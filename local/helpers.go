@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/luxd/config"
+	"github.com/luxdefi/luxd/utils/logging"
 	"go.uber.org/zap"
 )
 

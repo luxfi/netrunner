@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/luxdefi/netrunner/network/node"
 )
 
 var (
@@ -21,7 +21,7 @@ type BlockchainSpec struct {
 	NetworkUpgrade []byte
 }
 
-// Network is an abstraction of an Avalanche network
+// Network is an abstraction of an LUX network
 type Network interface {
 	// Returns nil if all the nodes in the network are healthy.
 	// A stopped network is considered unhealthy.

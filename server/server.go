@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 // Package server implements server.
@@ -19,13 +19,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/snow/networking/router"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/luxd/message"
+	"github.com/luxdefi/luxd/snow/networking/router"
+	"github.com/luxdefi/luxd/utils/logging"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

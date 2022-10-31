@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package server
@@ -11,15 +11,15 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/ava-labs/avalanche-network-runner/local"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/ids"
-	avago_constants "github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/local"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/luxd/config"
+	"github.com/luxdefi/luxd/ids"
+	avago_constants "github.com/luxdefi/luxd/utils/constants"
+	"github.com/luxdefi/luxd/utils/logging"
 )
 
 type localNetwork struct {
@@ -158,7 +158,7 @@ func (lc *localNetwork) createConfig() error {
 			cfg.NodeConfigs[i].Flags = map[string]interface{}{}
 		}
 
-		// avalanchego expects buildDir (parent dir of pluginDir) to be provided at cmdline
+		// luxd expects buildDir (parent dir of pluginDir) to be provided at cmdline
 		buildDir, err := getBuildDir(lc.execPath, lc.pluginDir)
 		if err != nil {
 			return err

@@ -14,18 +14,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/beacon"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/wrappers"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/luxd/config"
+	"github.com/luxdefi/luxd/network/peer"
+	"github.com/luxdefi/luxd/staking"
+	"github.com/luxdefi/luxd/utils/beacon"
+	"github.com/luxdefi/luxd/utils/ips"
+	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/luxdefi/luxd/utils/wrappers"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -60,7 +60,7 @@ var (
 	}
 	chainConfigSubDir = "chainConfigs"
 
-	snapshotsRelPath = filepath.Join(".avalanche-network-runner", "snapshots")
+	snapshotsRelPath = filepath.Join(".netrunner", "snapshots")
 
 	ErrSnapshotNotFound = errors.New("snapshot not found")
 )
@@ -251,7 +251,7 @@ func NewNetwork(
 
 // See NewNetwork.
 // [newAPIClientF] is used to create new API clients.
-// [nodeProcessCreator] is used to launch new avalanchego processes.
+// [nodeProcessCreator] is used to launch new luxd processes.
 func newNetwork(
 	log logging.Logger,
 	newAPIClientF api.NewAPIClientF,
@@ -523,7 +523,7 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		return nil, fmt.Errorf("couldn't get node ID: %w", err)
 	}
 
-	// Start the AvalancheGo node and pass it the flags defined above
+	// Start the LUX node and pass it the flags defined above
 	nodeProcess, err := ln.nodeProcessCreator.NewNodeProcess(nodeConfig, nodeData.flags...)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -902,7 +902,7 @@ func (ln *localNetwork) buildFlags(
 		return buildFlagsReturn{}, err
 	}
 
-	// Flags for AvalancheGo
+	// Flags for LUX
 	flags := []string{
 		fmt.Sprintf("--%s=%d", config.NetworkNameKey, ln.networkID),
 		fmt.Sprintf("--%s=%s", config.DBPathKey, dbDir),

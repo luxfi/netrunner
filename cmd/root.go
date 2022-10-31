@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package cmd
@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ava-labs/avalanche-network-runner/cmd/control"
-	"github.com/ava-labs/avalanche-network-runner/cmd/ping"
-	"github.com/ava-labs/avalanche-network-runner/cmd/server"
+	"github.com/luxdefi/netrunner/cmd/control"
+	"github.com/luxdefi/netrunner/cmd/ping"
+	"github.com/luxdefi/netrunner/cmd/server"
 	"github.com/spf13/cobra"
 )
 
 var Version = ""
 
 var rootCmd = &cobra.Command{
-	Use:        "avalanche-network-runner",
-	Short:      "avalanche-network-runner commands",
+	Use:        "netrunner",
+	Short:      "netrunner commands",
 	SuggestFor: []string{"network-runner"},
 	Version:    Version,
 }
@@ -36,7 +36,7 @@ func init() {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "avalanche-network-runner failed %v\n", err)
+		fmt.Fprintf(os.Stderr, "netrunner failed %v\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

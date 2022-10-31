@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package local
@@ -13,22 +13,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/api/admin"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/genesis"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/units"
-	"github.com/ava-labs/avalanchego/vms/platformvm"
-	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
-	"github.com/ava-labs/avalanchego/vms/platformvm/validator"
-	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
-	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
-	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/luxd/api/admin"
+	"github.com/luxdefi/luxd/config"
+	"github.com/luxdefi/luxd/genesis"
+	"github.com/luxdefi/luxd/ids"
+	"github.com/luxdefi/luxd/utils/constants"
+	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/luxdefi/luxd/utils/units"
+	"github.com/luxdefi/luxd/vms/platformvm"
+	"github.com/luxdefi/luxd/vms/platformvm/txs"
+	"github.com/luxdefi/luxd/vms/platformvm/validator"
+	"github.com/luxdefi/luxd/vms/secp256k1fx"
+	"github.com/luxdefi/luxd/wallet/subnet/primary"
+	"github.com/luxdefi/luxd/wallet/subnet/primary/common"
 	"go.uber.org/zap"
 )
 
@@ -135,7 +135,7 @@ func (ln *localNetwork) installCustomChains(
 		}
 	}
 
-	baseWallet, avaxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
+	baseWallet, luxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func (ln *localNetwork) installCustomChains(
 	if err != nil {
 		return nil, err
 	}
-	ln.log.Info("base wallet AVAX balance", zap.Uint64("balance", balances[avaxAssetID]), zap.String("address", testKeyAddr.String()))
+	ln.log.Info("base wallet LUX balance", zap.Uint64("balance", balances[luxAssetID]), zap.String("address", testKeyAddr.String()))
 
 	return chainInfos, nil
 }
@@ -255,7 +255,7 @@ func (ln *localNetwork) setupWalletAndInstallSubnets(
 	platformCli := platformvm.NewClient(clientURI)
 
 	pTXs := []ids.ID{}
-	baseWallet, avaxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
+	baseWallet, luxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func (ln *localNetwork) setupWalletAndInstallSubnets(
 	if err != nil {
 		return nil, err
 	}
-	ln.log.Info("base wallet AVAX balance", zap.Uint64("balance", balances[avaxAssetID]), zap.String("address", testKeyAddr.String()))
+	ln.log.Info("base wallet LUX balance", zap.Uint64("balance", balances[luxAssetID]), zap.String("address", testKeyAddr.String()))
 
 	return subnetIDs, nil
 }
@@ -446,7 +446,7 @@ func setupWallet(
 	clientURI string,
 	pTXs []ids.ID,
 	log logging.Logger,
-) (baseWallet primary.Wallet, avaxAssetID ids.ID, testKeyAddr ids.ShortID, err error) {
+) (baseWallet primary.Wallet, luxAssetID ids.ID, testKeyAddr ids.ShortID, err error) {
 	// "local/default/genesis.json" pre-funds "ewoq" key
 	testKey := genesis.EWOQKey
 	testKeyAddr = testKey.PublicKey().Address()
@@ -463,23 +463,23 @@ func setupWallet(
 
 	fmt.Println()
 	log.Info(logging.Green.Wrap("check if the seed test key has enough balance to create validators and subnets"))
-	avaxAssetID = baseWallet.P().AVAXAssetID()
+	luxAssetID = baseWallet.P().LUXAssetID()
 	balances, err := baseWallet.P().Builder().GetBalance()
 	if err != nil {
 		return nil, ids.Empty, ids.ShortEmpty, err
 	}
-	bal, ok := balances[avaxAssetID]
-	if bal <= 1*units.Avax || !ok {
-		return nil, ids.Empty, ids.ShortEmpty, fmt.Errorf("not enough AVAX balance %v in the address %q", bal, testKeyAddr)
+	bal, ok := balances[luxAssetID]
+	if bal <= 1*units.Lux || !ok {
+		return nil, ids.Empty, ids.ShortEmpty, fmt.Errorf("not enough LUX balance %v in the address %q", bal, testKeyAddr)
 	}
 	log.Info("fetched base wallet", zap.String("api", clientURI), zap.Uint64("balance", bal), zap.String("address", testKeyAddr.String()))
 
-	return baseWallet, avaxAssetID, testKeyAddr, nil
+	return baseWallet, luxAssetID, testKeyAddr, nil
 }
 
 // add the nodes in [nodeInfos] as validators of the primary network, in case they are not
 // the validation starts as soon as possible and its duration is as long as possible, that is,
-// it is set to max accepted duration by avalanchego
+// it is set to max accepted duration by luxd
 func (ln *localNetwork) addPrimaryValidators(
 	ctx context.Context,
 	platformCli platformvm.Client,
@@ -487,7 +487,7 @@ func (ln *localNetwork) addPrimaryValidators(
 	testKeyAddr ids.ShortID,
 ) error {
 	ln.log.Info(logging.Green.Wrap("adding the nodes as primary network validators"))
-	// ref. https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetcurrentvalidators
+	// ref. https://docs.lux.network/build/luxd-apis/p-chain/#platformgetcurrentvalidators
 	cctx, cancel := createDefaultCtx(ctx)
 	vs, err := platformCli.GetCurrentValidators(cctx, constants.PrimaryNetworkID, nil)
 	cancel()
@@ -512,7 +512,7 @@ func (ln *localNetwork) addPrimaryValidators(
 				NodeID: nodeID,
 				Start:  uint64(time.Now().Add(validationStartOffset).Unix()),
 				End:    uint64(time.Now().Add(validationDuration).Unix()),
-				Wght:   1 * units.Avax,
+				Wght:   1 * units.Lux,
 			},
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,

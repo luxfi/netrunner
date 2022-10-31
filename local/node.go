@@ -9,23 +9,23 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/network/throttling"
-	"github.com/ava-labs/avalanchego/snow/networking/router"
-	"github.com/ava-labs/avalanchego/snow/networking/tracker"
-	"github.com/ava-labs/avalanchego/snow/validators"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/math/meter"
-	"github.com/ava-labs/avalanchego/utils/resource"
-	"github.com/ava-labs/avalanchego/version"
+	"github.com/luxdefi/luxd/ids"
+	"github.com/luxdefi/luxd/message"
+	"github.com/luxdefi/luxd/network/peer"
+	"github.com/luxdefi/luxd/network/throttling"
+	"github.com/luxdefi/luxd/snow/networking/router"
+	"github.com/luxdefi/luxd/snow/networking/tracker"
+	"github.com/luxdefi/luxd/snow/validators"
+	"github.com/luxdefi/luxd/staking"
+	"github.com/luxdefi/luxd/utils/constants"
+	"github.com/luxdefi/luxd/utils/ips"
+	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/luxdefi/luxd/utils/math/meter"
+	"github.com/luxdefi/luxd/utils/resource"
+	"github.com/luxdefi/luxd/version"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,11 +42,11 @@ const (
 	peerStartWaitTimeout        = 30 * time.Second
 )
 
-// Gives access to basic node info, and to most avalanchego apis
+// Gives access to basic node info, and to most network apis
 type localNode struct {
 	// Must be unique across all nodes in this network.
 	name string
-	// [nodeID] is this node's Avalannche Node ID.
+	// [nodeID] is this node's Node ID.
 	// Set in network.AddNode
 	nodeID ids.NodeID
 	// The ID of the network this node exists in

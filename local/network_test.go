@@ -13,21 +13,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	apimocks "github.com/ava-labs/avalanche-network-runner/api/mocks"
-	"github.com/ava-labs/avalanche-network-runner/local/mocks"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/api/health"
-	healthmocks "github.com/ava-labs/avalanchego/api/health/mocks"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/snow/networking/router"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/rpc"
+	"github.com/luxdefi/netrunner/api"
+	apimocks "github.com/luxdefi/netrunner/api/mocks"
+	"github.com/luxdefi/netrunner/local/mocks"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/luxd/api/health"
+	healthmocks "github.com/luxdefi/luxd/api/health/mocks"
+	"github.com/luxdefi/luxd/config"
+	"github.com/luxdefi/luxd/ids"
+	"github.com/luxdefi/luxd/message"
+	"github.com/luxdefi/luxd/snow/networking/router"
+	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/luxdefi/luxd/utils/rpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -499,7 +499,7 @@ func TestGeneratedNodesNames(t *testing.T) {
 }
 
 // TestGenerateDefaultNetwork create a default network with config from NewDefaultConfig and
-// check expected number of nodes, node names, and avalanchego node ids
+// check expected number of nodes, node names, and luxd node ids
 func TestGenerateDefaultNetwork(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
@@ -908,7 +908,7 @@ func checkNetwork(t *testing.T, net network.Network, runningNodes map[string]str
 func emptyNetworkConfig() (network.Config, error) {
 	networkID := uint32(1337)
 	// Use a dummy genesis
-	genesis, err := network.NewAvalancheGoGenesis(
+	genesis, err := network.NewLUXGenesis(
 		networkID,
 		[]network.AddrAndBalance{
 			{
@@ -1129,7 +1129,7 @@ func TestWriteFiles(t *testing.T) {
 	chainConfigFiles := map[string]string{
 		"C": "c-chain config file",
 	}
-	tmpDir, err := os.MkdirTemp("", "avalanche-network-runner-tests-*")
+	tmpDir, err := os.MkdirTemp("", "netrunner-tests-*")
 	if err != nil {
 		t.Fatal(err)
 	}
