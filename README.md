@@ -72,7 +72,7 @@ From inside the cloned directory:
 go install
 ```
 
-After that, `luxnet` binary should be present under `$HOME/go/bin/` directory. Consider adding this directory to the `PATH` environment variable.
+After that, `netrunner` binary should be present under `$HOME/go/bin/` directory. Consider adding this directory to the `PATH` environment variable.
 
 #### Run Unit Tests
 
