@@ -8,19 +8,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/genesis"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/formatting/address"
-	"github.com/ava-labs/avalanchego/utils/units"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/luxd/genesis"
+	"github.com/luxdefi/luxd/ids"
+	"github.com/luxdefi/luxd/utils/constants"
+	"github.com/luxdefi/luxd/utils/formatting/address"
+	"github.com/luxdefi/luxd/utils/units"
 )
 
 var cChainConfig map[string]interface{}
 
 const (
-	validatorStake = units.MegaAvax
+	validatorStake = units.MegaLux
 )
 
 func init() {
@@ -111,7 +111,7 @@ func (c *Config) Validate() error {
 // [cChainBalances] and [xChainBalances].
 // Note that many of the genesis fields (i.e. reward addresses)
 // are randomly generated or hard-coded.
-func NewAvalancheGoGenesis(
+func NewLUXGenesis(
 	networkID uint32,
 	xChainBalances []AddrAndBalance,
 	cChainBalances []AddrAndBalance,
@@ -139,7 +139,7 @@ func NewAvalancheGoGenesis(
 		Allocations: []genesis.UnparsedAllocation{
 			{
 				ETHAddr:       "0x0000000000000000000000000000000000000000",
-				AVAXAddr:      genesisVdrStakeAddr, // Owner doesn't matter
+				LUXAddr:      genesisVdrStakeAddr, // Owner doesn't matter
 				InitialAmount: 0,
 				UnlockSchedule: []genesis.LockedAmount{ // Provides stake to validators
 					{
@@ -161,7 +161,7 @@ func NewAvalancheGoGenesis(
 			config.Allocations,
 			genesis.UnparsedAllocation{
 				ETHAddr:       "0x0000000000000000000000000000000000000000",
-				AVAXAddr:      xChainAddr,
+				LUXAddr:      xChainAddr,
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
 					{
@@ -205,6 +205,6 @@ func NewAvalancheGoGenesis(
 		)
 	}
 
-	// TODO add validation (from AvalancheGo's function validateConfig?)
+	// TODO add validation (from LUX's function validateConfig?)
 	return json.Marshal(config)
 }

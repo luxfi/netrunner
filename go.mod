@@ -1,10 +1,10 @@
-module github.com/ava-labs/avalanche-network-runner
+module github.com/luxdefi/netrunner
 
 go 1.18
 
 require (
-	github.com/ava-labs/avalanchego v1.9.0
-	github.com/ava-labs/coreth v0.11.0-rc.4
+	github.com/luxdefi/luxd v1.9.0
+	github.com/luxdefi/coreth v0.11.0-rc.4
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.12.0
 	github.com/onsi/ginkgo/v2 v2.4.0

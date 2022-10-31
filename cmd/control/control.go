@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package control
@@ -13,12 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/client"
-	"github.com/ava-labs/avalanche-network-runner/local"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/client"
+	"github.com/luxdefi/netrunner/local"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/luxd/utils/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -90,7 +90,7 @@ func NewCommand() *cobra.Command {
 }
 
 var (
-	avalancheGoBinPath  string
+	luxdBinPath  string
 	numNodes            uint32
 	pluginDir           string
 	globalNodeConfig    string
@@ -113,10 +113,10 @@ func newStartCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 	}
 	cmd.PersistentFlags().StringVar(
-		&avalancheGoBinPath,
-		"avalanchego-path",
+		&luxdBinPath,
+		"luxd-path",
 		"",
-		"avalanchego binary path",
+		"luxd binary path",
 	)
 	cmd.PersistentFlags().Uint32Var(
 		&numNodes,
@@ -184,7 +184,7 @@ func newStartCommand() *cobra.Command {
 		false,
 		"true to assign dynamic ports",
 	)
-	if err := cmd.MarkPersistentFlagRequired("avalanchego-path"); err != nil {
+	if err := cmd.MarkPersistentFlagRequired("luxd-path"); err != nil {
 		panic(err)
 	}
 	return cmd
@@ -251,7 +251,7 @@ func startFunc(cmd *cobra.Command, args []string) error {
 
 	info, err := cli.Start(
 		ctx,
-		avalancheGoBinPath,
+		luxdBinPath,
 		opts...,
 	)
 	if err != nil {
@@ -516,10 +516,10 @@ func newAddNodeCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	cmd.PersistentFlags().StringVar(
-		&avalancheGoBinPath,
-		"avalanchego-path",
+		&luxdBinPath,
+		"luxd-path",
 		"",
-		"avalanchego binary path",
+		"luxd binary path",
 	)
 	cmd.PersistentFlags().StringVar(
 		&addNodeConfig,
@@ -582,7 +582,7 @@ func addNodeFunc(cmd *cobra.Command, args []string) error {
 	info, err := cli.AddNode(
 		ctx,
 		nodeName,
-		avalancheGoBinPath,
+		luxdBinPath,
 		opts...,
 	)
 	cancel()
@@ -602,10 +602,10 @@ func newRestartNodeCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	cmd.PersistentFlags().StringVar(
-		&avalancheGoBinPath,
-		"avalanchego-path",
+		&luxdBinPath,
+		"luxd-path",
 		"",
-		"avalanchego binary path",
+		"luxd binary path",
 	)
 	cmd.PersistentFlags().StringVar(
 		&whitelistedSubnets,
@@ -638,7 +638,7 @@ func restartNodeFunc(cmd *cobra.Command, args []string) error {
 	defer cli.Close()
 
 	opts := []client.OpOption{
-		client.WithExecPath(avalancheGoBinPath),
+		client.WithExecPath(luxdBinPath),
 		client.WithWhitelistedSubnets(whitelistedSubnets),
 	}
 
@@ -835,10 +835,10 @@ func newLoadSnapshotCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	cmd.PersistentFlags().StringVar(
-		&avalancheGoBinPath,
-		"avalanchego-path",
+		&luxdBinPath,
+		"luxd-path",
 		"",
-		"avalanchego binary path",
+		"luxd binary path",
 	)
 	cmd.PersistentFlags().StringVar(
 		&pluginDir,
@@ -887,7 +887,7 @@ func loadSnapshotFunc(cmd *cobra.Command, args []string) error {
 	defer cli.Close()
 
 	opts := []client.OpOption{
-		client.WithExecPath(avalancheGoBinPath),
+		client.WithExecPath(luxdBinPath),
 		client.WithPluginDir(pluginDir),
 		client.WithRootDataDir(rootDataDir),
 		client.WithReassignPortsIfUsed(reassignPortsIfUsed),

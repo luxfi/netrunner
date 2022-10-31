@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package server
@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/server"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/server"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/luxd/utils/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

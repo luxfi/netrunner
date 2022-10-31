@@ -143,12 +143,12 @@ netrunner ping \
 --endpoint="0.0.0.0:8080"
 ```
 
-To start a new Avalanche network with five nodes (a cluster):
+To start a new LUX network with five nodes (a cluster):
 
 ```bash
-# replace execPath with the path to AvalancheGo on your machine
-# e.g., ${HOME}/go/src/github.com/ava-labs/avalanchego/build/avalanchego
-LUXD_EXEC_PATH="avalanchego"
+# replace execPath with the path to LUX on your machine
+# e.g., ${HOME}/go/src/github.com/luxdefi/luxd/build/luxd
+LUXD_EXEC_PATH="luxd"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO"}'
 
@@ -157,7 +157,7 @@ netrunner control start \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
 --number-of-nodes=5 \
---avalanchego-path ${LUXD_EXEC_PATH}
+--luxd-path ${LUXD_EXEC_PATH}
 ```
 
 Additional optional parameters which can be passed to the start command:
@@ -169,7 +169,7 @@ Additional optional parameters which can be passed to the start command:
 --custom-node-configs" '{"node1":{"log-level":"debug","api-admin-enabled":false},"node2":{...},...}'
 ```
 
-For example, to set `avalanchego --http-host` flag for all nodes:
+For example, to set `luxd --http-host` flag for all nodes:
 
 ```bash
 # to expose local RPC server to all traffic
@@ -178,7 +178,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_
 
 # or
 netrunner control start \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --global-node-config '{"http-host":"0.0.0.0"}'
 ```
 
@@ -201,7 +201,7 @@ The netrunner supports LUX node configuration at different levels.
         }
     ```
 
-2. `--global-node-config` is a JSON string representing a _single_ avalanchego config, which will be applied to **all nodes**. This makes it easy to define common properties to all nodes. Whatever is set here will be _combined_ with the standard set above.
+2. `--global-node-config` is a JSON string representing a _single_ luxd config, which will be applied to **all nodes**. This makes it easy to define common properties to all nodes. Whatever is set here will be _combined_ with the standard set above.
 3. `--custom-node-configs` is a map of JSON strings representing the _complete_ network with individual configs. This allows to configure each node independently. If set, `--number-of-nodes` will be **ignored** to avoid conflicts.
 4. The configs can be combined and will be merged, i.e. one could set global `--global-node-config` entries applied to each node, and also set `--custom-node-configs` for additional entries.
 5. Common `--custom-node-configs` entries override `--global-node-config` entries which override the standard set.
@@ -222,7 +222,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d\
 
 # or
 netrunner control start \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --custom-node-configs \
 '{
 "node1":"{\"http-port\":9650}",
@@ -297,14 +297,14 @@ curl -X POST -k http://localhost:8081/v1/control/loadsnapshot -d '{"snapshot_nam
 netrunner control load-snapshot snapshotName
 ```
 
-An avalanchego binary path and/or plugin dir can be specified when loading the snapshot. This is
+An luxd binary path and/or plugin dir can be specified when loading the snapshot. This is
 optional. If not specified, will use the paths saved with the snapshot:
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/loadsnapshot -d '{"snapshot_name":"node5","execPath":"'${LUXD_EXEC_PATH}'","pluginDir":"'${LUXD_PLUGIN_PATH}'"}'
 
 # or
-netrunner control load-snapshot snapshotName --avalanchego-path ${LUXD_EXEC_PATH} --plugin-dir ${LUXD_PLUGIN_PATH}
+netrunner control load-snapshot snapshotName --luxd-path ${LUXD_EXEC_PATH} --plugin-dir ${LUXD_PLUGIN_PATH}
 ```
 
 To get the list of snapshots:
@@ -377,8 +377,8 @@ netrunner control remove-node \
 To restart a node (in this case, the one named `node1`):
 
 ```bash
-# e.g., ${HOME}/go/src/github.com/ava-labs/avalanchego/build/avalanchego
-LUXD_EXEC_PATH="avalanchego"
+# e.g., ${HOME}/go/src/github.com/luxdefi/luxd/build/luxd
+LUXD_EXEC_PATH="luxd"
 
 # Note that you can restart the node with a different binary by providing
 # a different execPath
@@ -390,14 +390,14 @@ netrunner control restart-node \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
 --node-name node1 \
---avalanchego-path ${LUXD_EXEC_PATH}
+--luxd-path ${LUXD_EXEC_PATH}
 ```
 
 To add a node (in this case, a new node named `node99`):
 
 ```bash
-# e.g., ${HOME}/go/src/github.com/ava-labs/avalanchego/build/avalanchego
-LUXD_EXEC_PATH="avalanchego"
+# e.g., ${HOME}/go/src/github.com/luxdefi/luxd/build/luxd
+LUXD_EXEC_PATH="luxd"
 
 # Note that you can add the new node with a different binary by providing
 # a different execPath
@@ -409,7 +409,7 @@ netrunner control add-node \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
 --node-name node99 \
---avalanchego-path ${LUXD_EXEC_PATH}
+--luxd-path ${LUXD_EXEC_PATH}
 ```
 
 You can also provide additional flags that specify the node's config:
@@ -418,14 +418,14 @@ You can also provide additional flags that specify the node's config:
   --node-config '{"index-enabled":false, "api-admin-enabled":true,"network-peer-list-gossip-frequency":"300ms"}'
 ```
 
-`--node-config` allows to specify specific avalanchego config parameters to the new node. See [here](https://docs.avax.network/build/references/avalanchego-config-flags) for the reference of supported flags.
+`--node-config` allows to specify specific luxd config parameters to the new node. See [here](https://docs.lux.network/build/references/luxd-config-flags) for the reference of supported flags.
 
 **Note**: The following parameters will be _ignored_ if set in `--node-config`, because the network runner needs to set its own in order to function properly:
 `--log-dir`
 `--db-dir`
 
-AvalancheGo exposes a "test peer", which you can attach to a node.
-(See [here](https://github.com/ava-labs/avalanchego/blob/master/network/peer/test_peer.go) for more information.)
+LUX exposes a "test peer", which you can attach to a node.
+(See [here](https://github.com/luxdefi/luxd/blob/master/network/peer/test_peer.go) for more information.)
 You can send messages through the test peer to the node it is attached to.
 
 To attach a test peer to a node (in this case, `node1`):
@@ -485,32 +485,32 @@ curl -X POST -k http://localhost:8081/v1/ping -d ''
 To start the cluster with custom chains:
 
 ```bash
-# or download from https://github.com/ava-labs/subnet-cli/releases
-cd ${HOME}/go/src/github.com/ava-labs/subnet-cli
+# or download from https://github.com/luxdefi/subnet-cli/releases
+cd ${HOME}/go/src/github.com/luxdefi/subnet-cli
 go install -v .
 subnet-cli create VMID subnetevm
 # srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
 
-# download from https://github.com/ava-labs/avalanchego/releases
+# download from https://github.com/luxdefi/luxd/releases
 # or build
-rm -rf ${HOME}/go/src/github.com/ava-labs/avalanchego/build
-cd ${HOME}/go/src/github.com/ava-labs/avalanchego
+rm -rf ${HOME}/go/src/github.com/luxdefi/luxd/build
+cd ${HOME}/go/src/github.com/luxdefi/luxd
 ./scripts/build.sh
 
-# ref. https://github.com/ava-labs/subnet-evm/blob/b69e47e0398b5237cda0422f6a32969e64bde346/scripts/run.sh
-cd ${HOME}/go/src/github.com/ava-labs/subnet-evm
+# ref. https://github.com/luxdefi/subnet-evm/blob/b69e47e0398b5237cda0422f6a32969e64bde346/scripts/run.sh
+cd ${HOME}/go/src/github.com/luxdefi/subnet-evm
 go build -v \
--o ${HOME}/go/src/github.com/ava-labs/avalanchego/build/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
+-o ${HOME}/go/src/github.com/luxdefi/luxd/build/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
 ./plugin
 
 # make sure binaries are built
-find ${HOME}/go/src/github.com/ava-labs/avalanchego/build
+find ${HOME}/go/src/github.com/luxdefi/luxd/build
 # for example
 # .../build
 # .../build/plugins
 # .../build/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
 # .../build/plugins/evm
-# .../build/avalanchego
+# .../build/luxd
 
 # generate the genesis for the custom chain
 export CHAIN_ID=99999
@@ -562,9 +562,9 @@ cat /tmp/subnet-evm.genesis.json
 ```
 
 ```bash
-# replace execPath with the path to AvalancheGo on your machine
-LUXD_EXEC_PATH="${HOME}/go/src/github.com/ava-labs/avalanchego/build/avalanchego"
-LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/ava-labs/avalanchego/build/plugins"
+# replace execPath with the path to LUX on your machine
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/luxd/build/luxd"
+LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/luxd/build/plugins"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"subnetevm","genesis":"/tmp/subnet-evm.genesis.json"}]}'
 
@@ -572,7 +572,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_
 netrunner control start \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
 --blockchain-specs '[{"vm_name": "subnetevm", "genesis": "/tmp/subnet-evm.genesis.json"}]'
 ```
@@ -591,7 +591,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_
 netrunner control start \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
 --blockchain-specs '[{"vm_name": "subnetevm", "genesis": "/tmp/subnet-evm.genesis.json", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'"}]'
 ```
@@ -613,34 +613,34 @@ curl -X POST -k http://localhost:8081/v1/ping -d ''
 To start the cluster with custom chains:
 
 ```bash
-# or download from https://github.com/ava-labs/subnet-cli/releases
-cd ${HOME}/go/src/github.com/ava-labs/subnet-cli
+# or download from https://github.com/luxdefi/subnet-cli/releases
+cd ${HOME}/go/src/github.com/luxdefi/subnet-cli
 go install -v .
 subnet-cli create VMID blobvm
 # kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8
 
-# download from https://github.com/ava-labs/avalanchego/releases
+# download from https://github.com/luxdefi/luxd/releases
 # or build
-rm -rf ${HOME}/go/src/github.com/ava-labs/avalanchego/build
-cd ${HOME}/go/src/github.com/ava-labs/avalanchego
+rm -rf ${HOME}/go/src/github.com/luxdefi/luxd/build
+cd ${HOME}/go/src/github.com/luxdefi/luxd
 ./scripts/build.sh
 
-cd ${HOME}/go/src/github.com/ava-labs/blobvm
+cd ${HOME}/go/src/github.com/luxdefi/blobvm
 go build -v \
--o ${HOME}/go/src/github.com/ava-labs/avalanchego/build/plugins/kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8 \
+-o ${HOME}/go/src/github.com/luxdefi/luxd/build/plugins/kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8 \
 ./cmd/blobvm
 
 # make sure binaries are built
-find ${HOME}/go/src/github.com/ava-labs/avalanchego/build
+find ${HOME}/go/src/github.com/luxdefi/luxd/build
 # for example
 # .../build
 # .../build/plugins
 # .../build/plugins/kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8
 # .../build/plugins/evm
-# .../build/avalanchego
+# .../build/luxd
 
 # generate the genesis for the custom chain
-cd ${HOME}/go/src/github.com/ava-labs/blobvm
+cd ${HOME}/go/src/github.com/luxdefi/blobvm
 go install -v ./cmd/blob-cli
 echo "[]" > /tmp/alloc.json
 blob-cli genesis 1 /tmp/alloc.json --genesis-file /tmp/blobvm.genesis.json
@@ -648,9 +648,9 @@ cat /tmp/blobvm.genesis.json
 ```
 
 ```bash
-# replace execPath with the path to AvalancheGo on your machine
-LUXD_EXEC_PATH="${HOME}/go/src/github.com/ava-labs/avalanchego/build/avalanchego"
-LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/ava-labs/avalanchego/build/plugins"
+# replace execPath with the path to LUX on your machine
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/luxd/build/luxd"
+LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/luxd/build/plugins"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"blobvm","genesis":"/tmp/blobvm.genesis.json"}]}'
 
@@ -658,7 +658,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_
 netrunner control start \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
 --blockchain-specs '[{"vm_name": "blobvm", "genesis": "/tmp/blobvm.genesis.json"}]'
 ```
@@ -677,7 +677,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_
 netrunner control start \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
 --blockchain-specs '[{"vm_name": "blobvm", "genesis": "/tmp/blobvm.genesis.json", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'"}]'
 ```
@@ -699,34 +699,34 @@ curl -X POST -k http://localhost:8081/v1/ping -d ''
 To start the cluster with custom chains:
 
 ```bash
-# or download from https://github.com/ava-labs/subnet-cli/releases
-cd ${HOME}/go/src/github.com/ava-labs/subnet-cli
+# or download from https://github.com/luxdefi/subnet-cli/releases
+cd ${HOME}/go/src/github.com/luxdefi/subnet-cli
 go install -v .
 subnet-cli create VMID timestampvm
 # tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc
 
-# download from https://github.com/ava-labs/avalanchego/releases
+# download from https://github.com/luxdefi/luxd/releases
 # or build
-rm -rf ${HOME}/go/src/github.com/ava-labs/avalanchego/build
-cd ${HOME}/go/src/github.com/ava-labs/avalanchego
+rm -rf ${HOME}/go/src/github.com/luxdefi/luxd/build
+cd ${HOME}/go/src/github.com/luxdefi/luxd
 ./scripts/build.sh
 
-# or download from https://github.com/ava-labs/timestampvm/releases
-# cd ${HOME}/go/src/github.com/ava-labs/timestampvm
+# or download from https://github.com/luxdefi/timestampvm/releases
+# cd ${HOME}/go/src/github.com/luxdefi/timestampvm
 # ./scripts/build.sh
-cd ${HOME}/go/src/github.com/ava-labs/timestampvm
+cd ${HOME}/go/src/github.com/luxdefi/timestampvm
 go build -v \
--o ${HOME}/go/src/github.com/ava-labs/avalanchego/build/plugins/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc \
+-o ${HOME}/go/src/github.com/luxdefi/luxd/build/plugins/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc \
 ./main
 
 # make sure binaries are built
-find ${HOME}/go/src/github.com/ava-labs/avalanchego/build
+find ${HOME}/go/src/github.com/luxdefi/luxd/build
 # for example
 # .../build
 # .../build/plugins
 # .../build/plugins/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc
 # .../build/plugins/evm
-# .../build/avalanchego
+# .../build/luxd
 
 # generate the genesis for the custom chain
 # NOTE: timestampvm takes arbitrary data for its genesis
@@ -734,9 +734,9 @@ echo hello > /tmp/timestampvm.genesis.json
 ```
 
 ```bash
-# replace execPath with the path to AvalancheGo on your machine
-LUXD_EXEC_PATH="${HOME}/go/src/github.com/ava-labs/avalanchego/build/avalanchego"
-LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/ava-labs/avalanchego/build/plugins"
+# replace execPath with the path to LUX on your machine
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/luxd/build/luxd"
+LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/luxd/build/plugins"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vmName":"timestampvm","genesis":"/tmp/timestampvm.genesis.json"}]}'
 
@@ -744,7 +744,7 @@ curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_
 netrunner control start \
 --log-level debug \
 --endpoint="0.0.0.0:8080" \
---avalanchego-path ${LUXD_EXEC_PATH} \
+--luxd-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
 --blockchain-specs '[{"vm_name":"timestampvm","genesis":"/tmp/timestampvm.genesis.json"}]'
 ```
@@ -934,10 +934,10 @@ To create a new network from a snapshot, the function `NewNetworkFromSnapshot` i
 
 ## Network Interaction
 
-The network runner allows users to interact with an AvalancheGo network using the `network.Network` interface:
+The network runner allows users to interact with an LUX network using the `network.Network` interface:
 
 ```go
-// Network is an abstraction of an Avalanche network
+// Network is an abstraction of an LUX network
 type Network interface {
   // Returns nil if all the nodes in the network are healthy.
   // A stopped network is considered unhealthy.
@@ -976,12 +976,12 @@ type Network interface {
 and allows users to interact with a node using the `node.Node` interface:
 
 ```go
-// Node represents an AvalancheGo node
+// Node represents an LUX node
 type Node interface {
   // Return this node's name, which is unique
   // across all the nodes in its network.
   GetName() string
-  // Return this node's Avalanche node ID.
+  // Return this node's LUX node ID.
   GetNodeID() ids.ShortID
   // Return a client that can be used to make API calls.
   GetAPIClient() api.Client
@@ -997,7 +997,7 @@ type Node interface {
   // It's left to the caller to maintain a reference to the returned peer.
   // The caller should call StartClose() on the peer when they're done with it.
   AttachPeer(ctx context.Context, handler router.InboundHandler) (peer.Peer, error)
-  // Return this node's avalanchego binary path
+  // Return this node's luxd binary path
   GetBinaryPath() string
   // Return this node's db dir
   GetDbDir() string

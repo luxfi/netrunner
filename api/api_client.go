@@ -3,15 +3,15 @@ package api
 import (
 	"fmt"
 
-	"github.com/ava-labs/avalanchego/api/admin"
-	"github.com/ava-labs/avalanchego/api/health"
-	"github.com/ava-labs/avalanchego/api/info"
-	"github.com/ava-labs/avalanchego/api/ipcs"
-	"github.com/ava-labs/avalanchego/api/keystore"
-	"github.com/ava-labs/avalanchego/indexer"
-	"github.com/ava-labs/avalanchego/vms/avm"
-	"github.com/ava-labs/avalanchego/vms/platformvm"
-	"github.com/ava-labs/coreth/plugin/evm"
+	"github.com/luxdefi/luxd/api/admin"
+	"github.com/luxdefi/luxd/api/health"
+	"github.com/luxdefi/luxd/api/info"
+	"github.com/luxdefi/luxd/api/ipcs"
+	"github.com/luxdefi/luxd/api/keystore"
+	"github.com/luxdefi/luxd/indexer"
+	"github.com/luxdefi/luxd/vms/avm"
+	"github.com/luxdefi/luxd/vms/platformvm"
+	"github.com/luxdefi/coreth/plugin/evm"
 )
 
 // interface compliance
@@ -20,7 +20,7 @@ var (
 	_ NewAPIClientF = NewAPIClient
 )
 
-// APIClient gives access to most avalanchego apis (or suitable wrappers)
+// APIClient gives access to most luxd apis (or suitable wrappers)
 type APIClient struct {
 	platform     platformvm.Client
 	xChain       avm.Client
@@ -39,7 +39,7 @@ type APIClient struct {
 // Returns a new API client for a node at [ipAddr]:[port].
 type NewAPIClientF func(ipAddr string, port uint16) Client
 
-// NewAPIClient initialize most of avalanchego apis
+// NewAPIClient initialize most of luxd apis
 func NewAPIClient(ipAddr string, port uint16) Client {
 	uri := fmt.Sprintf("http://%s:%d", ipAddr, port)
 	return &APIClient{

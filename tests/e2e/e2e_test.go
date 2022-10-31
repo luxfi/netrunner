@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 // e2e implements the e2e tests.
@@ -15,17 +15,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/client"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/server"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/api/admin"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	avago_constants "github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/client"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/server"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/luxd/api/admin"
+	"github.com/luxdefi/luxd/ids"
+	"github.com/luxdefi/luxd/message"
+	avago_constants "github.com/luxdefi/luxd/utils/constants"
+	"github.com/luxdefi/luxd/utils/logging"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
@@ -88,15 +88,15 @@ func init() {
 	)
 	flag.StringVar(
 		&execPath1,
-		"avalanchego-path-1",
+		"luxd-path-1",
 		"",
-		"avalanchego executable path (to upgrade from)",
+		"luxd executable path (to upgrade from)",
 	)
 	flag.StringVar(
 		&execPath2,
-		"avalanchego-path-2",
+		"luxd-path-2",
 		"",
-		"avalanchego executable path (to upgrade to)",
+		"luxd executable path (to upgrade to)",
 	)
 	flag.StringVar(
 		&subnetEvmPath,

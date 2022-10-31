@@ -3,7 +3,7 @@
   "allocations": [
     {
       "ethAddr": "0xb3d82b1367d362de99ab59a658165aff520cbd4d",
-      "avaxAddr": "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
+      "luxAddr": "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
       "initialAmount": 0,
       "unlockSchedule": [
         {
@@ -14,7 +14,7 @@
     },
     {
       "ethAddr": "0xb3d82b1367d362de99ab59a658165aff520cbd4d",
-      "avaxAddr": "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
+      "luxAddr": "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
       "initialAmount": 300000000000000000,
       "unlockSchedule": [
         {
@@ -28,7 +28,7 @@
     },
     {
       "ethAddr": "0xb3d82b1367d362de99ab59a658165aff520cbd4d",
-      "avaxAddr": "X-custom16045mxr3s2cjycqe2xfluk304xv3ezhkhsvkpr",
+      "luxAddr": "X-custom16045mxr3s2cjycqe2xfluk304xv3ezhkhsvkpr",
       "initialAmount": 10000000000000000,
       "unlockSchedule": [
         {
