@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
+// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package local
@@ -13,22 +13,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luxdefi/netrunner/network"
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/netrunner/utils"
-	"github.com/luxdefi/luxd/api/admin"
-	"github.com/luxdefi/luxd/config"
-	"github.com/luxdefi/luxd/genesis"
-	"github.com/luxdefi/luxd/ids"
-	"github.com/luxdefi/luxd/utils/constants"
-	"github.com/luxdefi/luxd/utils/logging"
-	"github.com/luxdefi/luxd/utils/units"
-	"github.com/luxdefi/luxd/vms/platformvm"
-	"github.com/luxdefi/luxd/vms/platformvm/txs"
-	"github.com/luxdefi/luxd/vms/platformvm/validator"
-	"github.com/luxdefi/luxd/vms/secp256k1fx"
-	"github.com/luxdefi/luxd/wallet/subnet/primary"
-	"github.com/luxdefi/luxd/wallet/subnet/primary/common"
+	"github.com/ava-labs/avalanche-network-runner/network"
+	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/ava-labs/avalanche-network-runner/utils"
+	"github.com/ava-labs/avalanchego/api/admin"
+	"github.com/ava-labs/avalanchego/config"
+	"github.com/ava-labs/avalanchego/genesis"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/constants"
+	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/utils/set"
+	"github.com/ava-labs/avalanchego/utils/units"
+	"github.com/ava-labs/avalanchego/vms/platformvm"
+	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
+	"github.com/ava-labs/avalanchego/vms/platformvm/validator"
+	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
+	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
+	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
 	"go.uber.org/zap"
 )
 
@@ -69,7 +70,7 @@ func (ln *localNetwork) getSomeNode() node.Node {
 }
 
 // get node client URI for an arbitrary node in the network
-func (ln *localNetwork) getClientURI() (string, error) {
+func (ln *localNetwork) getClientURI() (string, error) { //nolint
 	node := ln.getSomeNode()
 	clientURI := fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort())
 	return clientURI, nil
@@ -88,6 +89,36 @@ func (ln *localNetwork) CreateBlockchains(
 
 	if err := ln.waitForCustomChainsReady(ctx, chainInfos); err != nil {
 		return err
+	}
+
+	if err := ln.RegisterBlockchainAliases(ctx, chainInfos, chainSpecs); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// if alias is defined in blockchain-specs, registers an alias for the previously created blockchain
+func (ln *localNetwork) RegisterBlockchainAliases(
+	ctx context.Context,
+	chainInfos []blockchainInfo,
+	chainSpecs []network.BlockchainSpec,
+) error {
+	fmt.Println()
+	ln.log.Info(logging.Blue.Wrap(logging.Bold.Wrap("registering blockchain aliases")))
+	for i, chainSpec := range chainSpecs {
+		if chainSpec.BlockchainAlias != "" {
+			blockchainAlias := chainSpec.BlockchainAlias
+			chainID := chainInfos[i].blockchainID.String()
+			ln.log.Info("registering blockchain alias",
+				zap.String("alias", blockchainAlias),
+				zap.String("chain-id", chainID))
+			for nodeName, node := range ln.nodes {
+				if err := node.client.AdminAPI().AliasChain(ctx, chainID, blockchainAlias); err != nil {
+					return fmt.Errorf("failure to register blockchain alias %v on node %v: %w", blockchainAlias, nodeName, err)
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -126,8 +157,8 @@ func (ln *localNetwork) installCustomChains(
 		// tx info to the wallet so blockchain creation does not fail
 		// if subnet id is not specified, a new subnet will later be created by using the wallet,
 		// and the wallet will obtain the tx info at that moment
-		if chainSpec.SubnetId != nil {
-			subnetID, err := ids.FromString(*chainSpec.SubnetId)
+		if chainSpec.SubnetID != nil {
+			subnetID, err := ids.FromString(*chainSpec.SubnetID)
 			if err != nil {
 				return nil, err
 			}
@@ -135,7 +166,7 @@ func (ln *localNetwork) installCustomChains(
 		}
 	}
 
-	baseWallet, luxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
+	baseWallet, avaxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +180,7 @@ func (ln *localNetwork) installCustomChains(
 	// that number of subnets will be created and later assigned to those blockchain requests
 	var numSubnetsToCreate uint32
 	for _, chainSpec := range chainSpecs {
-		if chainSpec.SubnetId == nil {
+		if chainSpec.SubnetID == nil {
 			numSubnetsToCreate++
 		}
 	}
@@ -161,9 +192,9 @@ func (ln *localNetwork) installCustomChains(
 	// assign created subnets to blockchain requests with undefined subnet id
 	j := 0
 	for i := range chainSpecs {
-		if chainSpecs[i].SubnetId == nil {
+		if chainSpecs[i].SubnetID == nil {
 			subnetIDStr := addedSubnetIDs[j].String()
-			chainSpecs[i].SubnetId = &subnetIDStr
+			chainSpecs[i].SubnetID = &subnetIDStr
 			j++
 		}
 	}
@@ -172,10 +203,8 @@ func (ln *localNetwork) installCustomChains(
 	if err != nil {
 		return nil, err
 	}
-	blockchainFilesCreated, err := ln.createBlockchainConfigFiles(chainSpecs, blockchainTxs, ln.log)
-	if err != nil {
-		return nil, err
-	}
+
+	blockchainFilesCreated := ln.setBlockchainConfigFiles(chainSpecs, blockchainTxs, ln.log)
 
 	if numSubnetsToCreate > 0 || blockchainFilesCreated {
 		// we need to restart if there are new subnets or if there are new network config files
@@ -199,7 +228,7 @@ func (ln *localNetwork) installCustomChains(
 	// get all subnets for add subnet validator request
 	subnetIDs := []ids.ID{}
 	for _, chainSpec := range chainSpecs {
-		subnetID, err := ids.FromString(*chainSpec.SubnetId)
+		subnetID, err := ids.FromString(*chainSpec.SubnetID)
 		if err != nil {
 			return nil, err
 		}
@@ -212,18 +241,18 @@ func (ln *localNetwork) installCustomChains(
 
 	chainInfos := make([]blockchainInfo, len(chainSpecs))
 	for i, chainSpec := range chainSpecs {
-		vmID, err := utils.VMID(chainSpec.VmName)
+		vmID, err := utils.VMID(chainSpec.VMName)
 		if err != nil {
 			return nil, err
 		}
-		subnetID, err := ids.FromString(*chainSpec.SubnetId)
+		subnetID, err := ids.FromString(*chainSpec.SubnetID)
 		if err != nil {
 			return nil, err
 		}
 		chainInfos[i] = blockchainInfo{
 			// we keep a record of VM name in blockchain name field,
 			// as there is no way to recover VM name from VM ID
-			chainName:    chainSpec.VmName,
+			chainName:    chainSpec.VMName,
 			vmID:         vmID,
 			subnetID:     subnetID,
 			blockchainID: blockchainTxs[i].ID(),
@@ -236,7 +265,7 @@ func (ln *localNetwork) installCustomChains(
 	if err != nil {
 		return nil, err
 	}
-	ln.log.Info("base wallet LUX balance", zap.Uint64("balance", balances[luxAssetID]), zap.String("address", testKeyAddr.String()))
+	ln.log.Info("base wallet AVAX balance", zap.Uint64("balance", balances[avaxAssetID]), zap.String("address", testKeyAddr.String()))
 
 	return chainInfos, nil
 }
@@ -255,7 +284,7 @@ func (ln *localNetwork) setupWalletAndInstallSubnets(
 	platformCli := platformvm.NewClient(clientURI)
 
 	pTXs := []ids.ID{}
-	baseWallet, luxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
+	baseWallet, avaxAssetID, testKeyAddr, err := setupWallet(ctx, clientURI, pTXs, ln.log)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +317,7 @@ func (ln *localNetwork) setupWalletAndInstallSubnets(
 	if err != nil {
 		return nil, err
 	}
-	ln.log.Info("base wallet LUX balance", zap.Uint64("balance", balances[luxAssetID]), zap.String("address", testKeyAddr.String()))
+	ln.log.Info("base wallet AVAX balance", zap.Uint64("balance", balances[avaxAssetID]), zap.String("address", testKeyAddr.String()))
 
 	return subnetIDs, nil
 }
@@ -301,14 +330,14 @@ func (ln *localNetwork) restartNodesAndResetWallet(
 ) (primary.Wallet, error) {
 	fmt.Println()
 	ln.log.Info(logging.Blue.Wrap(logging.Bold.Wrap("restarting network")))
-	if err := ln.restartNodesWithWhitelistedSubnets(ctx, subnetIDs); err != nil {
+	if err := ln.restartNodesWithTrackSubnets(ctx, subnetIDs); err != nil {
 		return nil, err
 	}
 	fmt.Println()
 	ln.log.Info(logging.Green.Wrap("reconnecting the wallet client after restart"))
 	testKeychain := secp256k1fx.NewKeychain(genesis.EWOQKey)
-	allTxs := append(pTXs, subnetIDs...)
-	return primary.NewWalletWithTxs(ctx, clientURI, testKeychain, allTxs...)
+	pTXs = append(pTXs, subnetIDs...)
+	return primary.NewWalletWithTxs(ctx, clientURI, testKeychain, pTXs...)
 }
 
 func (ln *localNetwork) waitForCustomChainsReady(
@@ -394,42 +423,42 @@ func (ln *localNetwork) getCurrentSubnets(ctx context.Context) ([]ids.ID, error)
 }
 
 // TODO: make this "restart" pattern more generic, so it can be used for "Restart" RPC
-func (ln *localNetwork) restartNodesWithWhitelistedSubnets(
+func (ln *localNetwork) restartNodesWithTrackSubnets(
 	ctx context.Context,
 	subnetIDs []ids.ID,
 ) (err error) {
 	fmt.Println()
-	ln.log.Info(logging.Green.Wrap("restarting each node"), zap.String("whitelisted-subnets", config.WhitelistedSubnetsKey))
-	whitelistedSubnetIDsMap := map[string]struct{}{}
+
+	trackSubnetIDsMap := map[string]struct{}{}
 	currentSubnets, err := ln.getCurrentSubnets(ctx)
 	if err != nil {
 		return err
 	}
 	for _, subnet := range currentSubnets {
-		whitelistedSubnetIDsMap[subnet.String()] = struct{}{}
+		trackSubnetIDsMap[subnet.String()] = struct{}{}
 	}
 	for _, subnetID := range subnetIDs {
-		whitelistedSubnetIDsMap[subnetID.String()] = struct{}{}
+		trackSubnetIDsMap[subnetID.String()] = struct{}{}
 	}
-	whitelistedSubnetIDs := []string{}
-	for subnetID := range whitelistedSubnetIDsMap {
-		whitelistedSubnetIDs = append(whitelistedSubnetIDs, subnetID)
+	trackSubnetIDs := []string{}
+	for subnetID := range trackSubnetIDsMap {
+		trackSubnetIDs = append(trackSubnetIDs, subnetID)
 	}
-	sort.Strings(whitelistedSubnetIDs)
-	whitelistedSubnets := strings.Join(whitelistedSubnetIDs, ",")
+	sort.Strings(trackSubnetIDs)
+	trackSubnets := strings.Join(trackSubnetIDs, ",")
 
-	ln.log.Info("restarting all nodes to whitelist subnets", zap.Strings("whitelisted-subnet-IDs", whitelistedSubnetIDs))
+	ln.log.Info("restarting all nodes to track subnets", zap.Strings("track-subnet-IDs", trackSubnetIDs))
 
 	// change default setting
-	ln.flags[config.WhitelistedSubnetsKey] = whitelistedSubnets
+	ln.flags[config.TrackSubnetsKey] = trackSubnets
 
 	for nodeName, node := range ln.nodes {
 		// delete node specific flag so as to use default one
 		nodeConfig := node.GetConfig()
-		delete(nodeConfig.Flags, config.WhitelistedSubnetsKey)
+		delete(nodeConfig.Flags, config.TrackSubnetsKey)
 
-		ln.log.Info("removing and adding back the node for whitelisted subnets", zap.String("node-name", nodeName))
-		if err := ln.restartNode(ctx, nodeName, "", "", nil, nil); err != nil {
+		ln.log.Debug("removing and adding back the node for track subnets", zap.String("node-name", nodeName))
+		if err := ln.restartNode(ctx, nodeName, "", "", "", nil, nil, nil); err != nil {
 			return err
 		}
 
@@ -446,7 +475,7 @@ func setupWallet(
 	clientURI string,
 	pTXs []ids.ID,
 	log logging.Logger,
-) (baseWallet primary.Wallet, luxAssetID ids.ID, testKeyAddr ids.ShortID, err error) {
+) (baseWallet primary.Wallet, avaxAssetID ids.ID, testKeyAddr ids.ShortID, err error) {
 	// "local/default/genesis.json" pre-funds "ewoq" key
 	testKey := genesis.EWOQKey
 	testKeyAddr = testKey.PublicKey().Address()
@@ -463,23 +492,23 @@ func setupWallet(
 
 	fmt.Println()
 	log.Info(logging.Green.Wrap("check if the seed test key has enough balance to create validators and subnets"))
-	luxAssetID = baseWallet.P().LUXAssetID()
+	avaxAssetID = baseWallet.P().AVAXAssetID()
 	balances, err := baseWallet.P().Builder().GetBalance()
 	if err != nil {
 		return nil, ids.Empty, ids.ShortEmpty, err
 	}
-	bal, ok := balances[luxAssetID]
-	if bal <= 1*units.Lux || !ok {
-		return nil, ids.Empty, ids.ShortEmpty, fmt.Errorf("not enough LUX balance %v in the address %q", bal, testKeyAddr)
+	bal, ok := balances[avaxAssetID]
+	if bal <= 1*units.Avax || !ok {
+		return nil, ids.Empty, ids.ShortEmpty, fmt.Errorf("not enough AVAX balance %v in the address %q", bal, testKeyAddr)
 	}
 	log.Info("fetched base wallet", zap.String("api", clientURI), zap.Uint64("balance", bal), zap.String("address", testKeyAddr.String()))
 
-	return baseWallet, luxAssetID, testKeyAddr, nil
+	return baseWallet, avaxAssetID, testKeyAddr, nil
 }
 
 // add the nodes in [nodeInfos] as validators of the primary network, in case they are not
 // the validation starts as soon as possible and its duration is as long as possible, that is,
-// it is set to max accepted duration by luxd
+// it is set to max accepted duration by avalanchego
 func (ln *localNetwork) addPrimaryValidators(
 	ctx context.Context,
 	platformCli platformvm.Client,
@@ -487,7 +516,7 @@ func (ln *localNetwork) addPrimaryValidators(
 	testKeyAddr ids.ShortID,
 ) error {
 	ln.log.Info(logging.Green.Wrap("adding the nodes as primary network validators"))
-	// ref. https://docs.lux.network/build/luxd-apis/p-chain/#platformgetcurrentvalidators
+	// ref. https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetcurrentvalidators
 	cctx, cancel := createDefaultCtx(ctx)
 	vs, err := platformCli.GetCurrentValidators(cctx, constants.PrimaryNetworkID, nil)
 	cancel()
@@ -512,7 +541,7 @@ func (ln *localNetwork) addPrimaryValidators(
 				NodeID: nodeID,
 				Start:  uint64(time.Now().Add(validationStartOffset).Unix()),
 				End:    uint64(time.Now().Add(validationDuration).Unix()),
-				Wght:   1 * units.Lux,
+				Wght:   genesis.LocalParams.MinValidatorStake,
 			},
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,
@@ -590,7 +619,7 @@ func (ln *localNetwork) addSubnetValidators(
 		if err != nil {
 			return err
 		}
-		subnetValidators := ids.NodeIDSet{}
+		subnetValidators := set.Set[ids.NodeID]{}
 		for _, v := range vs {
 			subnetValidators.Add(v.NodeID)
 		}
@@ -646,7 +675,7 @@ func (ln *localNetwork) waitSubnetValidators(
 			if err != nil {
 				return err
 			}
-			subnetValidators := ids.NodeIDSet{}
+			subnetValidators := set.Set[ids.NodeID]{}
 			for _, v := range vs {
 				subnetValidators.Add(v.NodeID)
 			}
@@ -685,7 +714,7 @@ func (ln *localNetwork) reloadVMPlugins(
 			return err
 		}
 		if len(failedVMs) > 0 {
-			return fmt.Errorf("%d VMs failed to load: %v\n", len(failedVMs), failedVMs)
+			return fmt.Errorf("%d VMs failed to load: %v", len(failedVMs), failedVMs)
 		}
 	}
 	return nil
@@ -701,7 +730,7 @@ func createBlockchainTxs(
 	log.Info(logging.Green.Wrap("creating tx for each custom chain"))
 	blockchainTxs := make([]*txs.Tx, len(chainSpecs))
 	for i, chainSpec := range chainSpecs {
-		vmName := chainSpec.VmName
+		vmName := chainSpec.VMName
 		vmID, err := utils.VMID(vmName)
 		if err != nil {
 			return nil, err
@@ -715,7 +744,7 @@ func createBlockchainTxs(
 		)
 		cctx, cancel := createDefaultCtx(ctx)
 		defer cancel()
-		subnetID, err := ids.FromString(*chainSpec.SubnetId)
+		subnetID, err := ids.FromString(*chainSpec.SubnetID)
 		if err != nil {
 			return nil, err
 		}
@@ -740,59 +769,47 @@ func createBlockchainTxs(
 	return blockchainTxs, nil
 }
 
-func (ln *localNetwork) createBlockchainConfigFiles(
+func (ln *localNetwork) setBlockchainConfigFiles(
 	chainSpecs []network.BlockchainSpec,
 	blockchainTxs []*txs.Tx,
 	log logging.Logger,
-) (bool, error) {
+) bool {
 	fmt.Println()
 	created := false
 	log.Info(logging.Green.Wrap("creating config files for each custom chain"))
 	for i, chainSpec := range chainSpecs {
 		chainAlias := blockchainTxs[i].ID().String()
-
-		// create config and network upgrade files
-		if chainSpec.ChainConfig != nil {
+		// update config info. set defaults and node specifics
+		if chainSpec.ChainConfig != nil || len(chainSpec.PerNodeChainConfig) != 0 {
 			created = true
-			for nodeName := range ln.nodes {
-				nodeRootDir := getNodeDir(ln.rootDir, nodeName)
-				chainConfigDir := filepath.Join(nodeRootDir, chainConfigSubDir)
-				chainConfigPath := filepath.Join(chainConfigDir, chainAlias, configFileName)
-				if err := createFileAndWrite(chainConfigPath, chainSpec.ChainConfig); err != nil {
-					return false, fmt.Errorf("couldn't write chain config file at %q: %w", chainConfigPath, err)
-				}
-			}
-		}
-		if chainSpec.NetworkUpgrade != nil {
-			created = true
-			for nodeName := range ln.nodes {
-				nodeRootDir := getNodeDir(ln.rootDir, nodeName)
-				chainConfigDir := filepath.Join(nodeRootDir, chainConfigSubDir)
-				chainUpgradePath := filepath.Join(chainConfigDir, chainAlias, upgradeConfigFileName)
-				if err := createFileAndWrite(chainUpgradePath, chainSpec.NetworkUpgrade); err != nil {
-					return false, fmt.Errorf("couldn't write network upgrade file at %q: %w", chainUpgradePath, err)
-				}
-			}
-		}
-		// update config info for snapshopt/restart purposes
-		// put into defaults and reset node specifics
-		if chainSpec.ChainConfig != nil {
 			ln.chainConfigFiles[chainAlias] = string(chainSpec.ChainConfig)
 			for nodeName := range ln.nodes {
-				delete(ln.nodes[nodeName].config.ChainConfigFiles, chainAlias)
+				if cfg, ok := chainSpec.PerNodeChainConfig[nodeName]; ok {
+					ln.nodes[nodeName].config.ChainConfigFiles[chainAlias] = string(cfg)
+				} else {
+					delete(ln.nodes[nodeName].config.ChainConfigFiles, chainAlias)
+				}
 			}
 		}
 		if chainSpec.NetworkUpgrade != nil {
+			created = true
 			ln.upgradeConfigFiles[chainAlias] = string(chainSpec.NetworkUpgrade)
 			for nodeName := range ln.nodes {
 				delete(ln.nodes[nodeName].config.UpgradeConfigFiles, chainAlias)
 			}
 		}
+		if chainSpec.SubnetConfig != nil {
+			created = true
+			ln.subnetConfigFiles[*chainSpec.SubnetID] = string(chainSpec.SubnetConfig)
+			for nodeName := range ln.nodes {
+				delete(ln.nodes[nodeName].config.SubnetConfigFiles, *chainSpec.SubnetID)
+			}
+		}
 	}
-	return created, nil
+	return created
 }
 
-func (ln *localNetwork) createBlockchains(
+func (*localNetwork) createBlockchains(
 	ctx context.Context,
 	chainSpecs []network.BlockchainSpec,
 	blockchainTxs []*txs.Tx,
@@ -802,7 +819,7 @@ func (ln *localNetwork) createBlockchains(
 	fmt.Println()
 	log.Info(logging.Green.Wrap("creating each custom chain"))
 	for i, chainSpec := range chainSpecs {
-		vmName := chainSpec.VmName
+		vmName := chainSpec.VMName
 		vmID, err := utils.VMID(vmName)
 		if err != nil {
 			return err

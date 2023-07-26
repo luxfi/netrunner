@@ -9,15 +9,45 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/luxdefi/netrunner/api"
-	"github.com/luxdefi/netrunner/network"
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/netrunner/utils"
-	"github.com/luxdefi/luxd/config"
-	"github.com/luxdefi/luxd/utils/constants"
-	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/ava-labs/avalanche-network-runner/api"
+	"github.com/ava-labs/avalanche-network-runner/network"
+	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/ava-labs/avalanche-network-runner/utils"
+	"github.com/ava-labs/avalanchego/config"
+	"github.com/ava-labs/avalanchego/utils/constants"
+	"github.com/ava-labs/avalanchego/utils/logging"
 	dircopy "github.com/otiai10/copy"
 )
+
+const (
+	deprecatedBuildDirKey           = "build-dir"
+	deprecatedWhitelistedSubnetsKey = "whitelisted-subnets"
+)
+
+// snapshots generated using older ANR versions may contain deprecated avago flags
+func fixDeprecatedAvagoFlags(flags map[string]interface{}) error {
+	if vIntf, ok := flags[deprecatedWhitelistedSubnetsKey]; ok {
+		v, ok := vIntf.(string)
+		if !ok {
+			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedWhitelistedSubnetsKey, vIntf)
+		}
+		if v != "" {
+			flags[config.TrackSubnetsKey] = v
+		}
+		delete(flags, deprecatedWhitelistedSubnetsKey)
+	}
+	if vIntf, ok := flags[deprecatedBuildDirKey]; ok {
+		v, ok := vIntf.(string)
+		if !ok {
+			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedBuildDirKey, vIntf)
+		}
+		if v != "" {
+			flags[config.PluginDirKey] = filepath.Join(v, "plugins")
+		}
+		delete(flags, deprecatedBuildDirKey)
+	}
+	return nil
+}
 
 // NewNetwork returns a new network from the given snapshot
 func NewNetworkFromSnapshot(
@@ -26,9 +56,10 @@ func NewNetworkFromSnapshot(
 	rootDir string,
 	snapshotsDir string,
 	binaryPath string,
-	buildDir string,
+	pluginDir string,
 	chainConfigs map[string]string,
 	upgradeConfigs map[string]string,
+	subnetConfigs map[string]string,
 	flags map[string]interface{},
 	reassignPortsIfUsed bool,
 ) (network.Network, error) {
@@ -48,7 +79,16 @@ func NewNetworkFromSnapshot(
 	if err != nil {
 		return net, err
 	}
-	err = net.loadSnapshot(context.Background(), snapshotName, binaryPath, buildDir, chainConfigs, upgradeConfigs, flags)
+	err = net.loadSnapshot(
+		context.Background(),
+		snapshotName,
+		binaryPath,
+		pluginDir,
+		chainConfigs,
+		upgradeConfigs,
+		subnetConfigs,
+		flags,
+	)
 	return net, err
 }
 
@@ -71,7 +111,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 	}
 	// keep copy of node info that will be removed by stop
 	nodesConfig := map[string]node.Config{}
-	nodesDbDir := map[string]string{}
+	nodesDBDir := map[string]string{}
 	for nodeName, node := range ln.nodes {
 		nodeConfig := node.config
 		// depending on how the user generated the config, different nodes config flags
@@ -82,7 +122,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		}
 		nodeConfig.Flags = nodeConfigFlags
 		nodesConfig[nodeName] = nodeConfig
-		nodesDbDir[nodeName] = node.GetDbDir()
+		nodesDBDir[nodeName] = node.GetDbDir()
 	}
 	// we change nodeConfig.Flags so as to preserve in snapshot the current node ports
 	for nodeName, nodeConfig := range nodesConfig {
@@ -112,20 +152,20 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		return "", err
 	}
 	// create main snapshot dirs
-	snapshotDbDir := filepath.Join(filepath.Join(snapshotDir, defaultDbSubdir))
-	err = os.MkdirAll(snapshotDbDir, os.ModePerm)
+	snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
+	err = os.MkdirAll(snapshotDBDir, os.ModePerm)
 	if err != nil {
 		return "", err
 	}
 	// save db
 	for _, nodeConfig := range nodesConfig {
-		sourceDbDir, ok := nodesDbDir[nodeConfig.Name]
+		sourceDBDir, ok := nodesDBDir[nodeConfig.Name]
 		if !ok {
 			return "", fmt.Errorf("failure obtaining db path for node %q", nodeConfig.Name)
 		}
-		sourceDbDir = filepath.Join(sourceDbDir, constants.NetworkName(ln.networkID))
-		targetDbDir := filepath.Join(filepath.Join(snapshotDbDir, nodeConfig.Name), constants.NetworkName(ln.networkID))
-		if err := dircopy.Copy(sourceDbDir, targetDbDir); err != nil {
+		sourceDBDir = filepath.Join(sourceDBDir, constants.NetworkName(ln.networkID))
+		targetDBDir := filepath.Join(filepath.Join(snapshotDBDir, nodeConfig.Name), constants.NetworkName(ln.networkID))
+		if err := dircopy.Copy(sourceDBDir, targetDBDir); err != nil {
 			return "", fmt.Errorf("failure saving node %q db dir: %w", nodeConfig.Name, err)
 		}
 	}
@@ -137,6 +177,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		BinaryPath:         ln.binaryPath,
 		ChainConfigFiles:   ln.chainConfigFiles,
 		UpgradeConfigFiles: ln.upgradeConfigFiles,
+		SubnetConfigFiles:  ln.subnetConfigFiles,
 	}
 
 	for _, nodeConfig := range nodesConfig {
@@ -159,15 +200,16 @@ func (ln *localNetwork) loadSnapshot(
 	ctx context.Context,
 	snapshotName string,
 	binaryPath string,
-	buildDir string,
+	pluginDir string,
 	chainConfigs map[string]string,
 	upgradeConfigs map[string]string,
+	subnetConfigs map[string]string,
 	flags map[string]interface{},
 ) error {
 	ln.lock.Lock()
 	defer ln.lock.Unlock()
 	snapshotDir := filepath.Join(ln.snapshotsDir, snapshotPrefix+snapshotName)
-	snapshotDbDir := filepath.Join(filepath.Join(snapshotDir, defaultDbSubdir))
+	snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
 	_, err := os.Stat(snapshotDir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -186,6 +228,15 @@ func (ln *localNetwork) loadSnapshot(
 	if err != nil {
 		return fmt.Errorf("failure unmarshaling network config from snapshot: %w", err)
 	}
+	// fix deprecated avago flags
+	if err := fixDeprecatedAvagoFlags(networkConfig.Flags); err != nil {
+		return err
+	}
+	for i := range networkConfig.NodeConfigs {
+		if err := fixDeprecatedAvagoFlags(networkConfig.NodeConfigs[i].Flags); err != nil {
+			return err
+		}
+	}
 	// add flags
 	for i := range networkConfig.NodeConfigs {
 		for k, v := range flags {
@@ -194,12 +245,12 @@ func (ln *localNetwork) loadSnapshot(
 	}
 	// load db
 	for _, nodeConfig := range networkConfig.NodeConfigs {
-		sourceDbDir := filepath.Join(snapshotDbDir, nodeConfig.Name)
-		targetDbDir := filepath.Join(filepath.Join(ln.rootDir, nodeConfig.Name), defaultDbSubdir)
-		if err := dircopy.Copy(sourceDbDir, targetDbDir); err != nil {
+		sourceDBDir := filepath.Join(snapshotDBDir, nodeConfig.Name)
+		targetDBDir := filepath.Join(filepath.Join(ln.rootDir, nodeConfig.Name), defaultDBSubdir)
+		if err := dircopy.Copy(sourceDBDir, targetDBDir); err != nil {
 			return fmt.Errorf("failure loading node %q db dir: %w", nodeConfig.Name, err)
 		}
-		nodeConfig.Flags[config.DBPathKey] = targetDbDir
+		nodeConfig.Flags[config.DBPathKey] = targetDBDir
 	}
 	// replace binary path
 	if binaryPath != "" {
@@ -207,10 +258,10 @@ func (ln *localNetwork) loadSnapshot(
 			networkConfig.NodeConfigs[i].BinaryPath = binaryPath
 		}
 	}
-	// replace build dir
-	if buildDir != "" {
+	// replace plugin dir
+	if pluginDir != "" {
 		for i := range networkConfig.NodeConfigs {
-			networkConfig.NodeConfigs[i].Flags[config.BuildDirKey] = buildDir
+			networkConfig.NodeConfigs[i].Flags[config.PluginDirKey] = pluginDir
 		}
 	}
 	// add chain configs and upgrade configs
@@ -221,11 +272,17 @@ func (ln *localNetwork) loadSnapshot(
 		if networkConfig.NodeConfigs[i].UpgradeConfigFiles == nil {
 			networkConfig.NodeConfigs[i].UpgradeConfigFiles = map[string]string{}
 		}
+		if networkConfig.NodeConfigs[i].SubnetConfigFiles == nil {
+			networkConfig.NodeConfigs[i].SubnetConfigFiles = map[string]string{}
+		}
 		for k, v := range chainConfigs {
 			networkConfig.NodeConfigs[i].ChainConfigFiles[k] = v
 		}
 		for k, v := range upgradeConfigs {
 			networkConfig.NodeConfigs[i].UpgradeConfigFiles[k] = v
+		}
+		for k, v := range subnetConfigs {
+			networkConfig.NodeConfigs[i].SubnetConfigFiles[k] = v
 		}
 	}
 	return ln.loadConfig(ctx, networkConfig)

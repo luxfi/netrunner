@@ -1,24 +1,80 @@
 package local
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
+	"math"
+	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
+	"time"
 
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/luxd/config"
-	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/ava-labs/avalanchego/config"
+	"github.com/ava-labs/avalanchego/utils/logging"
 	"go.uber.org/zap"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+const (
+	maxPort          = math.MaxUint16
+	minPort          = 10000
+	netListenTimeout = 3 * time.Second
+)
+
+// isFreePort verifies a given [port] is free
+func isFreePort(port uint16) bool {
+	// Verify it's free by binding to it
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		// Could not bind to [port]. Assumed to be not free.
+		return false
+	}
+	// We could bind to [port] so must be free.
+	_ = l.Close()
+	return true
+}
+
+// getFreePort generates a random port number and then
+// verifies it is free. If it is, returns that port, otherwise retries.
+// Returns an error if no free port is found within [netListenTimeout].
+// Note that it is possible for [getFreePort] to return the same port twice.
+func getFreePort() (uint16, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), netListenTimeout)
+	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+			// Generate random port in [minPort, maxPort]
+			port := uint16(rand.Intn(maxPort-minPort+1) + minPort) //nolint
+			if !isFreePort(port) {
+				// Not free. Try another.
+				continue
+			}
+			return port, nil
+		}
+	}
+}
+
 // writeFiles writes the files a node needs on startup.
 // It returns flags used to point to those files.
-func writeFiles(genesis []byte, nodeRootDir string, nodeConfig *node.Config) ([]string, error) {
+func writeFiles(genesis []byte, nodeRootDir string, nodeConfig *node.Config) (map[string]string, error) {
 	type file struct {
 		pathKey   string
 		flagValue string
 		path      string
 		contents  []byte
+	}
+	decodedStakingSigningKey, err := base64.StdEncoding.DecodeString(nodeConfig.StakingSigningKey)
+	if err != nil {
+		return nil, err
 	}
 	files := []file{
 		{
@@ -32,6 +88,12 @@ func writeFiles(genesis []byte, nodeRootDir string, nodeConfig *node.Config) ([]
 			path:      filepath.Join(nodeRootDir, stakingCertFileName),
 			pathKey:   config.StakingCertPathKey,
 			contents:  []byte(nodeConfig.StakingCert),
+		},
+		{
+			flagValue: filepath.Join(nodeRootDir, stakingSigningKeyFileName),
+			path:      filepath.Join(nodeRootDir, stakingSigningKeyFileName),
+			pathKey:   config.StakingSignerKeyPathKey,
+			contents:  decodedStakingSigningKey,
 		},
 		{
 			flagValue: filepath.Join(nodeRootDir, genesisFileName),
@@ -48,28 +110,44 @@ func writeFiles(genesis []byte, nodeRootDir string, nodeConfig *node.Config) ([]
 			contents:  []byte(nodeConfig.ConfigFile),
 		})
 	}
-	flags := []string{}
+	flags := map[string]string{}
 	for _, f := range files {
-		flags = append(flags, fmt.Sprintf("--%s=%s", f.pathKey, f.flagValue))
+		flags[f.pathKey] = f.flagValue
 		if err := createFileAndWrite(f.path, f.contents); err != nil {
 			return nil, fmt.Errorf("couldn't write file at %q: %w", f.path, err)
 		}
 	}
-	if nodeConfig.ChainConfigFiles != nil || nodeConfig.UpgradeConfigFiles != nil {
-		// only one flag and multiple files
-		chainConfigDir := filepath.Join(nodeRootDir, chainConfigSubDir)
-		flags = append(flags, fmt.Sprintf("--%s=%s", config.ChainConfigDirKey, chainConfigDir))
-		for chainAlias, chainConfigFile := range nodeConfig.ChainConfigFiles {
-			chainConfigPath := filepath.Join(chainConfigDir, chainAlias, configFileName)
-			if err := createFileAndWrite(chainConfigPath, []byte(chainConfigFile)); err != nil {
-				return nil, fmt.Errorf("couldn't write file at %q: %w", chainConfigPath, err)
-			}
+	// chain configs dir
+	chainConfigDir := filepath.Join(nodeRootDir, chainConfigSubDir)
+	if err := os.MkdirAll(chainConfigDir, 0o750); err != nil {
+		return nil, err
+	}
+	flags[config.ChainConfigDirKey] = chainConfigDir
+	// subnet configs dir
+	subnetConfigDir := filepath.Join(nodeRootDir, subnetConfigSubDir)
+	if err := os.MkdirAll(subnetConfigDir, 0o750); err != nil {
+		return nil, err
+	}
+	flags[config.SubnetConfigDirKey] = subnetConfigDir
+	// chain configs
+	for chainAlias, chainConfigFile := range nodeConfig.ChainConfigFiles {
+		chainConfigPath := filepath.Join(chainConfigDir, chainAlias, configFileName)
+		if err := createFileAndWrite(chainConfigPath, []byte(chainConfigFile)); err != nil {
+			return nil, fmt.Errorf("couldn't write file at %q: %w", chainConfigPath, err)
 		}
-		for chainAlias, chainUpgradeFile := range nodeConfig.UpgradeConfigFiles {
-			chainUpgradePath := filepath.Join(chainConfigDir, chainAlias, upgradeConfigFileName)
-			if err := createFileAndWrite(chainUpgradePath, []byte(chainUpgradeFile)); err != nil {
-				return nil, fmt.Errorf("couldn't write file at %q: %w", chainUpgradePath, err)
-			}
+	}
+	// network upgrades
+	for chainAlias, chainUpgradeFile := range nodeConfig.UpgradeConfigFiles {
+		chainUpgradePath := filepath.Join(chainConfigDir, chainAlias, upgradeConfigFileName)
+		if err := createFileAndWrite(chainUpgradePath, []byte(chainUpgradeFile)); err != nil {
+			return nil, fmt.Errorf("couldn't write file at %q: %w", chainUpgradePath, err)
+		}
+	}
+	// subnet configs
+	for subnetID, subnetConfigFile := range nodeConfig.SubnetConfigFiles {
+		subnetConfigPath := filepath.Join(subnetConfigDir, subnetID+".json")
+		if err := createFileAndWrite(subnetConfigPath, []byte(subnetConfigFile)); err != nil {
+			return nil, fmt.Errorf("couldn't write file at %q: %w", subnetConfigPath, err)
 		}
 	}
 	return flags, nil
@@ -107,19 +185,20 @@ func getPort(
 	reassignIfUsed bool,
 ) (port uint16, err error) {
 	if portIntf, ok := flags[portKey]; ok {
-		if portFromFlags, ok := portIntf.(int); ok {
-			port = uint16(portFromFlags)
-		} else if portFromFlags, ok := portIntf.(float64); ok {
-			port = uint16(portFromFlags)
-		} else {
+		switch gotPort := portIntf.(type) {
+		case int:
+			port = uint16(gotPort)
+		case float64:
+			port = uint16(gotPort)
+		default:
 			return 0, fmt.Errorf("expected flag %q to be int/float64 but got %T", portKey, portIntf)
 		}
 	} else if portIntf, ok := configFile[portKey]; ok {
-		if portFromConfigFile, ok := portIntf.(float64); ok {
-			port = uint16(portFromConfigFile)
-		} else {
+		portFromConfigFile, ok := portIntf.(float64)
+		if !ok {
 			return 0, fmt.Errorf("expected flag %q to be float64 but got %T", portKey, portIntf)
 		}
+		port = uint16(portFromConfigFile)
 	} else {
 		// Use a random free port.
 		// Note: it is possible but unlikely for getFreePort to return the same port multiple times.
@@ -151,11 +230,10 @@ func makeNodeDir(log logging.Logger, rootDir, nodeName string) (string, error) {
 	// TODO should we do this for other directories? Profiles?
 	nodeRootDir := getNodeDir(rootDir, nodeName)
 	if err := os.Mkdir(nodeRootDir, 0o755); err != nil {
-		if os.IsExist(err) {
-			log.Warn("node root directory already exists", zap.String("root-dir", nodeRootDir))
-		} else {
+		if !os.IsExist(err) {
 			return "", fmt.Errorf("error creating temp dir %w", err)
 		}
+		log.Warn("node root directory already exists", zap.String("root-dir", nodeRootDir))
 	}
 	return nodeRootDir, nil
 }

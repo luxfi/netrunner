@@ -6,26 +6,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"path/filepath"
 	"time"
 
-	"github.com/luxdefi/luxd/ids"
-	"github.com/luxdefi/luxd/message"
-	"github.com/luxdefi/luxd/network/peer"
-	"github.com/luxdefi/luxd/network/throttling"
-	"github.com/luxdefi/luxd/snow/networking/router"
-	"github.com/luxdefi/luxd/snow/networking/tracker"
-	"github.com/luxdefi/luxd/snow/validators"
-	"github.com/luxdefi/luxd/staking"
-	"github.com/luxdefi/luxd/utils/constants"
-	"github.com/luxdefi/luxd/utils/ips"
-	"github.com/luxdefi/luxd/utils/logging"
-	"github.com/luxdefi/luxd/utils/math/meter"
-	"github.com/luxdefi/luxd/utils/resource"
-	"github.com/luxdefi/luxd/version"
-	"github.com/luxdefi/netrunner/api"
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/ava-labs/avalanche-network-runner/api"
+	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/ava-labs/avalanche-network-runner/network/node/status"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/message"
+	"github.com/ava-labs/avalanchego/network/peer"
+	"github.com/ava-labs/avalanchego/network/throttling"
+	"github.com/ava-labs/avalanchego/snow/networking/router"
+	"github.com/ava-labs/avalanchego/snow/networking/tracker"
+	"github.com/ava-labs/avalanchego/snow/validators"
+	"github.com/ava-labs/avalanchego/staking"
+	"github.com/ava-labs/avalanchego/utils/constants"
+	"github.com/ava-labs/avalanchego/utils/ips"
+	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/ava-labs/avalanchego/utils/math/meter"
+	"github.com/ava-labs/avalanchego/utils/resource"
+	"github.com/ava-labs/avalanchego/utils/set"
+	"github.com/ava-labs/avalanchego/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,11 +42,11 @@ const (
 	peerStartWaitTimeout        = 30 * time.Second
 )
 
-// Gives access to basic node info, and to most network apis
+// Gives access to basic node info, and to most avalanchego apis
 type localNode struct {
 	// Must be unique across all nodes in this network.
 	name string
-	// [nodeID] is this node's Node ID.
+	// [nodeID] is this node's Avalannche Node ID.
 	// Set in network.AddNode
 	nodeID ids.NodeID
 	// The ID of the network this node exists in
@@ -65,8 +65,8 @@ type localNode struct {
 	dbDir string
 	// The logs dir of the node
 	logsDir string
-	// The build dir of the node
-	buildDir string
+	// The plugin dir of the node
+	pluginDir string
 	// The node config
 	config node.Config
 	// The node httpHost
@@ -101,15 +101,6 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	if err != nil {
 		return nil, err
 	}
-	mcProto, err := message.NewCreatorWithProto(
-		prometheus.NewRegistry(),
-		"",
-		true,
-		10*time.Second,
-	)
-	if err != nil {
-		return nil, err
-	}
 
 	metrics, err := peer.NewMetrics(
 		logging.NoLog{},
@@ -118,10 +109,6 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	)
 	if err != nil {
 		return nil, err
-	}
-	ip := ips.IPPort{
-		IP:   net.IPv6zero,
-		Port: 0,
 	}
 	resourceTracker, err := tracker.NewResourceTracker(
 		prometheus.NewRegistry(),
@@ -132,30 +119,24 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	if err != nil {
 		return nil, err
 	}
+	signerIP := ips.NewDynamicIPPort(net.IPv6zero, 0)
+	tls := tlsCert.PrivateKey.(crypto.Signer)
 	config := &peer.Config{
-		Metrics:                 metrics,
-		MessageCreator:          mc,
-		MessageCreatorWithProto: mcProto,
-		Log:                     logging.NoLog{},
-		InboundMsgThrottler:     throttling.NewNoInboundThrottler(),
-		Network: peer.NewTestNetwork(
-			mc,
-			node.networkID,
-			ip,
-			version.CurrentApp,
-			tlsCert.PrivateKey.(crypto.Signer),
-			ids.Set{},
-			100,
-		),
+		Metrics:              metrics,
+		MessageCreator:       mc,
+		Log:                  logging.NoLog{},
+		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
+		Network:              peer.TestNetwork,
 		Router:               router,
 		VersionCompatibility: version.GetCompatibility(node.networkID),
-		MySubnets:            ids.Set{},
+		MySubnets:            set.Set[ids.ID]{},
 		Beacons:              validators.NewSet(),
 		NetworkID:            node.networkID,
 		PingFrequency:        constants.DefaultPingFrequency,
 		PongTimeout:          constants.DefaultPingPongTimeout,
 		MaxClockDifference:   time.Minute,
 		ResourceTracker:      resourceTracker,
+		IPSigner:             peer.NewIPSigner(signerIP, tls),
 	}
 	_, conn, cert, err := clientUpgrader.Upgrade(conn)
 	if err != nil {
@@ -189,7 +170,7 @@ func (node *localNode) SendOutboundMessage(ctx context.Context, peerID string, c
 	if !ok {
 		return false, fmt.Errorf("peer with ID %s is not attached here", peerID)
 	}
-	msg := message.NewTestMsg(message.Op(op), content, false)
+	msg := NewTestMsg(message.Op(op), content, false)
 	return attachedPeer.Send(ctx, msg), nil
 }
 
@@ -236,15 +217,13 @@ func (node *localNode) GetBinaryPath() string {
 }
 
 // See node.Node
-func (node *localNode) GetBuildDir() string {
-	if node.buildDir == "" {
-		return filepath.Dir(node.GetBinaryPath())
-	}
-	return node.buildDir
+func (node *localNode) GetPluginDir() string {
+	return node.pluginDir
 }
 
 // See node.Node
-func (node *localNode) GetDbDir() string {
+// TODO rename method so linter doesn't complain.
+func (node *localNode) GetDbDir() string { //nolint
 	return node.dbDir
 }
 

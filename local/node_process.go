@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/netrunner/network/node/status"
-	"github.com/luxdefi/netrunner/utils"
-	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/ava-labs/avalanche-network-runner/network/node/status"
+	"github.com/ava-labs/avalanche-network-runner/utils"
+	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/shirou/gopsutil/process"
 	"go.uber.org/zap"
 )
@@ -19,7 +19,7 @@ import (
 var _ NodeProcess = (*nodeProcess)(nil)
 
 // NodeProcess as an interface so we can mock running
-// LUX binaries in tests
+// AvalancheGo binaries in tests
 type NodeProcess interface {
 	// Sends a SIGINT to this process and returns the process's
 	// exit code.
@@ -33,6 +33,7 @@ type NodeProcess interface {
 
 // NodeProcessCreator is an interface for new node process creation
 type NodeProcessCreator interface {
+	GetNodeVersion(config node.Config) (string, error)
 	NewNodeProcess(config node.Config, args ...string) (NodeProcess, error)
 }
 
@@ -53,15 +54,15 @@ type nodeProcessCreator struct {
 // If the config has redirection set to `true` for either StdErr or StdOut,
 // the output will be redirected and colored
 func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string) (NodeProcess, error) {
-	// Start the LUX node and pass it the flags defined above
-	cmd := exec.Command(config.BinaryPath, args...)
+	// Start the AvalancheGo node and pass it the flags defined above
+	cmd := exec.Command(config.BinaryPath, args...) //nolint
 	// assign a new color to this process (might not be used if the config isn't set for it)
 	color := npc.colorPicker.NextColor()
 	// Optionally redirect stdout and stderr
 	if config.RedirectStdout {
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			return nil, fmt.Errorf("couldn't create stdout pipe: %s", err)
+			return nil, fmt.Errorf("couldn't create stdout pipe: %w", err)
 		}
 		// redirect stdout and assign a color to the text
 		utils.ColorAndPrepend(stdout, npc.stdout, config.Name, color)
@@ -69,7 +70,7 @@ func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string
 	if config.RedirectStderr {
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-			return nil, fmt.Errorf("couldn't create stderr pipe: %s", err)
+			return nil, fmt.Errorf("couldn't create stderr pipe: %w", err)
 		}
 		// redirect stderr and assign a color to the text
 		utils.ColorAndPrepend(stderr, npc.stderr, config.Name, color)
@@ -204,4 +205,14 @@ func killDescendants(pid int32, log logging.Logger) {
 			log.Warn("error killing process", zap.Int32("pid", proc.Pid), zap.Error(err))
 		}
 	}
+}
+
+// GetNodeVersion gets the version of the executable as per --version flag
+func (*nodeProcessCreator) GetNodeVersion(config node.Config) (string, error) {
+	// Start the AvalancheGo node and pass it the --version flag
+	out, err := exec.Command(config.BinaryPath, "--version").Output() //nolint
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }

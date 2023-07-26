@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/ava-labs/avalanchego/utils/logging"
 )
 
 // TestColorAssignment tests that each color assignment is different and that it "wraps"
