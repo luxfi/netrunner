@@ -3,15 +3,15 @@ set -e
 
 export RUN_E2E="true"
 # e.g.,
-# ./scripts/tests.e2e.sh 1.7.12 1.7.13
+# ./scripts/tests.e2e.sh $DEFAULT_VERSION1 $DEFAULT_VERSION2 $DEFAULT_SUBNET_EVM_VERSION
 if ! [[ "$0" =~ scripts/tests.e2e.sh ]]; then
   echo "must be run from repository root"
   exit 255
 fi
 
-DEFAULT_VERSION_1=1.9.0
-DEFAULT_VERSION_2=1.9.0
-DEFAULT_SUBNET_EVM_VERSION=0.4.0
+DEFAULT_VERSION_1=1.9.7
+DEFAULT_VERSION_2=1.9.6
+DEFAULT_SUBNET_EVM_VERSION=0.4.8
 
 if [ $# == 0 ]; then
     VERSION_1=$DEFAULT_VERSION_1
@@ -43,75 +43,78 @@ echo VERSION_1: ${VERSION_1}
 echo VERSION_2: ${VERSION_2}
 echo SUBNET_EVM_VERSION: ${SUBNET_EVM_VERSION}
 
-if [ ! -f /tmp/luxd-v${VERSION_1}/luxd ]
+if [ ! -f /tmp/avalanchego-v${VERSION_1}/avalanchego ]
 then
     ############################
-    # download luxd
-    # https://github.com/luxdefi/luxd/releases
+    # download avalanchego
+    # https://github.com/ava-labs/avalanchego/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/luxdefi/luxd/releases/download/v${VERSION_1}/luxd-linux-${GOARCH}-v${VERSION_1}.tar.gz
-    DOWNLOAD_PATH=/tmp/luxd.tar.gz
+    DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_1}/avalanchego-linux-${GOARCH}-v${VERSION_1}.tar.gz
+    DOWNLOAD_PATH=/tmp/avalanchego.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxdefi/luxd/releases/download/v${VERSION_1}/luxd-macos-v${VERSION_1}.zip
-      DOWNLOAD_PATH=/tmp/luxd.zip
+      DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_1}/avalanchego-macos-v${VERSION_1}.zip
+      DOWNLOAD_PATH=/tmp/avalanchego.zip
     fi
 
-    rm -rf /tmp/luxd-v${VERSION_1}
-    rm -rf /tmp/luxd-build
+    rm -rf /tmp/avalanchego-v${VERSION_1}
+    rm -rf /tmp/avalanchego-build
     rm -f ${DOWNLOAD_PATH}
 
-    echo "downloading luxd ${VERSION_1} at ${DOWNLOAD_URL}"
+    echo "downloading avalanchego ${VERSION_1} at ${DOWNLOAD_URL}"
     curl -L ${DOWNLOAD_URL} -o ${DOWNLOAD_PATH}
 
-    echo "extracting downloaded luxd"
+    echo "extracting downloaded avalanchego"
     if [[ ${GOOS} == "linux" ]]; then
       tar xzvf ${DOWNLOAD_PATH} -C /tmp
     elif [[ ${GOOS} == "darwin" ]]; then
-      unzip ${DOWNLOAD_PATH} -d /tmp/luxd-build
-      mv /tmp/luxd-build/build /tmp/luxd-v${VERSION_1}
+      unzip ${DOWNLOAD_PATH} -d /tmp/avalanchego-build
+      mv /tmp/avalanchego-build/build /tmp/avalanchego-v${VERSION_1}
     fi
-    find /tmp/luxd-v${VERSION_1}
+    find /tmp/avalanchego-v${VERSION_1}
 fi
 
-if [ ! -f /tmp/luxd-v${VERSION_2}/luxd ]
+if [ ! -f /tmp/avalanchego-v${VERSION_2}/avalanchego ]
 then
     ############################
-    # download luxd
-    # https://github.com/luxdefi/luxd/releases
-    DOWNLOAD_URL=https://github.com/luxdefi/luxd/releases/download/v${VERSION_2}/luxd-linux-${GOARCH}-v${VERSION_2}.tar.gz
+    # download avalanchego
+    # https://github.com/ava-labs/avalanchego/releases
+    GOARCH=$(go env GOARCH)
+    GOOS=$(go env GOOS)
+    DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_2}/avalanchego-linux-${GOARCH}-v${VERSION_2}.tar.gz
+    DOWNLOAD_PATH=/tmp/avalanchego.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxdefi/luxd/releases/download/v${VERSION_2}/luxd-macos-v${VERSION_2}.zip
-      DOWNLOAD_PATH=/tmp/luxd.zip
+      DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_2}/avalanchego-macos-v${VERSION_2}.zip
+      DOWNLOAD_PATH=/tmp/avalanchego.zip
     fi
 
-    rm -rf /tmp/luxd-v${VERSION_2}
-    rm -rf /tmp/luxd-build
+    rm -rf /tmp/avalanchego-v${VERSION_2}
+    rm -rf /tmp/avalanchego-build
     rm -f ${DOWNLOAD_PATH}
 
-    echo "downloading luxd ${VERSION_2} at ${DOWNLOAD_URL}"
+    echo "downloading avalanchego ${VERSION_2} at ${DOWNLOAD_URL}"
     curl -L ${DOWNLOAD_URL} -o ${DOWNLOAD_PATH}
 
-    echo "extracting downloaded luxd"
+    echo "extracting downloaded avalanchego"
     if [[ ${GOOS} == "linux" ]]; then
       tar xzvf ${DOWNLOAD_PATH} -C /tmp
     elif [[ ${GOOS} == "darwin" ]]; then
-      unzip ${DOWNLOAD_PATH} -d /tmp/luxd-build
-      mv /tmp/luxd-build/build /tmp/luxd-v${VERSION_2}
+      unzip ${DOWNLOAD_PATH} -d /tmp/avalanchego-build
+      mv /tmp/avalanchego-build/build /tmp/avalanchego-v${VERSION_2}
     fi
-    find /tmp/luxd-v${VERSION_2}
+    find /tmp/avalanchego-v${VERSION_2}
 fi
 
 if [ ! -f /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm ]
 then
     ############################
     # download subnet-evm 
-    # https://github.com/luxdefi/subnet-evm/releases
+    # https://github.com/ava-labs/subnet-evm/releases
     GOARCH=$(go env GOARCH)
-    DOWNLOAD_URL=https://github.com/luxdefi/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_linux_${GOARCH}.tar.gz
+    DOWNLOAD_URL=https://github.com/ava-labs/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_linux_${GOARCH}.tar.gz
     DOWNLOAD_PATH=/tmp/subnet-evm.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxdefi/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_darwin_${GOARCH}.tar.gz
+      DOWNLOAD_URL=https://github.com/ava-labs/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_darwin_${GOARCH}.tar.gz
     fi
 
     rm -rf /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
@@ -124,7 +127,8 @@ then
     mkdir /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
     tar xzvf ${DOWNLOAD_PATH} -C /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
     # NOTE: We are copying the subnet-evm binary here to a plugin hardcoded as srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy which corresponds to the VM name `subnetevm` used as such in the test
-    cp /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm /tmp/luxd-v${VERSION_2}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
+    mkdir -p /tmp/avalanchego-v${VERSION_1}/plugins/
+    cp /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm /tmp/avalanchego-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
     find /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm
 fi
 ############################
@@ -143,13 +147,13 @@ go install -v github.com/onsi/ginkgo/v2/ginkgo@v2.1.3
 ACK_GINKGO_RC=true ginkgo build ./tests/e2e
 ./tests/e2e/e2e.test --help
 
-snapshots_dir=/tmp/netrunner-snapshots-e2e/
+snapshots_dir=/tmp/avalanche-network-runner-snapshots-e2e/
 rm -rf $snapshots_dir
 
-killall network.runner || echo
+killall avalanche-network-runner || true
 
 echo "launch local test cluster in the background"
-bin/netrunner \
+bin/avalanche-network-runner \
 server \
 --log-level debug \
 --port=":8080" \
@@ -158,15 +162,20 @@ server \
 #--disable-nodes-output \
 PID=${!}
 
+function cleanup()
+{
+  echo "shutting down network runner"
+  kill ${PID}
+}
+trap cleanup EXIT
+
 echo "running e2e tests"
 ./tests/e2e/e2e.test \
 --ginkgo.v \
+--ginkgo.fail-fast \
 --log-level debug \
 --grpc-endpoint="0.0.0.0:8080" \
 --grpc-gateway-endpoint="0.0.0.0:8081" \
---luxd-path-1=/tmp/luxd-v${VERSION_1}/luxd \
---luxd-path-2=/tmp/luxd-v${VERSION_2}/luxd \
---subnet-evm-path=/tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm || (kill ${PID}; exit)
-
-kill ${PID}
-echo "ALL SUCCESS!"
+--avalanchego-path-1=/tmp/avalanchego-v${VERSION_1}/avalanchego \
+--avalanchego-path-2=/tmp/avalanchego-v${VERSION_2}/avalanchego \
+--subnet-evm-path=/tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm

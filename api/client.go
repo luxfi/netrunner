@@ -1,19 +1,19 @@
 package api
 
 import (
-	"github.com/luxdefi/luxd/api/admin"
-	"github.com/luxdefi/luxd/api/health"
-	"github.com/luxdefi/luxd/api/info"
-	"github.com/luxdefi/luxd/api/ipcs"
-	"github.com/luxdefi/luxd/api/keystore"
-	"github.com/luxdefi/luxd/indexer"
-	"github.com/luxdefi/luxd/vms/avm"
-	"github.com/luxdefi/luxd/vms/platformvm"
-	"github.com/luxdefi/coreth/plugin/evm"
+	"github.com/ava-labs/avalanchego/api/admin"
+	"github.com/ava-labs/avalanchego/api/health"
+	"github.com/ava-labs/avalanchego/api/info"
+	"github.com/ava-labs/avalanchego/api/ipcs"
+	"github.com/ava-labs/avalanchego/api/keystore"
+	"github.com/ava-labs/avalanchego/indexer"
+	"github.com/ava-labs/avalanchego/vms/avm"
+	"github.com/ava-labs/avalanchego/vms/platformvm"
+	"github.com/ava-labs/coreth/plugin/evm"
 )
 
 // Issues API calls to a node
-// TODO: byzantine api. check if appropiate. improve implementation.
+// TODO: byzantine api. check if appropriate. improve implementation.
 type Client interface {
 	PChainAPI() platformvm.Client
 	XChainAPI() avm.Client

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/luxdefi/netrunner/network/node"
+	"github.com/ava-labs/avalanche-network-runner/network/node"
 )
 
 var (
@@ -14,14 +14,17 @@ var (
 )
 
 type BlockchainSpec struct {
-	VmName         string
-	Genesis        []byte
-	SubnetId       *string
-	ChainConfig    []byte
-	NetworkUpgrade []byte
+	VMName             string
+	Genesis            []byte
+	SubnetID           *string
+	ChainConfig        []byte
+	NetworkUpgrade     []byte
+	SubnetConfig       []byte
+	BlockchainAlias    string
+	PerNodeChainConfig map[string][]byte
 }
 
-// Network is an abstraction of an LUX network
+// Network is an abstraction of an Avalanche network
 type Network interface {
 	// Returns nil if all the nodes in the network are healthy.
 	// A stopped network is considered unhealthy.
@@ -54,9 +57,10 @@ type Network interface {
 	RemoveSnapshot(string) error
 	// Get name of available snapshots
 	GetSnapshotNames() ([]string, error)
-	// Restart a given node using the same config, optionally changing binary path,
-	// whitelisted subnets, a map of chain configs, and a map of upgrade configs
-	RestartNode(context.Context, string, string, string, map[string]string, map[string]string) error
+	// Restart a given node using the same config, optionally changing binary path, plugin dir,
+	// track subnets, a map of chain configs, a map of upgrade configs, and
+	// a map of subnet configs
+	RestartNode(context.Context, string, string, string, string, map[string]string, map[string]string, map[string]string) error
 	// Create the specified blockchains
 	CreateBlockchains(context.Context, []BlockchainSpec) error
 	// Create the given numbers of subnets

@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/luxdefi/luxd/ids"
-	"github.com/luxdefi/luxd/staking"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/staking"
 )
 
 const (
@@ -44,8 +44,8 @@ func NetworkIDFromGenesis(genesis []byte) (uint32, error) {
 }
 
 var (
-	ErrInvalidExecPath        = errors.New("LUX exec is invalid")
-	ErrNotExists              = errors.New("LUX exec not exists")
+	ErrInvalidExecPath        = errors.New("avalanche exec is invalid")
+	ErrNotExists              = errors.New("avalanche exec not exists")
 	ErrNotExistsPlugin        = errors.New("plugin exec not exists")
 	ErrNotExistsPluginGenesis = errors.New("plugin genesis not exists")
 )

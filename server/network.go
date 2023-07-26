@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Lux Partners Limited. All rights reserved.
+// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package server
@@ -11,15 +11,15 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/luxdefi/netrunner/local"
-	"github.com/luxdefi/netrunner/network"
-	"github.com/luxdefi/netrunner/rpcpb"
-	"github.com/luxdefi/netrunner/utils/constants"
-	"github.com/luxdefi/netrunner/ux"
-	"github.com/luxdefi/luxd/config"
-	"github.com/luxdefi/luxd/ids"
-	avago_constants "github.com/luxdefi/luxd/utils/constants"
-	"github.com/luxdefi/luxd/utils/logging"
+	"github.com/ava-labs/avalanche-network-runner/local"
+	"github.com/ava-labs/avalanche-network-runner/network"
+	"github.com/ava-labs/avalanche-network-runner/rpcpb"
+	"github.com/ava-labs/avalanche-network-runner/utils/constants"
+	"github.com/ava-labs/avalanche-network-runner/ux"
+	"github.com/ava-labs/avalanchego/config"
+	"github.com/ava-labs/avalanchego/ids"
+	avago_constants "github.com/ava-labs/avalanchego/utils/constants"
+	"github.com/ava-labs/avalanchego/utils/logging"
 )
 
 type localNetwork struct {
@@ -41,8 +41,6 @@ type localNetwork struct {
 	// map from blockchain ID to blockchain info
 	customChainIDToInfo map[ids.ID]chainInfo
 
-	customChainRestartMu *sync.RWMutex
-
 	stopCh         chan struct{}
 	startDoneCh    chan struct{}
 	startErrCh     chan error
@@ -63,7 +61,7 @@ type localNetworkOptions struct {
 	execPath            string
 	rootDataDir         string
 	numNodes            uint32
-	whitelistedSubnets  string
+	trackSubnets        string
 	redirectNodesOutput bool
 	globalNodeConfig    string
 
@@ -74,9 +72,8 @@ type localNetworkOptions struct {
 	chainConfigs map[string]string
 	// upgrade configs to be added to the network, besides the ones in default config, or saved snapshot
 	upgradeConfigs map[string]string
-
-	// to block racey restart while installing custom chains
-	restartMu *sync.RWMutex
+	// subnet configs to be added to the network, besides the ones in default config, or saved snapshot
+	subnetConfigs map[string]string
 
 	snapshotsDir string
 
@@ -89,7 +86,8 @@ type localNetworkOptions struct {
 
 func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 	lcfg := logging.Config{
-		LogLevel: opts.logLevel,
+		LogLevel:     opts.logLevel,
+		DisplayLevel: opts.logLevel,
 	}
 	lcfg.Directory = opts.rootDataDir
 	logFactory := logging.NewFactory(lcfg)
@@ -107,8 +105,7 @@ func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 
 		options: opts,
 
-		customChainIDToInfo:  make(map[ids.ID]chainInfo),
-		customChainRestartMu: opts.restartMu,
+		customChainIDToInfo: make(map[ids.ID]chainInfo),
 
 		stopCh:      make(chan struct{}),
 		startDoneCh: make(chan struct{}),
@@ -138,6 +135,10 @@ func (lc *localNetwork) createConfig() error {
 		cfg.Flags[k] = v
 	}
 
+	if lc.pluginDir != "" {
+		cfg.Flags[config.PluginDirKey] = lc.pluginDir
+	}
+
 	for i := range cfg.NodeConfigs {
 		// NOTE: Naming convention for node names is currently `node` + number, i.e. `node1,node2,node3,...node101`
 		nodeName := fmt.Sprintf("node%d", i+1)
@@ -153,15 +154,12 @@ func (lc *localNetwork) createConfig() error {
 		for k, v := range lc.options.upgradeConfigs {
 			cfg.NodeConfigs[i].UpgradeConfigFiles[k] = v
 		}
+		for k, v := range lc.options.subnetConfigs {
+			cfg.NodeConfigs[i].SubnetConfigFiles[k] = v
+		}
 
 		if cfg.NodeConfigs[i].Flags == nil {
 			cfg.NodeConfigs[i].Flags = map[string]interface{}{}
-		}
-
-		// luxd expects buildDir (parent dir of pluginDir) to be provided at cmdline
-		buildDir, err := getBuildDir(lc.execPath, lc.pluginDir)
-		if err != nil {
-			return err
 		}
 
 		if lc.options.dynamicPorts {
@@ -172,11 +170,9 @@ func (lc *localNetwork) createConfig() error {
 
 		cfg.NodeConfigs[i].Flags[config.LogsDirKey] = logDir
 		cfg.NodeConfigs[i].Flags[config.DBPathKey] = dbDir
-		if buildDir != "" {
-			cfg.NodeConfigs[i].Flags[config.BuildDirKey] = buildDir
-		}
-		if lc.options.whitelistedSubnets != "" {
-			cfg.NodeConfigs[i].Flags[config.WhitelistedSubnetsKey] = lc.options.whitelistedSubnets
+
+		if lc.options.trackSubnets != "" {
+			cfg.NodeConfigs[i].Flags[config.TrackSubnetsKey] = lc.options.trackSubnets
 		}
 
 		cfg.NodeConfigs[i].BinaryPath = lc.execPath
@@ -197,24 +193,6 @@ func (lc *localNetwork) createConfig() error {
 
 	lc.cfg = cfg
 	return nil
-}
-
-// generates buildDir from pluginDir, and if not available, from execPath
-// returns error if pluginDir is non empty and invalid
-func getBuildDir(execPath string, pluginDir string) (string, error) {
-	buildDir := ""
-	if execPath != "" {
-		buildDir = filepath.Dir(execPath)
-	}
-	if pluginDir != "" {
-		pluginDir := filepath.Clean(pluginDir)
-		if filepath.Base(pluginDir) != "plugins" {
-			return "", fmt.Errorf("plugin dir %q is not named plugins", pluginDir)
-		}
-		buildDir = filepath.Dir(pluginDir)
-	}
-
-	return buildDir, nil
 }
 
 func (lc *localNetwork) start() error {
@@ -272,7 +250,7 @@ func (lc *localNetwork) createBlockchains(
 	ctx, lc.startCtxCancel = context.WithCancel(argCtx)
 
 	if len(chainSpecs) == 0 {
-		ux.Print(lc.log, logging.Orange.Wrap(logging.Bold.Wrap("custom chain not specified, skipping installation and its health checks")))
+		close(createBlockchainsReadyCh)
 		return
 	}
 
@@ -350,15 +328,10 @@ func (lc *localNetwork) createSubnets(
 }
 
 func (lc *localNetwork) loadSnapshot(
-	ctx context.Context,
+	_ context.Context,
 	snapshotName string,
 ) error {
 	ux.Print(lc.log, logging.Blue.Wrap(logging.Bold.Wrap("create and run local network from snapshot")))
-
-	buildDir, err := getBuildDir(lc.execPath, lc.pluginDir)
-	if err != nil {
-		return err
-	}
 
 	var globalNodeConfig map[string]interface{}
 	if lc.options.globalNodeConfig != "" {
@@ -373,9 +346,10 @@ func (lc *localNetwork) loadSnapshot(
 		lc.options.rootDataDir,
 		lc.options.snapshotsDir,
 		lc.execPath,
-		buildDir,
+		lc.pluginDir,
 		lc.options.chainConfigs,
 		lc.options.upgradeConfigs,
+		lc.options.subnetConfigs,
 		globalNodeConfig,
 		lc.options.reassignPortsIfUsed,
 	)
@@ -441,7 +415,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 	for _, nodeName := range lc.nodeNames {
 		nodeInfo := lc.nodeInfos[nodeName]
 		for chainID, chainInfo := range lc.customChainIDToInfo {
-			ux.Print(lc.log, logging.Blue.Wrap(logging.Bold.Wrap("[blockchain RPC for %q] \"%s/ext/bc/%s\"")), chainInfo.info.VmId, nodeInfo.GetUri(), chainID)
+			lc.log.Info(fmt.Sprintf(logging.LightBlue.Wrap("[blockchain RPC for %q] \"%s/ext/bc/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
 		}
 	}
 	return nil
@@ -456,7 +430,7 @@ func (lc *localNetwork) waitForLocalClusterReady(ctx context.Context) error {
 
 	for _, name := range lc.nodeNames {
 		nodeInfo := lc.nodeInfos[name]
-		ux.Print(lc.log, logging.Cyan.Wrap("node-info: node-name %s, node-ID: %s, URI: %s"), name, nodeInfo.Id, nodeInfo.Uri)
+		lc.log.Info(fmt.Sprintf(logging.Cyan.Wrap("node-info: node-name %s, node-ID: %s, URI: %s"), name, nodeInfo.Id, nodeInfo.Uri))
 	}
 	return nil
 }
@@ -475,14 +449,9 @@ func (lc *localNetwork) updateNodeInfo() error {
 	lc.nodeInfos = make(map[string]*rpcpb.NodeInfo)
 	for _, name := range lc.nodeNames {
 		node := nodes[name]
-		var pluginDir string
-		whitelistedSubnets, err := node.GetFlag(config.WhitelistedSubnetsKey)
+		trackSubnets, err := node.GetFlag(config.TrackSubnetsKey)
 		if err != nil {
 			return err
-		}
-		buildDir := node.GetBuildDir()
-		if buildDir != "" {
-			pluginDir = filepath.Join(buildDir, "plugins")
 		}
 
 		lc.nodeInfos[name] = &rpcpb.NodeInfo{
@@ -493,8 +462,8 @@ func (lc *localNetwork) updateNodeInfo() error {
 			LogDir:             node.GetLogsDir(),
 			DbDir:              node.GetDbDir(),
 			Config:             []byte(node.GetConfigFile()),
-			PluginDir:          pluginDir,
-			WhitelistedSubnets: whitelistedSubnets,
+			PluginDir:          node.GetPluginDir(),
+			WhitelistedSubnets: trackSubnets,
 		}
 
 		// update default exec and pluginDir if empty (snapshots started without this params)
@@ -502,7 +471,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 			lc.execPath = node.GetBinaryPath()
 		}
 		if lc.pluginDir == "" {
-			lc.pluginDir = pluginDir
+			lc.pluginDir = node.GetPluginDir()
 		}
 	}
 	return nil

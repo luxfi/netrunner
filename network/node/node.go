@@ -6,20 +6,20 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/luxdefi/netrunner/api"
-	"github.com/luxdefi/netrunner/network/node/status"
-	"github.com/luxdefi/luxd/config"
-	"github.com/luxdefi/luxd/ids"
-	"github.com/luxdefi/luxd/network/peer"
-	"github.com/luxdefi/luxd/snow/networking/router"
+	"github.com/ava-labs/avalanche-network-runner/api"
+	"github.com/ava-labs/avalanche-network-runner/network/node/status"
+	"github.com/ava-labs/avalanchego/config"
+	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/network/peer"
+	"github.com/ava-labs/avalanchego/snow/networking/router"
 )
 
-// Node represents an LUX node
+// Node represents an AvalancheGo node
 type Node interface {
 	// Return this node's name, which is unique
 	// across all the nodes in its network.
 	GetName() string
-	// Return this node's LUX node ID.
+	// Return this node's Avalanche node ID.
 	GetNodeID() ids.NodeID
 	// Return a client that can be used to make API calls.
 	GetAPIClient() api.Client
@@ -39,14 +39,14 @@ type Node interface {
 	SendOutboundMessage(ctx context.Context, peerID string, content []byte, op uint32) (bool, error)
 	// Return the state of the node process
 	Status() status.Status
-	// Return this node's luxd binary path
+	// Return this node's avalanchego binary path
 	GetBinaryPath() string
 	// Return this node's db dir
 	GetDbDir() string
 	// Return this node's logs dir
 	GetLogsDir() string
-	// Return this node's build dir
-	GetBuildDir() string
+	// Return this node's plugin dir
+	GetPluginDir() string
 	// Return this node's config file contents
 	GetConfigFile() string
 	// Return this node's config
@@ -55,7 +55,7 @@ type Node interface {
 	GetFlag(string) (string, error)
 }
 
-// Config encapsulates an luxd configuration
+// Config encapsulates an avalanchego configuration
 type Config struct {
 	// A node's name must be unique from all other nodes
 	// in a network. If Name is the empty string, a
@@ -68,12 +68,16 @@ type Config struct {
 	StakingKey string `json:"stakingKey"`
 	// Must not be nil.
 	StakingCert string `json:"stakingCert"`
+	// Must not be nil.
+	StakingSigningKey string `json:"stakingSigningKey"`
 	// May be nil.
 	ConfigFile string `json:"configFile"`
 	// May be nil.
 	ChainConfigFiles map[string]string `json:"chainConfigFiles"`
 	// May be nil.
 	UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
+	// May be nil.
+	SubnetConfigFiles map[string]string `json:"subnetConfigFiles"`
 	// Flags can hold additional flags for the node.
 	// It can be empty.
 	// The precedence of flags handling is:
