@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/ava-labs/avalanche-network-runner;rpcpb";
+option go_package = "github.com/luxdefi/netrunner;rpcpb";
 
 package rpcpb;
 
@@ -22,6 +22,13 @@ message PingResponse {
 }
 
 service ControlService {
+  rpc RPCVersion(RPCVersionRequest) returns (RPCVersionResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/rpcversion"
+      body: "*"
+    };
+  }
+
   rpc Start(StartRequest) returns (StartResponse) {
     option (google.api.http) = {
       post: "/v1/control/start"
@@ -32,6 +39,41 @@ service ControlService {
   rpc CreateBlockchains(CreateBlockchainsRequest) returns (CreateBlockchainsResponse) {
     option (google.api.http) = {
       post: "/v1/control/createblockchains"
+      body: "*"
+    };
+  }
+
+  rpc TransformElasticSubnets(TransformElasticSubnetsRequest) returns (TransformElasticSubnetsResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/transformelasticsubnets"
+      body: "*"
+    };
+  }
+
+  rpc AddPermissionlessDelegator(AddPermissionlessDelegatorRequest) returns (AddPermissionlessDelegatorResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/addpermissionlessdelegator"
+      body: "*"
+    };
+  }
+
+  rpc AddPermissionlessValidator(AddPermissionlessValidatorRequest) returns (AddPermissionlessValidatorResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/addpermissionlessvalidator"
+      body: "*"
+    };
+  }
+
+  rpc AddSubnetValidators(AddSubnetValidatorsRequest) returns (AddSubnetValidatorsResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/addsubnetvalidators"
+      body: "*"
+    };
+  }
+
+  rpc RemoveSubnetValidator(RemoveSubnetValidatorRequest) returns (RemoveSubnetValidatorResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/removesubnetvalidator"
       body: "*"
     };
   }
@@ -99,6 +141,20 @@ service ControlService {
     };
   }
 
+  rpc PauseNode(PauseNodeRequest) returns (PauseNodeResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/pausenode"
+      body: "*"
+    };
+  }
+
+  rpc ResumeNode(ResumeNodeRequest) returns (ResumeNodeResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/resumenode"
+      body: "*"
+    };
+  }
+
   rpc Stop(StopRequest) returns (StopResponse) {
     option (google.api.http) = {
       post: "/v1/control/stop"
@@ -147,6 +203,38 @@ service ControlService {
       body: "*"
     };
   }
+
+  rpc ListSubnets(ListSubnetsRequest) returns (ListSubnetsResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/listsubnets"
+      body: "*"
+    };
+  }
+
+  rpc ListBlockchains(ListBlockchainsRequest) returns (ListBlockchainsResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/listblockchains"
+      body: "*"
+    };
+  }
+
+  rpc ListRpcs(ListRpcsRequest) returns (ListRpcsResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/listrpcs"
+      body: "*"
+    };
+  }
+
+  rpc VMID(VMIDRequest) returns (VMIDResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/vmid"
+      body: "*"
+    };
+  }
+}
+
+message SubnetParticipants {
+  repeated string node_names = 1;
 }
 
 message ClusterInfo {
@@ -163,7 +251,19 @@ message ClusterInfo {
   bool custom_chains_healthy = 7;
   // The map of blockchain IDs in "ids.ID" format to its blockchain information.
   map<string, CustomChainInfo> custom_chains = 8;
-  repeated string subnets          = 9;
+  map<string, SubnetInfo> subnets          = 9;
+  uint32 network_id                         = 10;
+}
+
+message SubnetInfo {
+  // If Subnet is an Elastic Subnet
+  bool is_elastic = 1;
+
+  // TXID for the elastic subnet transform
+  string elastic_subnet_id = 2;
+
+  // node validators of subnet
+  SubnetParticipants subnet_participants = 3;
 }
 
 message CustomChainInfo {
@@ -176,7 +276,7 @@ message CustomChainInfo {
   string vm_id = 2;
 
   // Create subnet transaction ID -- subnet ID.
-  // The subnet ID must be whitelisted by the avalanche node.
+  // The subnet ID must be whitelisted by the lux node.
   string subnet_id = 3;
 
   // Create blockchain transaction ID -- blockchain ID>
@@ -193,7 +293,8 @@ message NodeInfo {
   string db_dir               = 6;
   string plugin_dir           = 7;
   string whitelisted_subnets  = 8;
-  bytes config                = 9;
+  bytes  config               = 9;
+  bool   paused               = 10;
 }
 
 message AttachedPeerInfo {
@@ -256,22 +357,123 @@ message StartRequest {
   // If specified, will create a file "subnetid.json" under subnets config dir with
   // the contents provided here.
   map<string, string> subnet_configs = 13;
+
+  // Network id to assign to the network, instead of default one
+  uint32 network_id = 14;
+}
+
+message RPCVersionRequest {}
+
+message RPCVersionResponse {
+  uint32 version = 1;
 }
 
 message StartResponse {
   ClusterInfo cluster_info = 1;
+  repeated string chain_ids = 2;
 }
+
+message SubnetSpec {
+  // if empty, assumes all nodes should be participants
+  repeated string participants = 1;
+  // either file path or file contents
+  string subnet_config = 2;
+}
+
+message ElasticSubnetSpec {
+  string subnet_id = 1;
+  string asset_name = 2;
+  string asset_symbol = 3;
+  uint64 initial_supply = 4;
+  uint64 max_supply = 5;
+  uint64 min_consumption_rate = 6;
+  uint64 max_consumption_rate = 7;
+  uint64 min_validator_stake = 8;
+  uint64 max_validator_stake = 9;
+  uint64 min_stake_duration = 10;
+  uint64 max_stake_duration = 11;
+  uint32 min_delegation_fee = 12;
+  uint64 min_delegator_stake = 13;
+  uint32 max_validator_weight_factor = 14;
+  uint32 uptime_requirement = 15;
+}
+
+message TransformElasticSubnetsRequest {
+  repeated ElasticSubnetSpec elastic_subnet_spec = 1;
+}
+
+message TransformElasticSubnetsResponse {
+  ClusterInfo cluster_info = 1;
+  repeated string tx_ids = 2;
+  repeated string asset_ids = 3;
+}
+
+message PermissionlessStakerSpec {
+  string subnet_id = 1;
+  string node_name = 2;
+  uint64 staked_token_amount = 3;
+  string asset_id = 4;
+  string start_time = 5;
+  uint64 stake_duration = 6;
+}
+
+message AddPermissionlessValidatorRequest {
+  repeated PermissionlessStakerSpec validator_spec = 1;
+}
+
+message AddPermissionlessValidatorResponse {
+  ClusterInfo cluster_info = 1;
+}
+
+message AddPermissionlessDelegatorRequest {
+  repeated PermissionlessStakerSpec validator_spec = 1;
+}
+
+message AddPermissionlessDelegatorResponse {
+  ClusterInfo cluster_info = 1;
+}
+
+message RemoveSubnetValidatorSpec {
+  string subnet_id = 1;
+  repeated string node_names = 2;
+}
+
+message RemoveSubnetValidatorRequest {
+  repeated RemoveSubnetValidatorSpec validator_spec = 1;
+}
+
+message RemoveSubnetValidatorResponse {
+  ClusterInfo cluster_info = 1;
+}
+
+message SubnetValidatorsSpec {
+  string subnet_id = 1;
+  repeated string node_names = 2;
+}
+
+message AddSubnetValidatorsRequest {
+  repeated SubnetValidatorsSpec validators_spec = 1;
+}
+
+message AddSubnetValidatorsResponse {
+  ClusterInfo cluster_info = 1;
+}
+
 
 message BlockchainSpec {
   string vm_name = 1;
+  // either file path or file contents
   string genesis = 2;
+  // either a subnet_id is given for a previously created subnet,
+  // or a subnet specification is given for a new subnet generation
   optional string subnet_id = 3;
-  // General chain config file path
-  string chain_config = 4;
-  string network_upgrade = 5;
-  string subnet_config = 6;
+  optional SubnetSpec subnet_spec = 4;
+  // General chain config, either file path or file contents
+  string chain_config = 5;
+  // either file path or file contents
+  string network_upgrade = 6;
   string blockchain_alias = 7;
-  // Per node chain config file path
+  // Per node chain config, either file path or file contents
   string per_node_chain_config = 8;
 }
 
@@ -296,14 +498,16 @@ message CreateBlockchainsRequest {
 
 message CreateBlockchainsResponse {
   ClusterInfo cluster_info = 1;
+  repeated string chain_ids = 2;
 }
 
 message CreateSubnetsRequest {
-  optional uint32 num_subnets = 1;
+  repeated SubnetSpec subnet_specs = 1;
 }
 
 message CreateSubnetsResponse {
   ClusterInfo cluster_info = 1;
+  repeated string subnet_ids = 2;
 }
 
 message HealthRequest {}
@@ -374,6 +578,22 @@ message RemoveNodeRequest {
 }
 
 message RemoveNodeResponse {
+  ClusterInfo cluster_info = 1;
+}
+
+message PauseNodeRequest {
+  string name = 1;
+}
+
+message PauseNodeResponse {
+  ClusterInfo cluster_info = 1;
+}
+
+message ResumeNodeRequest {
+  string name = 1;
+}
+
+message ResumeNodeResponse {
   ClusterInfo cluster_info = 1;
 }
 
@@ -468,3 +688,43 @@ message GetSnapshotNamesRequest {
 message GetSnapshotNamesResponse {
   repeated string snapshot_names = 1;
 }
+
+message ListSubnetsRequest {
+}
+
+message ListSubnetsResponse {
+  repeated string subnet_ids = 1;
+}
+
+message ListBlockchainsRequest {
+}
+
+message ListBlockchainsResponse {
+  repeated CustomChainInfo blockchains = 1;
+}
+
+message ListRpcsRequest {
+}
+
+message NodeRpc {
+  string node_name = 1;
+  string rpc = 2;
+}
+
+message BlockchainRpcs {
+  string blockchain_id = 1;
+  repeated NodeRpc rpcs = 2;
+}
+
+message ListRpcsResponse {
+  repeated BlockchainRpcs blockchains_rpcs = 1;
+}
+
+message VMIDRequest {
+  string vm_name = 1;
+}
+
+message VMIDResponse {
+  string vm_id = 1;
+}
+

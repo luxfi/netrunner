@@ -8,19 +8,20 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/genesis"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/formatting/address"
-	"github.com/ava-labs/avalanchego/utils/units"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/node/genesis"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/formatting/address"
+	"github.com/luxdefi/node/utils/units"
+	"golang.org/x/exp/maps"
 )
 
 var cChainConfig map[string]interface{}
 
 const (
-	validatorStake = units.MegaAvax
+	validatorStake = units.MegaLux
 )
 
 func init() {
@@ -50,6 +51,8 @@ type AddrAndBalance struct {
 type Config struct {
 	// Must not be empty
 	Genesis string `json:"genesis"`
+	// If 0, will use default network ID
+	NetworkID uint32 `json:"networkID"`
 	// May have length 0
 	// (i.e. network may have no nodes on creation.)
 	NodeConfigs []node.Config `json:"nodeConfigs"`
@@ -86,6 +89,9 @@ func (c *Config) Validate() error {
 	if err != nil {
 		return fmt.Errorf("couldn't get network ID from genesis: %w", err)
 	}
+	if c.NetworkID != 0 {
+		networkID = c.NetworkID
+	}
 
 	var someNodeIsBeacon bool
 	for i, nodeConfig := range c.NodeConfigs {
@@ -114,7 +120,7 @@ func (c *Config) Validate() error {
 // [cChainBalances] and [xChainBalances].
 // Note that many of the genesis fields (i.e. reward addresses)
 // are randomly generated or hard-coded.
-func NewAvalancheGoGenesis(
+func NewLuxGoGenesis(
 	networkID uint32,
 	xChainBalances []AddrAndBalance,
 	cChainBalances []AddrAndBalance,
@@ -142,7 +148,7 @@ func NewAvalancheGoGenesis(
 		Allocations: []genesis.UnparsedAllocation{
 			{
 				ETHAddr:       "0x0000000000000000000000000000000000000000",
-				AVAXAddr:      genesisVdrStakeAddr, // Owner doesn't matter
+				LUXAddr:       genesisVdrStakeAddr, // Owner doesn't matter
 				InitialAmount: 0,
 				UnlockSchedule: []genesis.LockedAmount{ // Provides stake to validators
 					{
@@ -164,7 +170,7 @@ func NewAvalancheGoGenesis(
 			config.Allocations,
 			genesis.UnparsedAllocation{
 				ETHAddr:       "0x0000000000000000000000000000000000000000",
-				AVAXAddr:      xChainAddr,
+				LUXAddr:       xChainAddr,
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
 					{
@@ -186,10 +192,7 @@ func NewAvalancheGoGenesis(
 		}
 	}
 	// avoid modifying original cChainConfig
-	localCChainConfig := map[string]interface{}{}
-	for k, v := range cChainConfig {
-		localCChainConfig[k] = v
-	}
+	localCChainConfig := maps.Clone(cChainConfig)
 	localCChainConfig["alloc"] = cChainAllocs
 	cChainConfigBytes, _ := json.Marshal(localCChainConfig)
 	config.CChainGenesis = string(cChainConfigBytes)
@@ -208,6 +211,6 @@ func NewAvalancheGoGenesis(
 		)
 	}
 
-	// TODO add validation (from AvalancheGo's function validateConfig?)
+	// TODO add validation (from LuxGo's function validateConfig?)
 	return json.Marshal(config)
 }

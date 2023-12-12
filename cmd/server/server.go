@@ -1,19 +1,20 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package server
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/server"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/server"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/node/utils/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -21,6 +22,8 @@ import (
 func init() {
 	cobra.EnablePrefixMatching = true
 }
+
+const serverRootDirPrefix = "server"
 
 var (
 	logLevel           string
@@ -36,7 +39,7 @@ var (
 func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server [options]",
-		Short: "Start a network runner server.",
+		Short: "Starts a network runner server.",
 		RunE:  serverFunc,
 		Args:  cobra.ExactArgs(0),
 	}
@@ -55,21 +58,30 @@ func NewCommand() *cobra.Command {
 
 func serverFunc(*cobra.Command, []string) (err error) {
 	if logDir == "" {
-		logDir, err = os.MkdirTemp("", fmt.Sprintf("anr-server-logs-%d", time.Now().Unix()))
+		anrRootDir := filepath.Join(os.TempDir(), constants.RootDirPrefix)
+		err = os.MkdirAll(anrRootDir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		serverRootDir := filepath.Join(anrRootDir, serverRootDirPrefix)
+		logDir, err = utils.MkDirWithTimestamp(serverRootDir)
 		if err != nil {
 			return err
 		}
 	}
-	lvl, err := logging.ToLevel(logLevel)
+
+	logLevel, err := logging.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
-	lcfg := logging.Config{
-		DisplayLevel: lvl,
-		LogLevel:     lvl,
-	}
-	lcfg.Directory = logDir
-	logFactory := logging.NewFactory(lcfg)
+
+	logFactory := logging.NewFactory(logging.Config{
+		RotatingWriterConfig: logging.RotatingWriterConfig{
+			Directory: logDir,
+		},
+		DisplayLevel: logLevel,
+		LogLevel:     logLevel,
+	})
 	log, err := logFactory.Make(constants.LogNameMain)
 	if err != nil {
 		return err
@@ -82,31 +94,33 @@ func serverFunc(*cobra.Command, []string) (err error) {
 		DialTimeout:         dialTimeout,
 		RedirectNodesOutput: !disableNodesOutput,
 		SnapshotsDir:        snapshotsDir,
-		LogLevel:            lvl,
+		LogLevel:            logLevel,
 	}, log)
 	if err != nil {
 		return err
 	}
 
-	rootCtx, rootCancel := context.WithCancel(context.Background())
-	errc := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errChan := make(chan error)
 	go func() {
-		errc <- s.Run(rootCtx)
+		errChan <- s.Run(ctx)
 	}()
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+	// Relay SIGINT and SIGTERM to [sigChan]
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	select {
-	case sig := <-sigc:
+	case sig := <-sigChan:
+		// Got a SIGINT or SIGTERM; stop the server and wait for it to finish.
 		log.Warn("signal received: closing server", zap.String("signal", sig.String()))
-		rootCancel()
-		// wait for server stop
-		waitForServerStop := <-errc
+		cancel()
+		waitForServerStop := <-errChan
 		log.Warn("closed server", zap.Error(waitForServerStop))
-	case serverClosed := <-errc:
-		// server already stopped here
-		_ = rootCancel
+	case serverClosed := <-errChan:
+		// The server stopped.
 		log.Warn("server closed", zap.Error(serverClosed))
 	}
-	return err
+	return nil
 }

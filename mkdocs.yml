@@ -1,0 +1,10 @@
+site_name: netrunner
+site_description: Service that runs a local Lux network for testing.
+nav:
+  - Introduction: index.md
+  - Reference: reference.md
+  - Core lib: lib.md
+  - Examples: examples.md
+  - Chain Examples: blockchain-examples.md
+plugins:
+  - techdocs-core

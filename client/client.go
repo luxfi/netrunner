@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited All rights reserved.
 // See the file LICENSE for licensing terms.
 
 // Package client implements client.
@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/local"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/local"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/node/utils/logging"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,15 +29,23 @@ type Config struct {
 
 type Client interface {
 	Ping(ctx context.Context) (*rpcpb.PingResponse, error)
+	RPCVersion(ctx context.Context) (*rpcpb.RPCVersionResponse, error)
 	Start(ctx context.Context, execPath string, opts ...OpOption) (*rpcpb.StartResponse, error)
 	CreateBlockchains(ctx context.Context, blockchainSpecs []*rpcpb.BlockchainSpec) (*rpcpb.CreateBlockchainsResponse, error)
-	CreateSubnets(ctx context.Context, opts ...OpOption) (*rpcpb.CreateSubnetsResponse, error)
+	CreateSubnets(ctx context.Context, subnetSpecs []*rpcpb.SubnetSpec) (*rpcpb.CreateSubnetsResponse, error)
+	TransformElasticSubnets(ctx context.Context, elasticSubnetSpecs []*rpcpb.ElasticSubnetSpec) (*rpcpb.TransformElasticSubnetsResponse, error)
+	AddPermissionlessValidator(ctx context.Context, validatorSpec []*rpcpb.PermissionlessStakerSpec) (*rpcpb.AddPermissionlessValidatorResponse, error)
+	AddPermissionlessDelegator(ctx context.Context, validatorSpec []*rpcpb.PermissionlessStakerSpec) (*rpcpb.AddPermissionlessDelegatorResponse, error)
+	RemoveSubnetValidator(ctx context.Context, validatorSpec []*rpcpb.RemoveSubnetValidatorSpec) (*rpcpb.RemoveSubnetValidatorResponse, error)
+	AddSubnetValidators(ctx context.Context, validatorSpec []*rpcpb.SubnetValidatorsSpec) (*rpcpb.AddSubnetValidatorsResponse, error)
 	Health(ctx context.Context) (*rpcpb.HealthResponse, error)
 	WaitForHealthy(ctx context.Context) (*rpcpb.WaitForHealthyResponse, error)
 	URIs(ctx context.Context) ([]string, error)
 	Status(ctx context.Context) (*rpcpb.StatusResponse, error)
 	StreamStatus(ctx context.Context, pushInterval time.Duration) (<-chan *rpcpb.ClusterInfo, error)
 	RemoveNode(ctx context.Context, name string) (*rpcpb.RemoveNodeResponse, error)
+	PauseNode(ctx context.Context, name string) (*rpcpb.PauseNodeResponse, error)
+	ResumeNode(ctx context.Context, name string) (*rpcpb.ResumeNodeResponse, error)
 	RestartNode(ctx context.Context, name string, opts ...OpOption) (*rpcpb.RestartNodeResponse, error)
 	AddNode(ctx context.Context, name string, execPath string, opts ...OpOption) (*rpcpb.AddNodeResponse, error)
 	Stop(ctx context.Context) (*rpcpb.StopResponse, error)
@@ -48,6 +56,10 @@ type Client interface {
 	LoadSnapshot(ctx context.Context, snapshotName string, opts ...OpOption) (*rpcpb.LoadSnapshotResponse, error)
 	RemoveSnapshot(ctx context.Context, snapshotName string) (*rpcpb.RemoveSnapshotResponse, error)
 	GetSnapshotNames(ctx context.Context) ([]string, error)
+	ListSubnets(ctx context.Context) ([]string, error)
+	ListBlockchains(ctx context.Context) ([]*rpcpb.CustomChainInfo, error)
+	ListRpcs(ctx context.Context) ([]*rpcpb.BlockchainRpcs, error)
+	VMID(ctx context.Context, vmName string) (string, error)
 }
 
 type client struct {
@@ -96,11 +108,17 @@ func (c *client) Ping(ctx context.Context) (*rpcpb.PingResponse, error) {
 	return c.pingc.Ping(ctx, &rpcpb.PingRequest{})
 }
 
+func (c *client) RPCVersion(ctx context.Context) (*rpcpb.RPCVersionResponse, error) {
+	c.log.Info("rpc version")
+	return c.controlc.RPCVersion(ctx, &rpcpb.RPCVersionRequest{})
+}
+
 func (c *client) Start(ctx context.Context, execPath string, opts ...OpOption) (*rpcpb.StartResponse, error) {
 	ret := &Op{numNodes: local.DefaultNumNodes}
 	ret.applyOpts(opts)
 
 	req := &rpcpb.StartRequest{
+		NetworkId:      ret.networkID,
 		ExecPath:       execPath,
 		NumNodes:       &ret.numNodes,
 		ChainConfigs:   ret.chainConfigs,
@@ -141,18 +159,58 @@ func (c *client) CreateBlockchains(ctx context.Context, blockchainSpecs []*rpcpb
 	return c.controlc.CreateBlockchains(ctx, req)
 }
 
-func (c *client) CreateSubnets(ctx context.Context, opts ...OpOption) (*rpcpb.CreateSubnetsResponse, error) {
-	ret := &Op{}
-	ret.applyOpts(opts)
-
-	req := &rpcpb.CreateSubnetsRequest{}
-
-	if ret.numSubnets != 0 {
-		req.NumSubnets = &ret.numSubnets
+func (c *client) CreateSubnets(ctx context.Context, subnetSpecs []*rpcpb.SubnetSpec) (*rpcpb.CreateSubnetsResponse, error) {
+	req := &rpcpb.CreateSubnetsRequest{
+		SubnetSpecs: subnetSpecs,
 	}
 
 	c.log.Info("create subnets")
 	return c.controlc.CreateSubnets(ctx, req)
+}
+
+func (c *client) TransformElasticSubnets(ctx context.Context, elasticSubnetSpecs []*rpcpb.ElasticSubnetSpec) (*rpcpb.TransformElasticSubnetsResponse, error) {
+	req := &rpcpb.TransformElasticSubnetsRequest{
+		ElasticSubnetSpec: elasticSubnetSpecs,
+	}
+
+	c.log.Info("transform subnets")
+	return c.controlc.TransformElasticSubnets(ctx, req)
+}
+
+func (c *client) AddPermissionlessDelegator(ctx context.Context, validatorSpec []*rpcpb.PermissionlessStakerSpec) (*rpcpb.AddPermissionlessDelegatorResponse, error) {
+	req := &rpcpb.AddPermissionlessDelegatorRequest{
+		ValidatorSpec: validatorSpec,
+	}
+
+	c.log.Info("add permissionless delegators to elastic subnets")
+	return c.controlc.AddPermissionlessDelegator(ctx, req)
+}
+
+func (c *client) AddPermissionlessValidator(ctx context.Context, validatorSpec []*rpcpb.PermissionlessStakerSpec) (*rpcpb.AddPermissionlessValidatorResponse, error) {
+	req := &rpcpb.AddPermissionlessValidatorRequest{
+		ValidatorSpec: validatorSpec,
+	}
+
+	c.log.Info("add permissionless validators to elastic subnets")
+	return c.controlc.AddPermissionlessValidator(ctx, req)
+}
+
+func (c *client) RemoveSubnetValidator(ctx context.Context, validatorSpec []*rpcpb.RemoveSubnetValidatorSpec) (*rpcpb.RemoveSubnetValidatorResponse, error) {
+	req := &rpcpb.RemoveSubnetValidatorRequest{
+		ValidatorSpec: validatorSpec,
+	}
+
+	c.log.Info("remove subnet validator")
+	return c.controlc.RemoveSubnetValidator(ctx, req)
+}
+
+func (c *client) AddSubnetValidators(ctx context.Context, validatorSpec []*rpcpb.SubnetValidatorsSpec) (*rpcpb.AddSubnetValidatorsResponse, error) {
+	req := &rpcpb.AddSubnetValidatorsRequest{
+		ValidatorsSpec: validatorSpec,
+	}
+
+	c.log.Info("add subnet validators")
+	return c.controlc.AddSubnetValidators(ctx, req)
 }
 
 func (c *client) Health(ctx context.Context) (*rpcpb.HealthResponse, error) {
@@ -257,6 +315,16 @@ func (c *client) RemoveNode(ctx context.Context, name string) (*rpcpb.RemoveNode
 	return c.controlc.RemoveNode(ctx, &rpcpb.RemoveNodeRequest{Name: name})
 }
 
+func (c *client) PauseNode(ctx context.Context, name string) (*rpcpb.PauseNodeResponse, error) {
+	c.log.Info("pause node", zap.String("name", name))
+	return c.controlc.PauseNode(ctx, &rpcpb.PauseNodeRequest{Name: name})
+}
+
+func (c *client) ResumeNode(ctx context.Context, name string) (*rpcpb.ResumeNodeResponse, error) {
+	c.log.Info("resume node", zap.String("name", name))
+	return c.controlc.ResumeNode(ctx, &rpcpb.ResumeNodeRequest{Name: name})
+}
+
 func (c *client) RestartNode(ctx context.Context, name string, opts ...OpOption) (*rpcpb.RestartNodeResponse, error) {
 	ret := &Op{}
 	ret.applyOpts(opts)
@@ -339,6 +407,42 @@ func (c *client) GetSnapshotNames(ctx context.Context) ([]string, error) {
 	return resp.SnapshotNames, nil
 }
 
+func (c *client) ListSubnets(ctx context.Context) ([]string, error) {
+	c.log.Info("list subnets")
+	resp, err := c.controlc.ListSubnets(ctx, &rpcpb.ListSubnetsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return resp.SubnetIds, nil
+}
+
+func (c *client) ListBlockchains(ctx context.Context) ([]*rpcpb.CustomChainInfo, error) {
+	c.log.Info("list blockchains")
+	resp, err := c.controlc.ListBlockchains(ctx, &rpcpb.ListBlockchainsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Blockchains, nil
+}
+
+func (c *client) ListRpcs(ctx context.Context) ([]*rpcpb.BlockchainRpcs, error) {
+	c.log.Info("list rpcs")
+	resp, err := c.controlc.ListRpcs(ctx, &rpcpb.ListRpcsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return resp.BlockchainsRpcs, nil
+}
+
+func (c *client) VMID(ctx context.Context, vmName string) (string, error) {
+	c.log.Info("vmid")
+	resp, err := c.controlc.VMID(ctx, &rpcpb.VMIDRequest{VmName: vmName})
+	if err != nil {
+		return "", err
+	}
+	return resp.VmId, nil
+}
+
 func (c *client) Close() error {
 	c.closeOnce.Do(func() {
 		close(c.closed)
@@ -361,6 +465,7 @@ type Op struct {
 	subnetConfigs       map[string]string
 	reassignPortsIfUsed bool
 	dynamicPorts        bool
+	networkID           uint32
 }
 
 type OpOption func(*Op)
@@ -374,6 +479,12 @@ func (op *Op) applyOpts(opts []OpOption) {
 func WithGlobalNodeConfig(nodeConfig string) OpOption {
 	return func(op *Op) {
 		op.globalNodeConfig = nodeConfig
+	}
+}
+
+func WithNetworkID(networkID uint32) OpOption {
+	return func(op *Op) {
+		op.networkID = networkID
 	}
 }
 
