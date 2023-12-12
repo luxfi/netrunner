@@ -1,15 +1,15 @@
 package api
 
 import (
-	"github.com/ava-labs/avalanchego/api/admin"
-	"github.com/ava-labs/avalanchego/api/health"
-	"github.com/ava-labs/avalanchego/api/info"
-	"github.com/ava-labs/avalanchego/api/ipcs"
-	"github.com/ava-labs/avalanchego/api/keystore"
-	"github.com/ava-labs/avalanchego/indexer"
-	"github.com/ava-labs/avalanchego/vms/avm"
-	"github.com/ava-labs/avalanchego/vms/platformvm"
-	"github.com/ava-labs/coreth/plugin/evm"
+	"github.com/luxdefi/node/api/admin"
+	"github.com/luxdefi/node/api/health"
+	"github.com/luxdefi/node/api/info"
+	"github.com/luxdefi/node/api/ipcs"
+	"github.com/luxdefi/node/api/keystore"
+	"github.com/luxdefi/node/indexer"
+	"github.com/luxdefi/node/vms/avm"
+	"github.com/luxdefi/node/vms/platformvm"
+	"github.com/luxdefi/coreth/plugin/evm"
 )
 
 // Issues API calls to a node

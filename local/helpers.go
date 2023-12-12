@@ -1,19 +1,18 @@
 package local
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/logging"
 	"go.uber.org/zap"
 )
 
@@ -21,51 +20,19 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-const (
-	maxPort          = math.MaxUint16
-	minPort          = 10000
-	netListenTimeout = 3 * time.Second
-)
-
-// isFreePort verifies a given [port] is free
-func isFreePort(port uint16) bool {
-	// Verify it's free by binding to it
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		// Could not bind to [port]. Assumed to be not free.
-		return false
-	}
-	// We could bind to [port] so must be free.
-	_ = l.Close()
-	return true
-}
-
-// getFreePort generates a random port number and then
-// verifies it is free. If it is, returns that port, otherwise retries.
-// Returns an error if no free port is found within [netListenTimeout].
-// Note that it is possible for [getFreePort] to return the same port twice.
 func getFreePort() (uint16, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), netListenTimeout)
-	defer cancel()
-	for {
-		select {
-		case <-ctx.Done():
-			return 0, ctx.Err()
-		default:
-			// Generate random port in [minPort, maxPort]
-			port := uint16(rand.Intn(maxPort-minPort+1) + minPort) //nolint
-			if !isFreePort(port) {
-				// Not free. Try another.
-				continue
-			}
-			return port, nil
-		}
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
 	}
+	port := uint16(l.Addr().(*net.TCPAddr).Port)
+	_ = l.Close()
+	return port, nil
 }
 
 // writeFiles writes the files a node needs on startup.
 // It returns flags used to point to those files.
-func writeFiles(genesis []byte, nodeRootDir string, nodeConfig *node.Config) (map[string]string, error) {
+func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig *node.Config) (map[string]string, error) {
 	type file struct {
 		pathKey   string
 		flagValue string
@@ -95,12 +62,14 @@ func writeFiles(genesis []byte, nodeRootDir string, nodeConfig *node.Config) (ma
 			pathKey:   config.StakingSignerKeyPathKey,
 			contents:  decodedStakingSigningKey,
 		},
-		{
+	}
+	if networkID != constants.LocalID {
+		files = append(files, file{
 			flagValue: filepath.Join(nodeRootDir, genesisFileName),
 			path:      filepath.Join(nodeRootDir, genesisFileName),
-			pathKey:   config.GenesisConfigFileKey,
+			pathKey:   config.GenesisFileKey,
 			contents:  genesis,
-		},
+		})
 	}
 	if len(nodeConfig.ConfigFile) != 0 {
 		files = append(files, file{
@@ -182,7 +151,6 @@ func getPort(
 	flags map[string]interface{},
 	configFile map[string]interface{},
 	portKey string,
-	reassignIfUsed bool,
 ) (port uint16, err error) {
 	if portIntf, ok := flags[portKey]; ok {
 		switch gotPort := portIntf.(type) {
@@ -200,22 +168,10 @@ func getPort(
 		}
 		port = uint16(portFromConfigFile)
 	} else {
-		// Use a random free port.
-		// Note: it is possible but unlikely for getFreePort to return the same port multiple times.
 		port, err = getFreePort()
 		if err != nil {
 			return 0, fmt.Errorf("couldn't get free port: %w", err)
 		}
-	}
-	if reassignIfUsed && !isFreePort(port) {
-		port, err = getFreePort()
-		if err != nil {
-			return 0, fmt.Errorf("couldn't get free port: %w", err)
-		}
-	}
-	// last check, avoid starting network with used ports
-	if !isFreePort(port) {
-		return 0, fmt.Errorf("port %d is not free", port)
 	}
 	return port, nil
 }
@@ -252,30 +208,19 @@ func createFileAndWrite(path string, contents []byte) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = file.Close()
-	}()
-	if _, err := file.Write(contents); err != nil {
-		return err
-	}
-	return nil
+	defer file.Close()
+	_, err = file.Write(contents)
+	return err
 }
 
 // addNetworkFlags adds the flags in [networkFlags] to [nodeConfig.Flags].
 // [nodeFlags] must not be nil.
-func addNetworkFlags(log logging.Logger, networkFlags map[string]interface{}, nodeFlags map[string]interface{}) {
+func addNetworkFlags(networkFlags map[string]interface{}, nodeFlags map[string]interface{}) {
 	for flagName, flagVal := range networkFlags {
 		// If the same flag is given in network config and node config,
 		// the flag in the node config takes precedence
-		if val, ok := nodeFlags[flagName]; !ok {
+		if _, ok := nodeFlags[flagName]; !ok {
 			nodeFlags[flagName] = flagVal
-		} else {
-			log.Debug(
-				"not overwriting node config flag with network config flag",
-				zap.String("flag-name", flagName),
-				zap.Any("value", val),
-				zap.Any("network config value", flagVal),
-			)
 		}
 	}
 }

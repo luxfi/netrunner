@@ -14,7 +14,7 @@ var genesis = []byte(
 		"allocations": [
 		  {
 			"ethAddr": "0xb3d82b1367d362de99ab59a658165aff520cbd4d",
-			"avaxAddr": "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
+			"luxAddr": "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
 			"initialAmount": 0,
 			"unlockSchedule": [
 			  {
@@ -71,7 +71,7 @@ func TestCheckExecPath(t *testing.T) {
 		},
 		{
 			execPath:    "",
-			expectedErr: ErrInvalidExecPath,
+			expectedErr: ErrEmptyExecPath,
 		},
 		{
 			execPath:    "invalid",
@@ -117,14 +117,9 @@ func TestCheckPluginPaths(t *testing.T) {
 			genesisPath: "",
 			expectedErr: ErrNotExistsPlugin,
 		},
-		{
-			pluginPath:  pluginPath,
-			genesisPath: "invalid",
-			expectedErr: ErrNotExistsPluginGenesis,
-		},
 	}
 	for i, tv := range tt {
-		err := CheckPluginPaths(tv.pluginPath, tv.genesisPath)
+		err := CheckPluginPath(tv.pluginPath)
 		require.Equal(t, tv.expectedErr, err, fmt.Sprintf("[%d] unexpected error", i))
 	}
 }

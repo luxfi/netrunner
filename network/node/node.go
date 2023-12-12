@@ -6,20 +6,20 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/snow/networking/router"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/network/peer"
+	"github.com/luxdefi/node/snow/networking/router"
 )
 
-// Node represents an AvalancheGo node
+// Node represents an LuxGo node
 type Node interface {
 	// Return this node's name, which is unique
 	// across all the nodes in its network.
 	GetName() string
-	// Return this node's Avalanche node ID.
+	// Return this node's Lux node ID.
 	GetNodeID() ids.NodeID
 	// Return a client that can be used to make API calls.
 	GetAPIClient() api.Client
@@ -39,8 +39,10 @@ type Node interface {
 	SendOutboundMessage(ctx context.Context, peerID string, content []byte, op uint32) (bool, error)
 	// Return the state of the node process
 	Status() status.Status
-	// Return this node's avalanchego binary path
+	// Return this node's node binary path
 	GetBinaryPath() string
+	// Return this node's data dir
+	GetDataDir() string
 	// Return this node's db dir
 	GetDbDir() string
 	// Return this node's logs dir
@@ -53,9 +55,11 @@ type Node interface {
 	GetConfig() Config
 	// Return this node's flag value
 	GetFlag(string) (string, error)
+	// Return this node's paused status
+	GetPaused() bool
 }
 
-// Config encapsulates an avalanchego configuration
+// Config encapsulates an node configuration
 type Config struct {
 	// A node's name must be unique from all other nodes
 	// in a network. If Name is the empty string, a

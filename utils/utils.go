@@ -8,21 +8,33 @@ import (
 	"os"
 	"time"
 
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/staking"
+	rpcb "github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/logging"
 )
 
 const (
 	genesisNetworkIDKey = "networkID"
 	dirTimestampFormat  = "20060102_150405"
+	dockerEnvPath       = "/.dockerenv"
+)
+
+var (
+	ErrEmptyExecPath    = errors.New("lux exec is not defined")
+	ErrNotExists        = errors.New("lux exec not exists")
+	ErrNotExistsPlugin  = errors.New("plugin exec not exists")
+	ErrorNoNetworkIDKey = fmt.Errorf("couldn't find key %q in genesis", genesisNetworkIDKey)
 )
 
 func ToNodeID(stakingKey, stakingCert []byte) (ids.NodeID, error) {
-	cert, err := staking.LoadTLSCertFromBytes(stakingKey, stakingCert)
+	tlsCert, err := staking.LoadTLSCertFromBytes(stakingKey, stakingCert)
 	if err != nil {
 		return ids.EmptyNodeID, err
 	}
-	nodeID := ids.NodeIDFromCert(cert.Leaf)
+	cert := staking.CertificateFromX509(tlsCert.Leaf)
+	nodeID := ids.NodeIDFromCert(cert)
 	return nodeID, nil
 }
 
@@ -43,16 +55,23 @@ func NetworkIDFromGenesis(genesis []byte) (uint32, error) {
 	return uint32(networkID), nil
 }
 
-var (
-	ErrInvalidExecPath        = errors.New("avalanche exec is invalid")
-	ErrNotExists              = errors.New("avalanche exec not exists")
-	ErrNotExistsPlugin        = errors.New("plugin exec not exists")
-	ErrNotExistsPluginGenesis = errors.New("plugin genesis not exists")
-)
+func SetGenesisNetworkID(genesis []byte, networkID uint32) ([]byte, error) {
+	genesisMap := map[string]interface{}{}
+	if err := json.Unmarshal(genesis, &genesisMap); err != nil {
+		return nil, fmt.Errorf("couldn't unmarshal genesis: %w", err)
+	}
+	genesisMap[genesisNetworkIDKey] = networkID
+	var err error
+	genesis, err = json.Marshal(genesisMap)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't marshal genesis: %w", err)
+	}
+	return genesis, nil
+}
 
 func CheckExecPath(exec string) error {
 	if exec == "" {
-		return ErrInvalidExecPath
+		return ErrEmptyExecPath
 	}
 	_, err := os.Stat(exec)
 	if err != nil {
@@ -64,19 +83,13 @@ func CheckExecPath(exec string) error {
 	return nil
 }
 
-func CheckPluginPaths(pluginExec string, pluginGenesisPath string) error {
+func CheckPluginPath(pluginExec string) error {
 	var err error
 	if _, err = os.Stat(pluginExec); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return ErrNotExistsPlugin
 		}
 		return fmt.Errorf("failed to stat plugin exec %q (%w)", pluginExec, err)
-	}
-	if _, err = os.Stat(pluginGenesisPath); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return ErrNotExistsPluginGenesis
-		}
-		return fmt.Errorf("failed to stat plugin genesis %q (%w)", pluginGenesisPath, err)
 	}
 
 	return nil
@@ -95,4 +108,51 @@ func MkDirWithTimestamp(dirPrefix string) (string, error) {
 	currentTime := time.Now().Format(dirTimestampFormat)
 	dirName := dirPrefix + "_" + currentTime
 	return dirName, os.MkdirAll(dirName, os.ModePerm)
+}
+
+func VerifySubnetHasCorrectParticipants(
+	log logging.Logger,
+	subnetParticipants []string,
+	cluster *rpcb.ClusterInfo,
+	subnetID string,
+) bool {
+	if cluster != nil {
+		participatingNodeNames := cluster.Subnets[subnetID].GetSubnetParticipants().GetNodeNames()
+
+		var nodeIsInList bool
+		// Check that all subnet validators are equal to the node IDs added as participant in subnet creation
+		for _, node := range subnetParticipants {
+			nodeIsInList = false
+			for _, subnetValidator := range participatingNodeNames {
+				if subnetValidator == node {
+					nodeIsInList = true
+					break
+				}
+			}
+			if !nodeIsInList {
+				ux.Print(log, logging.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: %#v", cluster)))
+				ux.Print(log, logging.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: node not in list subnet %q node %q %v %v", subnetID, node, subnetParticipants, participatingNodeNames)))
+				return false
+			}
+		}
+		return true
+	} else {
+		ux.Print(log, logging.Red.Wrap("VerifySubnetHasCorrectParticipants: cluster is nil"))
+	}
+	return false
+}
+
+func IsInsideDockerContainer() (bool, error) {
+	return PathExists(dockerEnvPath)
+}
+
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

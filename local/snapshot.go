@@ -9,20 +9,28 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/logging"
 	dircopy "github.com/otiai10/copy"
+	"golang.org/x/exp/maps"
 )
 
 const (
 	deprecatedBuildDirKey           = "build-dir"
 	deprecatedWhitelistedSubnetsKey = "whitelisted-subnets"
 )
+
+// NetworkState defines dynamic network information not available on blockchain db
+type NetworkState struct {
+	// Map from subnet id to elastic subnet tx id
+	SubnetID2ElasticSubnetID map[string]string `json:"subnetID2ElasticSubnetID"`
+}
 
 // snapshots generated using older ANR versions may contain deprecated avago flags
 func fixDeprecatedAvagoFlags(flags map[string]interface{}) error {
@@ -62,6 +70,8 @@ func NewNetworkFromSnapshot(
 	subnetConfigs map[string]string,
 	flags map[string]interface{},
 	reassignPortsIfUsed bool,
+	redirectStdout bool,
+	redirectStderr bool,
 ) (network.Network, error) {
 	net, err := newNetwork(
 		log,
@@ -75,6 +85,8 @@ func NewNetworkFromSnapshot(
 		rootDir,
 		snapshotsDir,
 		reassignPortsIfUsed,
+		redirectStdout,
+		redirectStderr,
 	)
 	if err != nil {
 		return net, err
@@ -97,6 +109,7 @@ func NewNetworkFromSnapshot(
 func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (string, error) {
 	ln.lock.Lock()
 	defer ln.lock.Unlock()
+
 	if ln.stopCalled() {
 		return "", network.ErrStopped
 	}
@@ -105,8 +118,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 	}
 	// check if snapshot already exists
 	snapshotDir := filepath.Join(ln.snapshotsDir, snapshotPrefix+snapshotName)
-	_, err := os.Stat(snapshotDir)
-	if err == nil {
+	if _, err := os.Stat(snapshotDir); err == nil {
 		return "", fmt.Errorf("snapshot %q already exists", snapshotName)
 	}
 	// keep copy of node info that will be removed by stop
@@ -116,11 +128,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		nodeConfig := node.config
 		// depending on how the user generated the config, different nodes config flags
 		// may point to the same map, so we made a copy to avoid always modifying the same value
-		nodeConfigFlags := make(map[string]interface{})
-		for fk, fv := range nodeConfig.Flags {
-			nodeConfigFlags[fk] = fv
-		}
-		nodeConfig.Flags = nodeConfigFlags
+		nodeConfig.Flags = maps.Clone(nodeConfig.Flags)
 		nodesConfig[nodeName] = nodeConfig
 		nodesDBDir[nodeName] = node.GetDbDir()
 	}
@@ -130,19 +138,19 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		nodeConfig.Flags[config.StakingPortKey] = ln.nodes[nodeName].GetP2PPort()
 	}
 	// make copy of network flags
-	networkConfigFlags := make(map[string]interface{})
-	for fk, fv := range ln.flags {
-		networkConfigFlags[fk] = fv
-	}
-	// remove all log dir references
+	networkConfigFlags := maps.Clone(ln.flags)
+	// remove all data dir, log dir references
+	delete(networkConfigFlags, config.DataDirKey)
 	delete(networkConfigFlags, config.LogsDirKey)
 	for nodeName, nodeConfig := range nodesConfig {
 		if nodeConfig.ConfigFile != "" {
+			var err error
 			nodeConfig.ConfigFile, err = utils.SetJSONKey(nodeConfig.ConfigFile, config.LogsDirKey, "")
 			if err != nil {
 				return "", err
 			}
 		}
+		delete(nodeConfig.Flags, config.DataDirKey)
 		delete(nodeConfig.Flags, config.LogsDirKey)
 		nodesConfig[nodeName] = nodeConfig
 	}
@@ -153,8 +161,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 	}
 	// create main snapshot dirs
 	snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
-	err = os.MkdirAll(snapshotDBDir, os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(snapshotDBDir, os.ModePerm); err != nil {
 		return "", err
 	}
 	// save db
@@ -180,16 +187,28 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		SubnetConfigFiles:  ln.subnetConfigFiles,
 	}
 
-	for _, nodeConfig := range nodesConfig {
-		// no need to save this, will be generated automatically on snapshot load
-		networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, nodeConfig)
-	}
+	// no need to save this, will be generated automatically on snapshot load
+	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, maps.Values(nodesConfig)...)
 	networkConfigJSON, err := json.MarshalIndent(networkConfig, "", "    ")
 	if err != nil {
 		return "", err
 	}
-	err = createFileAndWrite(filepath.Join(snapshotDir, "network.json"), networkConfigJSON)
+	if err := createFileAndWrite(filepath.Join(snapshotDir, "network.json"), networkConfigJSON); err != nil {
+		return "", err
+	}
+	// save dynamic part of network not available on blockchain
+	subnetID2ElasticSubnetID := map[string]string{}
+	for subnetID, elasticSubnetID := range ln.subnetID2ElasticSubnetID {
+		subnetID2ElasticSubnetID[subnetID.String()] = elasticSubnetID.String()
+	}
+	networkState := NetworkState{
+		SubnetID2ElasticSubnetID: subnetID2ElasticSubnetID,
+	}
+	networkStateJSON, err := json.MarshalIndent(networkState, "", "    ")
 	if err != nil {
+		return "", err
+	}
+	if err := createFileAndWrite(filepath.Join(snapshotDir, "state.json"), networkStateJSON); err != nil {
 		return "", err
 	}
 	return snapshotDir, nil
@@ -208,6 +227,7 @@ func (ln *localNetwork) loadSnapshot(
 ) error {
 	ln.lock.Lock()
 	defer ln.lock.Unlock()
+
 	snapshotDir := filepath.Join(ln.snapshotsDir, snapshotPrefix+snapshotName)
 	snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
 	_, err := os.Stat(snapshotDir)
@@ -224,8 +244,7 @@ func (ln *localNetwork) loadSnapshot(
 		return fmt.Errorf("failure reading network config file from snapshot: %w", err)
 	}
 	networkConfig := network.Config{}
-	err = json.Unmarshal(networkConfigJSON, &networkConfig)
-	if err != nil {
+	if err := json.Unmarshal(networkConfigJSON, &networkConfig); err != nil {
 		return fmt.Errorf("failure unmarshaling network config from snapshot: %w", err)
 	}
 	// fix deprecated avago flags
@@ -283,6 +302,31 @@ func (ln *localNetwork) loadSnapshot(
 		}
 		for k, v := range subnetConfigs {
 			networkConfig.NodeConfigs[i].SubnetConfigFiles[k] = v
+		}
+	}
+	// load network state not available at blockchain db
+	networkStateJSON, err := os.ReadFile(filepath.Join(snapshotDir, "state.json"))
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failure reading network state file from snapshot: %w", err)
+		}
+		ln.log.Warn("network state file not found on snapshot")
+	} else {
+		networkState := NetworkState{}
+		if err := json.Unmarshal(networkStateJSON, &networkState); err != nil {
+			return fmt.Errorf("failure unmarshaling network state from snapshot: %w", err)
+		}
+		ln.subnetID2ElasticSubnetID = map[ids.ID]ids.ID{}
+		for subnetIDStr, elasticSubnetIDStr := range networkState.SubnetID2ElasticSubnetID {
+			subnetID, err := ids.FromString(subnetIDStr)
+			if err != nil {
+				return err
+			}
+			elasticSubnetID, err := ids.FromString(elasticSubnetIDStr)
+			if err != nil {
+				return err
+			}
+			ln.subnetID2ElasticSubnetID[subnetID] = elasticSubnetID
 		}
 	}
 	return ln.loadConfig(ctx, networkConfig)

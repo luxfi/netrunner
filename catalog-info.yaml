@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: netrunner
+  description: |
+    Service that runs a local Lux network for testing.
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: luxdefi/netrunner
+spec:
+  type: service
+  owner: group:platform-tooling
+  lifecycle: production
+  system: platform
+  dependsOn:
+    - component:node
+    - component:subnet-evm
+    - component:coreth

@@ -7,7 +7,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
-	status "github.com/ava-labs/avalanche-network-runner/network/node/status"
+	status "github.com/luxdefi/netrunner/network/node/status"
 
 	testing "testing"
 )

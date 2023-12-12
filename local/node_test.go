@@ -11,16 +11,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/proto/pb/p2p"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/wrappers"
-	"github.com/ava-labs/avalanchego/version"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/message"
+	"github.com/luxdefi/node/network/peer"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/ips"
+	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxdefi/node/utils/wrappers"
+	"github.com/luxdefi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +29,8 @@ const bitmaskCodec = uint32(1 << 31)
 
 func upgradeConn(myTLSCert *tls.Certificate, conn net.Conn) (ids.NodeID, net.Conn, error) {
 	tlsConfig := peer.TLSConfig(*myTLSCert, nil)
-	upgrader := peer.NewTLSServerUpgrader(tlsConfig)
+	counter := prometheus.NewCounter(prometheus.CounterOpts{})
+	upgrader := peer.NewTLSServerUpgrader(tlsConfig, counter)
 	// this will block until the ssh handshake is done
 	peerID, tlsConn, _, err := upgrader.Upgrade(conn)
 	return peerID, tlsConn, err
@@ -151,7 +152,7 @@ func readMessage(nodeConn net.Conn, errCh chan error) (*bytes.Buffer, error) {
 	return msgBytes, nil
 }
 
-// sendMessage sends a protocol message to the avalanchego peer
+// sendMessage sends a protocol message to the node peer
 func sendMessage(nodeConn net.Conn, msgBytes []byte, errCh chan error) error {
 	// buffer for message length
 	msgLenBytes := make([]byte, wrappers.IntLen)
@@ -198,9 +199,10 @@ func TestAttachPeer(t *testing.T) {
 
 	// For message creation and parsing
 	mc, err := message.NewCreator(
+		logging.NoLog{},
 		prometheus.NewRegistry(),
 		"",
-		true,
+		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
 	require.NoError(err)
@@ -224,15 +226,13 @@ func TestAttachPeer(t *testing.T) {
 	require.NoError(err)
 
 	// we'll use a Chits message for testing. (We could use any message type.)
-	containerIDs := []ids.ID{
-		ids.GenerateTestID(),
-		ids.GenerateTestID(),
-		ids.GenerateTestID(),
-	}
+	preferredID := ids.GenerateTestID()
+	preferredIDAtHeight := ids.GenerateTestID()
+	acceptedID := ids.GenerateTestID()
 	requestID := uint32(42)
 	chainID := constants.PlatformChainID
 	// create the Chits message
-	msg, err := mc.Chits(chainID, requestID, []ids.ID{}, containerIDs, p2p.EngineType_ENGINE_TYPE_AVALANCHE)
+	msg, err := mc.Chits(chainID, requestID, preferredID, preferredIDAtHeight, acceptedID)
 	require.NoError(err)
 	// send chits to [node]
 	ok := p.Send(context.Background(), msg)

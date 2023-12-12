@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package ping
@@ -7,10 +7,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/client"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/client"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/node/utils/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -24,12 +24,12 @@ var (
 func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ping [options]",
-		Short: "Ping the server.",
+		Short: "Pings the server.",
 		RunE:  pingFunc,
 	}
 
 	cmd.PersistentFlags().StringVar(&logLevel, "log-level", logging.Info.String(), "log level")
-	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "0.0.0.0:8080", "server endpoint")
+	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "localhost:8080", "server endpoint")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")
 	cmd.PersistentFlags().DurationVar(&requestTimeout, "request-timeout", 10*time.Second, "client request timeout")
 

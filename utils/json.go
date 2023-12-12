@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2019-2022, Lux Partners Limited All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package utils
@@ -21,6 +21,25 @@ func SetJSONKey(jsonBody string, k string, v string) (string, error) {
 	}
 
 	updatedJSON, err := json.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	return string(updatedJSON), nil
+}
+
+func CombineJSONs(baseJSON string, addedJSON string) (string, error) {
+	var baseConfig map[string]interface{}
+	if err := json.Unmarshal([]byte(baseJSON), &baseConfig); err != nil {
+		return "", err
+	}
+	var addedConfig map[string]interface{}
+	if err := json.Unmarshal([]byte(addedJSON), &addedConfig); err != nil {
+		return "", err
+	}
+	for k, v := range addedConfig {
+		baseConfig[k] = v
+	}
+	updatedJSON, err := json.Marshal(baseConfig)
 	if err != nil {
 		return "", err
 	}

@@ -8,24 +8,25 @@ import (
 	"net"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/network/throttling"
-	"github.com/ava-labs/avalanchego/snow/networking/router"
-	"github.com/ava-labs/avalanchego/snow/networking/tracker"
-	"github.com/ava-labs/avalanchego/snow/validators"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/math/meter"
-	"github.com/ava-labs/avalanchego/utils/resource"
-	"github.com/ava-labs/avalanchego/utils/set"
-	"github.com/ava-labs/avalanchego/version"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/message"
+	"github.com/luxdefi/node/network/peer"
+	"github.com/luxdefi/node/network/throttling"
+	"github.com/luxdefi/node/snow/networking/router"
+	"github.com/luxdefi/node/snow/networking/tracker"
+	"github.com/luxdefi/node/snow/uptime"
+	"github.com/luxdefi/node/snow/validators"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/ips"
+	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxdefi/node/utils/math/meter"
+	"github.com/luxdefi/node/utils/resource"
+	"github.com/luxdefi/node/utils/set"
+	"github.com/luxdefi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,11 +43,11 @@ const (
 	peerStartWaitTimeout        = 30 * time.Second
 )
 
-// Gives access to basic node info, and to most avalanchego apis
+// Gives access to basic node info, and to most node apis
 type localNode struct {
 	// Must be unique across all nodes in this network.
 	name string
-	// [nodeID] is this node's Avalannche Node ID.
+	// [nodeID] is this node's Lux Node ID.
 	// Set in network.AddNode
 	nodeID ids.NodeID
 	// The ID of the network this node exists in
@@ -61,6 +62,8 @@ type localNode struct {
 	p2pPort uint16
 	// Returns a connection to this node
 	getConnFunc getConnFunc
+	// The data dir of the node
+	dataDir string
 	// The db dir of the node
 	dbDir string
 	// The logs dir of the node
@@ -73,6 +76,9 @@ type localNode struct {
 	httpHost string
 	// maps from peer ID to peer object
 	attachedPeers map[string]peer.Peer
+	// signals that the process is stopped but the information is valid
+	// and can be resumed
+	paused bool
 }
 
 func defaultGetConnFunc(ctx context.Context, node node.Node) (net.Conn, error) {
@@ -87,15 +93,17 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 	tlsConfg := peer.TLSConfig(*tlsCert, nil)
-	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg)
+	counter := prometheus.NewCounter(prometheus.CounterOpts{})
+	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg, counter)
 	conn, err := node.getConnFunc(ctx, node)
 	if err != nil {
 		return nil, err
 	}
 	mc, err := message.NewCreator(
+		logging.NoLog{},
 		prometheus.NewRegistry(),
 		"",
-		true,
+		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
 	if err != nil {
@@ -130,12 +138,13 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		Router:               router,
 		VersionCompatibility: version.GetCompatibility(node.networkID),
 		MySubnets:            set.Set[ids.ID]{},
-		Beacons:              validators.NewSet(),
+		Beacons:              validators.NewManager(),
 		NetworkID:            node.networkID,
 		PingFrequency:        constants.DefaultPingFrequency,
 		PongTimeout:          constants.DefaultPingPongTimeout,
 		MaxClockDifference:   time.Minute,
 		ResourceTracker:      resourceTracker,
+		UptimeCalculator:     uptime.NoOpCalculator,
 		IPSigner:             peer.NewIPSigner(signerIP, tls),
 	}
 	_, conn, cert, err := clientUpgrader.Upgrade(conn)
@@ -147,7 +156,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		config,
 		conn,
 		cert,
-		ids.NodeIDFromCert(tlsCert.Leaf),
+		ids.NodeIDFromCert(staking.CertificateFromX509(tlsCert.Leaf)),
 		peer.NewBlockingMessageQueue(
 			config.Metrics,
 			logging.NoLog{},
@@ -222,6 +231,11 @@ func (node *localNode) GetPluginDir() string {
 }
 
 // See node.Node
+func (node *localNode) GetDataDir() string {
+	return node.dataDir
+}
+
+// See node.Node
 // TODO rename method so linter doesn't complain.
 func (node *localNode) GetDbDir() string { //nolint
 	return node.dbDir
@@ -267,4 +281,9 @@ func (node *localNode) GetFlag(k string) (string, error) {
 		}
 	}
 	return v, nil
+}
+
+// See node.Node
+func (node *localNode) GetPaused() bool {
+	return node.paused
 }

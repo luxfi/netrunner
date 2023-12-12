@@ -3,8 +3,10 @@ package network
 import (
 	"context"
 	"errors"
+	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/node/ids"
 )
 
 var (
@@ -13,19 +15,59 @@ var (
 	ErrNodeNotFound = errors.New("node not found in network")
 )
 
+type PermissionlessStakerSpec struct {
+	SubnetID      string
+	AssetID       string
+	NodeName      string
+	StakedAmount  uint64
+	StartTime     time.Time
+	StakeDuration time.Duration
+}
+
+type ElasticSubnetSpec struct {
+	SubnetID                 *string
+	AssetName                string
+	AssetSymbol              string
+	InitialSupply            uint64
+	MaxSupply                uint64
+	MinConsumptionRate       uint64
+	MaxConsumptionRate       uint64
+	MinValidatorStake        uint64
+	MaxValidatorStake        uint64
+	MinStakeDuration         time.Duration
+	MaxStakeDuration         time.Duration
+	MinDelegationFee         uint32
+	MinDelegatorStake        uint64
+	MaxValidatorWeightFactor byte
+	UptimeRequirement        uint32
+}
+
+type SubnetSpec struct {
+	Participants []string
+	SubnetConfig []byte
+}
+
+type SubnetValidatorsSpec struct {
+	NodeNames []string
+	SubnetID  string
+}
+
 type BlockchainSpec struct {
 	VMName             string
 	Genesis            []byte
 	SubnetID           *string
+	SubnetSpec         *SubnetSpec
 	ChainConfig        []byte
 	NetworkUpgrade     []byte
-	SubnetConfig       []byte
 	BlockchainAlias    string
 	PerNodeChainConfig map[string][]byte
 }
 
-// Network is an abstraction of an Avalanche network
+// Network is an abstraction of an Lux network
 type Network interface {
+	// Returns the network ID for the currently running network
+	// Returns ErrStopped if Stop() was previously called.
+	GetNetworkID() (uint32, error)
 	// Returns nil if all the nodes in the network are healthy.
 	// A stopped network is considered unhealthy.
 	// Timeout is given by the context parameter.
@@ -39,6 +81,12 @@ type Network interface {
 	// Stop the node with this name.
 	// Returns ErrStopped if Stop() was previously called.
 	RemoveNode(ctx context.Context, name string) error
+	// Pause the node with this name.
+	// Returns ErrStopped if Stop() was previously called.
+	PauseNode(ctx context.Context, name string) error
+	// Resume the node with this name.
+	// Returns ErrStopped if Stop() was previously called.
+	ResumeNode(ctx context.Context, name string) error
 	// Return the node with this name.
 	// Returns ErrStopped if Stop() was previously called.
 	GetNode(name string) (node.Node, error)
@@ -62,7 +110,19 @@ type Network interface {
 	// a map of subnet configs
 	RestartNode(context.Context, string, string, string, string, map[string]string, map[string]string, map[string]string) error
 	// Create the specified blockchains
-	CreateBlockchains(context.Context, []BlockchainSpec) error
+	CreateBlockchains(context.Context, []BlockchainSpec) ([]ids.ID, error)
 	// Create the given numbers of subnets
-	CreateSubnets(context.Context, uint32) error
+	CreateSubnets(context.Context, []SubnetSpec) ([]ids.ID, error)
+	// Transform subnet into elastic subnet
+	TransformSubnet(context.Context, []ElasticSubnetSpec) ([]ids.ID, []ids.ID, error)
+	// Delegate stake into a permissionless validator in an elastic subnet
+	AddPermissionlessDelegators(context.Context, []PermissionlessStakerSpec) error
+	// Add a validator into an elastic subnet
+	AddPermissionlessValidators(context.Context, []PermissionlessStakerSpec) error
+	// Remove a validator from a subnet
+	RemoveSubnetValidators(context.Context, []SubnetValidatorsSpec) error
+	// Add a validator toa subnet
+	AddSubnetValidators(context.Context, []SubnetValidatorsSpec) error
+	// Get the elastic subnet tx id for the given subnet id
+	GetElasticSubnetID(context.Context, ids.ID) (ids.ID, error)
 }
