@@ -57,11 +57,11 @@ echo SUBNET_EVM_VERSION: ${SUBNET_EVM_VERSION}
 export CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 
 ############################
-LUXGO_REPO=/tmp/node-repo/
+LUXD_REPO=/tmp/node-repo/
 
-if [ ! -d $LUXGO_REPO ]
+if [ ! -d $LUXD_REPO ]
 then
-    git clone https://github.com/luxdefi/node/ $LUXGO_REPO
+    git clone https://github.com/luxdefi/node/ $LUXD_REPO
 fi
 
 VERSION_1_DIR=/tmp/node-${VERSION_1}/
@@ -70,7 +70,7 @@ then
     echo building node $VERSION_1
     rm -rf ${VERSION_1_DIR}
     mkdir -p ${VERSION_1_DIR}
-    cd $LUXGO_REPO
+    cd $LUXD_REPO
     git checkout $VERSION_1
     ./scripts/build.sh 
     cp -r build/* ${VERSION_1_DIR}
@@ -82,7 +82,7 @@ then
     echo building node $VERSION_2
     rm -rf ${VERSION_2_DIR}
     mkdir -p ${VERSION_2_DIR}
-    cd $LUXGO_REPO
+    cd $LUXD_REPO
     git checkout $VERSION_2
     ./scripts/build.sh 
     cp -r build/* ${VERSION_2_DIR}

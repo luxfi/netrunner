@@ -92,7 +92,7 @@ func NewCommand() *cobra.Command {
 }
 
 var (
-	luxGoBinPath  string
+	luxdBinPath  string
 	numNodes            uint32
 	pluginDir           string
 	globalNodeConfig    string
@@ -173,7 +173,7 @@ func newStartCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 	}
 	cmd.PersistentFlags().StringVar(
-		&luxGoBinPath,
+		&luxdBinPath,
 		"node-path",
 		"",
 		"node binary path",
@@ -328,7 +328,7 @@ func startFunc(*cobra.Command, []string) error {
 
 	info, err := cli.Start(
 		ctx,
-		luxGoBinPath,
+		luxdBinPath,
 		opts...,
 	)
 	if err != nil {
@@ -868,7 +868,7 @@ func newAddNodeCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	cmd.PersistentFlags().StringVar(
-		&luxGoBinPath,
+		&luxdBinPath,
 		"node-path",
 		"",
 		"node binary path",
@@ -955,7 +955,7 @@ func addNodeFunc(_ *cobra.Command, args []string) error {
 	info, err := cli.AddNode(
 		ctx,
 		nodeName,
-		luxGoBinPath,
+		luxdBinPath,
 		opts...,
 	)
 	cancel()
@@ -975,7 +975,7 @@ func newRestartNodeCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	cmd.PersistentFlags().StringVar(
-		&luxGoBinPath,
+		&luxdBinPath,
 		"node-path",
 		"",
 		"node binary path",
@@ -1023,7 +1023,7 @@ func restartNodeFunc(_ *cobra.Command, args []string) error {
 	defer cli.Close()
 
 	opts := []client.OpOption{
-		client.WithExecPath(luxGoBinPath),
+		client.WithExecPath(luxdBinPath),
 		client.WithPluginDir(pluginDir),
 		client.WithTrackSubnets(trackSubnets),
 	}
@@ -1228,7 +1228,7 @@ func newLoadSnapshotCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 	cmd.PersistentFlags().StringVar(
-		&luxGoBinPath,
+		&luxdBinPath,
 		"node-path",
 		"",
 		"node binary path",
@@ -1286,7 +1286,7 @@ func loadSnapshotFunc(_ *cobra.Command, args []string) error {
 	defer cli.Close()
 
 	opts := []client.OpOption{
-		client.WithExecPath(luxGoBinPath),
+		client.WithExecPath(luxdBinPath),
 		client.WithPluginDir(pluginDir),
 		client.WithRootDataDir(rootDataDir),
 		client.WithReassignPortsIfUsed(reassignPortsIfUsed),

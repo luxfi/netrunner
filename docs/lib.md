@@ -49,7 +49,7 @@ As you can see, some fields of the config must be set, while others will be auto
 
 ## Genesis Generation
 
-You can create a custom LuxGo genesis with function `network.NewLuxGoGenesis`:
+You can create a custom Luxd genesis with function `network.NewLuxdGenesis`:
 
 ```go
 // Return a genesis JSON where:
@@ -58,7 +58,7 @@ You can create a custom LuxGo genesis with function `network.NewLuxGoGenesis`:
 // [cChainBalances] and [xChainBalances].
 // Note that many of the genesis fields (i.e. reward addresses)
 // are randomly generated or hard-coded.
-func NewLuxGoGenesis(
+func NewLuxdGenesis(
   log logging.Logger,
   networkID uint32,
   xChainBalances []AddrAndBalance,
@@ -150,7 +150,7 @@ To create a new network from a snapshot, the function `NewNetworkFromSnapshot` i
 
 ## Network Interaction
 
-The network runner allows users to interact with an LuxGo network using the `network.Network` interface:
+The network runner allows users to interact with an Luxd network using the `network.Network` interface:
 
 ```go
 // Network is an abstraction of an Lux network
@@ -192,7 +192,7 @@ type Network interface {
 and allows users to interact with a node using the `node.Node` interface:
 
 ```go
-// Node represents an LuxGo node
+// Node represents an Luxd node
 type Node interface {
   // Return this node's name, which is unique
   // across all the nodes in its network.
