@@ -14,7 +14,7 @@ import (
 	"github.com/luxdefi/node/snow/networking/router"
 )
 
-// Node represents an LuxGo node
+// Node represents an Luxd node
 type Node interface {
 	// Return this node's name, which is unique
 	// across all the nodes in its network.

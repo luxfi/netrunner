@@ -937,7 +937,7 @@ func checkNetwork(t *testing.T, net network.Network, runningNodes map[string]str
 func emptyNetworkConfig() (network.Config, error) {
 	networkID := uint32(1337)
 	// Use a dummy genesis
-	genesis, err := network.NewLuxGoGenesis(
+	genesis, err := network.NewLuxdGenesis(
 		networkID,
 		[]network.AddrAndBalance{
 			{

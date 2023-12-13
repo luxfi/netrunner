@@ -120,7 +120,7 @@ func (c *Config) Validate() error {
 // [cChainBalances] and [xChainBalances].
 // Note that many of the genesis fields (i.e. reward addresses)
 // are randomly generated or hard-coded.
-func NewLuxGoGenesis(
+func NewLuxdGenesis(
 	networkID uint32,
 	xChainBalances []AddrAndBalance,
 	cChainBalances []AddrAndBalance,
@@ -211,6 +211,6 @@ func NewLuxGoGenesis(
 		)
 	}
 
-	// TODO add validation (from LuxGo's function validateConfig?)
+	// TODO add validation (from Luxd's function validateConfig?)
 	return json.Marshal(config)
 }

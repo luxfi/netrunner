@@ -459,7 +459,7 @@ Loads a network snapshot.
 ```sh
 netrunner control load-snapshot snapshot-name [flags]
 
- if the `LUXGO_EXEC_PATH` and `LUXGO_PLUGIN_PATH` env vars aren't set then you should pass them in as a flag
+ if the `LUXD_EXEC_PATH` and `LUXD_PLUGIN_PATH` env vars aren't set then you should pass them in as a flag
 netrunner control load-snapshot snapshotName --node-path /path/to/node/binary --plugin-dir /path/to/node/plugins
 ```
 
@@ -481,7 +481,7 @@ curl --location 'http://localhost:8081/v1/control/loadsnapshot' \
     "snapshotName":"snapshot"
 }'
 
- if the `LUXGO_EXEC_PATH` and `LUXGO_PLUGIN_PATH` env vars aren't set then you should pass them in to the curl
+ if the `LUXD_EXEC_PATH` and `LUXD_PLUGIN_PATH` env vars aren't set then you should pass them in to the curl
 curl -X POST -k http://localhost:8081/v1/control/loadsnapshot -d '{"snapshotName":"node5","execPath":"/path/to/node/binary","pluginDir":"/path/to/node/plugins"}'
 ```
 

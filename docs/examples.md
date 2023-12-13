@@ -207,7 +207,7 @@ netrunner control remove-subnet-validator '[{"subnet_id": "'$SUBNET_ID'", "node_
 ## Operating with blockchains
 
 **Note**: To create a blockchain, the vm binary for it should be present under the plugin dir, with a filename equal to the vm id. The plugin dir
-can be specified either in environment variable `LUXGO_PLUGIN_PATH` before starting the server, or as flag `--plugin-dir` to network start command.
+can be specified either in environment variable `LUXD_PLUGIN_PATH` before starting the server, or as flag `--plugin-dir` to network start command.
 
 The vm id can be derived from the vm name by using:
 
@@ -399,7 +399,7 @@ You can also provide additional flags that specify the node's config:
 
 ## Interacting with the test peers
 
-LuxGo exposes a "test peer", which you can attach to a node.
+Luxd exposes a "test peer", which you can attach to a node.
 (See [here](https://github.com/luxdefi/node/blob/master/network/peer/test_peer.go) for more information.)
 You can send messages through the test peer to the node it is attached to.
 

@@ -20,7 +20,7 @@ import (
 var _ NodeProcess = (*nodeProcess)(nil)
 
 // NodeProcess as an interface so we can mock running
-// LuxGo binaries in tests
+// Luxd binaries in tests
 type NodeProcess interface {
 	// Sends a SIGINT to this process and returns the process's
 	// exit code.
@@ -55,7 +55,7 @@ type nodeProcessCreator struct {
 // If the config has redirection set to `true` for either StdErr or StdOut,
 // the output will be redirected and colored
 func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string) (NodeProcess, error) {
-	// Start the LuxGo node and pass it the flags defined above
+	// Start the Luxd node and pass it the flags defined above
 	cmd := exec.Command(config.BinaryPath, args...) //nolint
 	// assign a new color to this process (might not be used if the config isn't set for it)
 	color := npc.colorPicker.NextColor()
@@ -212,7 +212,7 @@ func killDescendants(pid int32, log logging.Logger) {
 
 // GetNodeVersion gets the version of the executable as per --version flag
 func (*nodeProcessCreator) GetNodeVersion(c node.Config) (string, error) {
-	// Start the LuxGo node and pass it the --version flag
+	// Start the Luxd node and pass it the --version flag
 	out, err := exec.Command(c.BinaryPath, "--"+config.VersionKey).Output() //nolint
 	if err != nil {
 		return "", err

@@ -116,13 +116,13 @@ You can import this repository as a library in your Go program, but we recommend
 
 ### Using default paths
 
-ANR needs to know the location of the node binary and the vm plugins that will be used by the network. It is recommended that you export the environment variables `LUXGO_EXEC_PATH` and `LUXGO_PLUGIN_PATH` before starting the server. They will be used as default when starting networks and creating blockchains if no command line flags are passed.
+ANR needs to know the location of the node binary and the vm plugins that will be used by the network. It is recommended that you export the environment variables `LUXD_EXEC_PATH` and `LUXD_PLUGIN_PATH` before starting the server. They will be used as default when starting networks and creating blockchains if no command line flags are passed.
 
 Example setting:
 
 ```sh
-export LUXGO_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
-export LUXGO_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
+export LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
+export LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
 ```
 
 ### Starting and pinging the server

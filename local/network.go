@@ -628,7 +628,7 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		return nil, fmt.Errorf("couldn't get node ID: %w", err)
 	}
 
-	// Start the LuxGo node and pass it the flags defined above
+	// Start the Luxd node and pass it the flags defined above
 	nodeProcess, err := ln.nodeProcessCreator.NewNodeProcess(nodeConfig, nodeData.args...)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1126,7 +1126,7 @@ func (ln *localNetwork) buildArgs(
 		return buildArgsReturn{}, err
 	}
 
-	// Flags for LuxGo
+	// Flags for Luxd
 	flags := map[string]string{
 		config.NetworkNameKey:  fmt.Sprintf("%d", ln.networkID),
 		config.DataDirKey:      dataDir,
@@ -1200,7 +1200,7 @@ func (ln *localNetwork) buildArgs(
 	}, nil
 }
 
-// Get LuxGo version
+// Get Luxd version
 func (ln *localNetwork) getNodeSemVer(nodeConfig node.Config) (string, error) {
 	nodeVersionOutput, err := ln.nodeProcessCreator.GetNodeVersion(nodeConfig)
 	if err != nil {

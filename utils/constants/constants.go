@@ -9,8 +9,8 @@ const (
 	LogNameControl         = "control"
 	LogNameTest            = "test"
 	RootDirPrefix          = "network-runner-root-data"
-	DefaultExecPathEnvVar  = "LUXGO_EXEC_PATH"
-	DefaultPluginDirEnvVar = "LUXGO_PLUGIN_PATH"
+	DefaultExecPathEnvVar  = "LUXD_EXEC_PATH"
+	DefaultPluginDirEnvVar = "LUXD_PLUGIN_PATH"
 	LocalGenesisFile       = "genesis.json"
 	IPv4Lookback           = "127.0.0.1"
 )

@@ -5,8 +5,8 @@
 To start the server:
 
 ```sh
-export LUXGO_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
-export LUXGO_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
+export LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
+export LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
 
 netrunner server \
 --log-level debug \
@@ -128,8 +128,8 @@ netrunner control start \
 To start the server:
 
 ```sh
-export LUXGO_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
-export LUXGO_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
+export LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
+export LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
 
 netrunner server \
 --log-level debug \
@@ -209,8 +209,8 @@ netrunner control start \
 To start the server:
 
 ```sh
-export LUXGO_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
-export LUXGO_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
+export LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxdefi/node/build/node"
+export LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxdefi/node/build/plugins"
 
 netrunner server \
 --log-level debug \
