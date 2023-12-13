@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
-	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,16 +17,6 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-}
-
-func getFreePort() (uint16, error) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	port := uint16(l.Addr().(*net.TCPAddr).Port)
-	_ = l.Close()
-	return port, nil
 }
 
 // writeFiles writes the files a node needs on startup.

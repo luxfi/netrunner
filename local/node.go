@@ -134,7 +134,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		MessageCreator:       mc,
 		Log:                  logging.NoLog{},
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
-		Network:              peer.TestNetwork,
+		Network:              peer.Testnetwork,
 		Router:               router,
 		VersionCompatibility: version.GetCompatibility(node.networkID),
 		MySubnets:            set.Set[ids.ID]{},
