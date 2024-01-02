@@ -345,7 +345,7 @@ type CustomChainInfo struct {
 	// VM ID in "ids.ID" format.
 	VmId string `protobuf:"bytes,2,opt,name=vm_id,json=vmId,proto3" json:"vm_id,omitempty"`
 	// Create subnet transaction ID -- subnet ID.
-	// The subnet ID must be whitelisted by the avalanche node.
+	// The subnet ID must be whitelisted by the lux node.
 	SubnetId string `protobuf:"bytes,3,opt,name=subnet_id,json=subnetId,proto3" json:"subnet_id,omitempty"`
 	// Create blockchain transaction ID -- blockchain ID>
 	// The blockchain ID is used for RPC endpoints.

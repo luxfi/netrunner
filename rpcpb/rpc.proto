@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/ava-labs/avalanche-network-runner;rpcpb";
+option go_package = "github.com/luxdefi/netrunner;rpcpb";
 
 package rpcpb;
 
@@ -233,7 +233,7 @@ message CustomChainInfo {
   string vm_id = 2;
 
   // Create subnet transaction ID -- subnet ID.
-  // The subnet ID must be whitelisted by the avalanche node.
+  // The subnet ID must be whitelisted by the lux node.
   string subnet_id = 3;
 
   // Create blockchain transaction ID -- blockchain ID>
