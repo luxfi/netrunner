@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/logging"
 	"go.uber.org/zap"
 )
 

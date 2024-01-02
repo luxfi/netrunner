@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/node/utils/logging"
 	"github.com/shirou/gopsutil/process"
 	"go.uber.org/zap"
 )
@@ -19,7 +19,7 @@ import (
 var _ NodeProcess = (*nodeProcess)(nil)
 
 // NodeProcess as an interface so we can mock running
-// AvalancheGo binaries in tests
+// Lux binaries in tests
 type NodeProcess interface {
 	// Sends a SIGINT to this process and returns the process's
 	// exit code.
@@ -54,7 +54,7 @@ type nodeProcessCreator struct {
 // If the config has redirection set to `true` for either StdErr or StdOut,
 // the output will be redirected and colored
 func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string) (NodeProcess, error) {
-	// Start the AvalancheGo node and pass it the flags defined above
+	// Start the Lux node and pass it the flags defined above
 	cmd := exec.Command(config.BinaryPath, args...) //nolint
 	// assign a new color to this process (might not be used if the config isn't set for it)
 	color := npc.colorPicker.NextColor()
@@ -211,7 +211,7 @@ func killDescendants(pid int32, log logging.Logger) {
 
 // GetNodeVersion gets the version of the executable as per --version flag
 func (*nodeProcessCreator) GetNodeVersion(config node.Config) (string, error) {
-	// Start the AvalancheGo node and pass it the --version flag
+	// Start the Lux node and pass it the --version flag
 	out, err := exec.Command(config.BinaryPath, "--version").Output() //nolint
 	if err != nil {
 		return "", err

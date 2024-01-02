@@ -1,6 +1,6 @@
 package local
 
-import "github.com/ava-labs/avalanchego/message"
+import "github.com/luxdefi/node/message"
 
 var _ message.OutboundMessage = &TestMsg{}
 

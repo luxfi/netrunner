@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2021-2024, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package local
@@ -14,31 +14,31 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/avalanchego/vms/platformvm/reward"
+	"github.com/luxdefi/node/vms/platformvm/reward"
 
-	"github.com/ava-labs/avalanchego/vms/avm"
-	"github.com/ava-labs/avalanchego/vms/components/avax"
-	"github.com/ava-labs/avalanchego/vms/components/verify"
-	"github.com/ava-labs/avalanchego/wallet/chain/x"
+	"github.com/luxdefi/node/vms/avm"
+	"github.com/luxdefi/node/vms/components/lux"
+	"github.com/luxdefi/node/vms/components/verify"
+	"github.com/luxdefi/node/wallet/chain/x"
 
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/api/admin"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/genesis"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/crypto/bls"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/set"
-	"github.com/ava-labs/avalanchego/vms/platformvm"
-	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
-	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
-	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
-	"github.com/ava-labs/avalanchego/wallet/chain/p"
-	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
-	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/node/api/admin"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/genesis"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/crypto/bls"
+	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxdefi/node/utils/set"
+	"github.com/luxdefi/node/vms/platformvm"
+	"github.com/luxdefi/node/vms/platformvm/signer"
+	"github.com/luxdefi/node/vms/platformvm/txs"
+	"github.com/luxdefi/node/vms/secp256k1fx"
+	"github.com/luxdefi/node/wallet/chain/p"
+	"github.com/luxdefi/node/wallet/subnet/primary"
+	"github.com/luxdefi/node/wallet/subnet/primary/common"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 )
@@ -691,14 +691,14 @@ func (w *wallet) reload(uri string) {
 
 // add all nodes as validators of the primary network, in case they are not
 // the validation starts as soon as possible and its duration is as long as possible, that is,
-// it is set to max accepted duration by avalanchego
+// it is set to max accepted duration by node
 func (ln *localNetwork) addPrimaryValidators(
 	ctx context.Context,
 	platformCli platformvm.Client,
 	w *wallet,
 ) error {
 	ln.log.Info(logging.Green.Wrap("adding the nodes as primary network validators"))
-	// ref. https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetcurrentvalidators
+	// ref. https://docs.lux.network/build/node-apis/p-chain/#platformgetcurrentvalidators
 	cctx, cancel := createDefaultCtx(ctx)
 	vdrs, err := platformCli.GetCurrentValidators(cctx, constants.PrimaryNetworkID, nil)
 	cancel()
@@ -740,7 +740,7 @@ func (ln *localNetwork) addPrimaryValidators(
 				Subnet: ids.Empty,
 			},
 			proofOfPossession,
-			w.pWallet.AVAXAssetID(),
+			w.pWallet.LUXAssetID(),
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,
 				Addrs:     []ids.ShortID{w.addr},
@@ -792,9 +792,9 @@ func exportXChainToPChain(ctx context.Context, w *wallet, owner *secp256k1fx.Out
 	defer cancel()
 	_, err := w.xWallet.IssueExportTx(
 		ids.Empty,
-		[]*avax.TransferableOutput{
+		[]*lux.TransferableOutput{
 			{
-				Asset: avax.Asset{
+				Asset: lux.Asset{
 					ID: subnetAssetID,
 				},
 				Out: &secp256k1fx.TransferOutput{

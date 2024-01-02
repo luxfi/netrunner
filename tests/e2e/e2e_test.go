@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2021-2024, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 // e2e implements the e2e tests.
@@ -14,21 +14,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ava-labs/avalanchego/api/admin"
-	"github.com/ava-labs/avalanchego/message"
-	avago_constants "github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/vms/platformvm"
+	"github.com/luxdefi/node/api/admin"
+	"github.com/luxdefi/node/message"
+	luxd_constants "github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/vms/platformvm"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/exp/maps"
 
-	"github.com/ava-labs/avalanche-network-runner/client"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/server"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/client"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/server"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/utils/logging"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
@@ -132,15 +132,15 @@ func init() {
 	)
 	flag.StringVar(
 		&execPath1,
-		"avalanchego-path-1",
+		"node-path-1",
 		"",
-		"avalanchego executable path (to upgrade from)",
+		"node executable path (to upgrade from)",
 	)
 	flag.StringVar(
 		&execPath2,
-		"avalanchego-path-2",
+		"node-path-2",
 		"",
-		"avalanchego executable path (to upgrade to)",
+		"node executable path (to upgrade to)",
 	)
 	flag.StringVar(
 		&subnetEvmPath,
@@ -630,7 +630,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 				logging.NoLog{},
 				prometheus.NewRegistry(),
 				"",
-				avago_constants.DefaultNetworkCompressionType,
+				luxd_constants.DefaultNetworkCompressionType,
 				10*time.Second,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
@@ -641,7 +641,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 				ids.GenerateTestID(),
 			}
 			requestID := uint32(42)
-			chainID := avago_constants.PlatformChainID
+			chainID := luxd_constants.PlatformChainID
 			msg, err := mc.Chits(chainID, requestID, []ids.ID{}, containerIDs)
 			gomega.Ω(err).Should(gomega.BeNil())
 

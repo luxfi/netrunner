@@ -10,14 +10,14 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/logging"
 	dircopy "github.com/otiai10/copy"
 	"golang.org/x/exp/maps"
 )
@@ -33,8 +33,8 @@ type NetworkState struct {
 	SubnetID2ElasticSubnetID map[string]string `json:"subnetID2ElasticSubnetID"`
 }
 
-// snapshots generated using older ANR versions may contain deprecated avago flags
-func fixDeprecatedAvagoFlags(flags map[string]interface{}) error {
+// snapshots generated using older ANR versions may contain deprecated luxd flags
+func fixDeprecatedLuxdFlags(flags map[string]interface{}) error {
 	if vIntf, ok := flags[deprecatedWhitelistedSubnetsKey]; ok {
 		v, ok := vIntf.(string)
 		if !ok {
@@ -245,12 +245,12 @@ func (ln *localNetwork) loadSnapshot(
 	if err := json.Unmarshal(networkConfigJSON, &networkConfig); err != nil {
 		return fmt.Errorf("failure unmarshaling network config from snapshot: %w", err)
 	}
-	// fix deprecated avago flags
-	if err := fixDeprecatedAvagoFlags(networkConfig.Flags); err != nil {
+	// fix deprecated luxd flags
+	if err := fixDeprecatedLuxdFlags(networkConfig.Flags); err != nil {
 		return err
 	}
 	for i := range networkConfig.NodeConfigs {
-		if err := fixDeprecatedAvagoFlags(networkConfig.NodeConfigs[i].Flags); err != nil {
+		if err := fixDeprecatedLuxdFlags(networkConfig.NodeConfigs[i].Flags); err != nil {
 			return err
 		}
 	}

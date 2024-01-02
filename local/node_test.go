@@ -11,16 +11,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/wrappers"
-	"github.com/ava-labs/avalanchego/version"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/message"
+	"github.com/luxdefi/node/network/peer"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/ips"
+	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxdefi/node/utils/wrappers"
+	"github.com/luxdefi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
@@ -151,7 +151,7 @@ func readMessage(nodeConn net.Conn, errCh chan error) (*bytes.Buffer, error) {
 	return msgBytes, nil
 }
 
-// sendMessage sends a protocol message to the avalanchego peer
+// sendMessage sends a protocol message to the node peer
 func sendMessage(nodeConn net.Conn, msgBytes []byte, errCh chan error) error {
 	// buffer for message length
 	msgLenBytes := make([]byte, wrappers.IntLen)
