@@ -1,11 +1,11 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2021-2024, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 package ux
 
 import (
 	"fmt"
 
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/node/utils/logging"
 )
 
 func Print(log logging.Logger, msg string, args ...interface{}) {

@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/local"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/local"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/node/utils/logging"
 	"go.uber.org/zap"
 )
 
@@ -41,8 +41,8 @@ func shutdownOnSignal(
 	close(closedOnShutdownChan)
 }
 
-// Shows example usage of the Avalanche Network Runner.
-// Creates a local five node Avalanche network
+// Shows example usage of the Lux Network Runner.
+// Creates a local five node Lux network
 // and waits for all nodes to become healthy.
 // The network runs until the user provides a SIGINT or SIGTERM.
 func main() {
@@ -59,7 +59,7 @@ func main() {
 	if goPath == "" {
 		goPath = build.Default.GOPATH
 	}
-	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/ava-labs/avalanchego/build/avalanchego")
+	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/luxdefi/node/build/node")
 	if err := run(log, binaryPath); err != nil {
 		log.Fatal("fatal error", zap.Error(err))
 		os.Exit(1)

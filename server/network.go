@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2021-2024, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package server
@@ -13,16 +13,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ava-labs/avalanche-network-runner/local"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/ids"
-	avago_constants "github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/local"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/ids"
+	luxd_constants "github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/logging"
 	"golang.org/x/exp/maps"
 )
 
@@ -36,13 +36,13 @@ scrape_configs:
     static_configs:
       - targets: 
         - localhost:9090
-  - job_name: avalanchego-machine
+  - job_name: node-machine
     static_configs:
      - targets: 
        - localhost:9100
        labels:
          alias: machine
-  - job_name: avalanchego
+  - job_name: node
     metrics_path: /ext/metrics
     static_configs:
       - targets:
@@ -541,7 +541,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 
 	subnetIDList := []string{}
 	for _, subnet := range subnets {
-		if subnet.ID != avago_constants.PlatformChainID {
+		if subnet.ID != luxd_constants.PlatformChainID {
 			subnetIDList = append(subnetIDList, subnet.ID.String())
 		}
 	}

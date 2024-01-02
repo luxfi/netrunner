@@ -1,4 +1,4 @@
-// Copyright (C) 2019-2022, Ava Labs, Inc. All rights reserved.
+// Copyright (C) 2021-2024, Lux Partners Limited. All rights reserved.
 // See the file LICENSE for licensing terms.
 
 package ping
@@ -7,10 +7,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/client"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	"github.com/luxdefi/netrunner/client"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/node/utils/logging"
 	"github.com/spf13/cobra"
 )
 

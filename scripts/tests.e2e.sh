@@ -43,79 +43,79 @@ echo VERSION_1: ${VERSION_1}
 echo VERSION_2: ${VERSION_2}
 echo SUBNET_EVM_VERSION: ${SUBNET_EVM_VERSION}
 
-if [ ! -f /tmp/avalanchego-v${VERSION_1}/avalanchego ]
+if [ ! -f /tmp/node-v${VERSION_1}/node ]
 then
     ############################
-    # download avalanchego
-    # https://github.com/ava-labs/avalanchego/releases
+    # download node
+    # https://github.com/luxdefi/node/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_1}/avalanchego-linux-${GOARCH}-v${VERSION_1}.tar.gz
-    DOWNLOAD_PATH=/tmp/avalanchego.tar.gz
+    DOWNLOAD_URL=https://github.com/luxdefi/node/releases/download/v${VERSION_1}/node-linux-${GOARCH}-v${VERSION_1}.tar.gz
+    DOWNLOAD_PATH=/tmp/node.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_1}/avalanchego-macos-v${VERSION_1}.zip
-      DOWNLOAD_PATH=/tmp/avalanchego.zip
+      DOWNLOAD_URL=https://github.com/luxdefi/node/releases/download/v${VERSION_1}/node-macos-v${VERSION_1}.zip
+      DOWNLOAD_PATH=/tmp/node.zip
     fi
 
-    rm -rf /tmp/avalanchego-v${VERSION_1}
-    rm -rf /tmp/avalanchego-build
+    rm -rf /tmp/node-v${VERSION_1}
+    rm -rf /tmp/node-build
     rm -f ${DOWNLOAD_PATH}
 
-    echo "downloading avalanchego ${VERSION_1} at ${DOWNLOAD_URL}"
+    echo "downloading node ${VERSION_1} at ${DOWNLOAD_URL}"
     curl -L ${DOWNLOAD_URL} -o ${DOWNLOAD_PATH}
 
-    echo "extracting downloaded avalanchego"
+    echo "extracting downloaded node"
     if [[ ${GOOS} == "linux" ]]; then
       tar xzvf ${DOWNLOAD_PATH} -C /tmp
     elif [[ ${GOOS} == "darwin" ]]; then
-      unzip ${DOWNLOAD_PATH} -d /tmp/avalanchego-build
-      mv /tmp/avalanchego-build/build /tmp/avalanchego-v${VERSION_1}
+      unzip ${DOWNLOAD_PATH} -d /tmp/node-build
+      mv /tmp/node-build/build /tmp/node-v${VERSION_1}
     fi
-    find /tmp/avalanchego-v${VERSION_1}
+    find /tmp/node-v${VERSION_1}
 fi
 
-if [ ! -f /tmp/avalanchego-v${VERSION_2}/avalanchego ]
+if [ ! -f /tmp/node-v${VERSION_2}/node ]
 then
     ############################
-    # download avalanchego
-    # https://github.com/ava-labs/avalanchego/releases
+    # download node
+    # https://github.com/luxdefi/node/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_2}/avalanchego-linux-${GOARCH}-v${VERSION_2}.tar.gz
-    DOWNLOAD_PATH=/tmp/avalanchego.tar.gz
+    DOWNLOAD_URL=https://github.com/luxdefi/node/releases/download/v${VERSION_2}/node-linux-${GOARCH}-v${VERSION_2}.tar.gz
+    DOWNLOAD_PATH=/tmp/node.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/ava-labs/avalanchego/releases/download/v${VERSION_2}/avalanchego-macos-v${VERSION_2}.zip
-      DOWNLOAD_PATH=/tmp/avalanchego.zip
+      DOWNLOAD_URL=https://github.com/luxdefi/node/releases/download/v${VERSION_2}/node-macos-v${VERSION_2}.zip
+      DOWNLOAD_PATH=/tmp/node.zip
     fi
 
-    rm -rf /tmp/avalanchego-v${VERSION_2}
-    rm -rf /tmp/avalanchego-build
+    rm -rf /tmp/node-v${VERSION_2}
+    rm -rf /tmp/node-build
     rm -f ${DOWNLOAD_PATH}
 
-    echo "downloading avalanchego ${VERSION_2} at ${DOWNLOAD_URL}"
+    echo "downloading node ${VERSION_2} at ${DOWNLOAD_URL}"
     curl -L ${DOWNLOAD_URL} -o ${DOWNLOAD_PATH}
 
-    echo "extracting downloaded avalanchego"
+    echo "extracting downloaded node"
     if [[ ${GOOS} == "linux" ]]; then
       tar xzvf ${DOWNLOAD_PATH} -C /tmp
     elif [[ ${GOOS} == "darwin" ]]; then
-      unzip ${DOWNLOAD_PATH} -d /tmp/avalanchego-build
-      mv /tmp/avalanchego-build/build /tmp/avalanchego-v${VERSION_2}
+      unzip ${DOWNLOAD_PATH} -d /tmp/node-build
+      mv /tmp/node-build/build /tmp/node-v${VERSION_2}
     fi
-    find /tmp/avalanchego-v${VERSION_2}
+    find /tmp/node-v${VERSION_2}
 fi
 
 if [ ! -f /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm ]
 then
     ############################
     # download subnet-evm 
-    # https://github.com/ava-labs/subnet-evm/releases
+    # https://github.com/luxdefi/subnet-evm/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/ava-labs/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_linux_${GOARCH}.tar.gz
+    DOWNLOAD_URL=https://github.com/luxdefi/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_linux_${GOARCH}.tar.gz
     DOWNLOAD_PATH=/tmp/subnet-evm.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/ava-labs/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_darwin_${GOARCH}.tar.gz
+      DOWNLOAD_URL=https://github.com/luxdefi/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_darwin_${GOARCH}.tar.gz
     fi
 
     rm -rf /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
@@ -128,8 +128,8 @@ then
     mkdir /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
     tar xzvf ${DOWNLOAD_PATH} -C /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
     # NOTE: We are copying the subnet-evm binary here to a plugin hardcoded as srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy which corresponds to the VM name `subnetevm` used as such in the test
-    mkdir -p /tmp/avalanchego-v${VERSION_1}/plugins/
-    cp /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm /tmp/avalanchego-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
+    mkdir -p /tmp/node-v${VERSION_1}/plugins/
+    cp /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm /tmp/node-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
     find /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm
 fi
 ############################
@@ -151,10 +151,10 @@ ACK_GINKGO_RC=true ginkgo build ./tests/e2e
 snapshots_dir=/tmp/network-runner-root-data/snapshots-e2e/
 rm -rf $snapshots_dir
 
-killall avalanche-network-runner || true
+killall netrunner || true
 
 echo "launch local test cluster in the background"
-bin/avalanche-network-runner \
+bin/netrunner \
 server \
 --log-level debug \
 --port=":8080" \
@@ -177,6 +177,6 @@ echo "running e2e tests"
 --log-level debug \
 --grpc-endpoint="0.0.0.0:8080" \
 --grpc-gateway-endpoint="0.0.0.0:8081" \
---avalanchego-path-1=/tmp/avalanchego-v${VERSION_1}/avalanchego \
---avalanchego-path-2=/tmp/avalanchego-v${VERSION_2}/avalanchego \
+--node-path-1=/tmp/node-v${VERSION_1}/node \
+--node-path-2=/tmp/node-v${VERSION_2}/node \
 --subnet-evm-path=/tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm

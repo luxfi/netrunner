@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	coreth_params "github.com/ava-labs/coreth/params"
+	coreth_params "github.com/luxdefi/coreth/params"
 )
 
 //go:embed default/genesis.json
@@ -25,7 +25,7 @@ func LoadLocalGenesis() (map[string]interface{}, error) {
 	cChainGenesis := genesisMap["cChainGenesis"]
 	// set the cchain genesis directly from coreth
 	// the whole of `cChainGenesis` should be set as a string, not a json object...
-	corethCChainGenesis := coreth_params.AvalancheLocalChainConfig
+	corethCChainGenesis := coreth_params.LuxLocalChainConfig
 	// but the part in coreth is only the "config" part.
 	// In order to set it easily, first we get the cChainGenesis item
 	// convert it to a map

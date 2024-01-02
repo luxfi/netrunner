@@ -18,22 +18,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanche-network-runner/utils"
-	"github.com/ava-labs/avalanche-network-runner/utils/constants"
-	"github.com/ava-labs/avalanchego/config"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/beacon"
-	"github.com/ava-labs/avalanchego/utils/crypto/bls"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/set"
-	"github.com/ava-labs/avalanchego/utils/wrappers"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/netrunner/utils"
+	"github.com/luxdefi/netrunner/utils/constants"
+	"github.com/luxdefi/node/config"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/network/peer"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/beacon"
+	"github.com/luxdefi/node/utils/crypto/bls"
+	"github.com/luxdefi/node/utils/ips"
+	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxdefi/node/utils/set"
+	"github.com/luxdefi/node/utils/wrappers"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 	"golang.org/x/mod/semver"
@@ -72,7 +72,7 @@ var (
 	chainConfigSubDir  = "chainConfigs"
 	subnetConfigSubDir = "subnetConfigs"
 
-	snapshotsRelPath = filepath.Join(".avalanche-network-runner", "snapshots")
+	snapshotsRelPath = filepath.Join(".netrunner", "snapshots")
 
 	ErrSnapshotNotFound = errors.New("snapshot not found")
 )
@@ -149,7 +149,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	// load deprecated avago flags support information
+	// load deprecated luxd flags support information
 	if err = json.Unmarshal(deprecatedFlagsSupportBytes, &deprecatedFlagsSupport); err != nil {
 		panic(err)
 	}
@@ -288,7 +288,7 @@ func NewNetwork(
 
 // See NewNetwork.
 // [newAPIClientF] is used to create new API clients.
-// [nodeProcessCreator] is used to launch new avalanchego processes.
+// [nodeProcessCreator] is used to launch new node processes.
 func newNetwork(
 	log logging.Logger,
 	newAPIClientF api.NewAPIClientF,
@@ -586,7 +586,7 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		return nil, fmt.Errorf("couldn't get node ID: %w", err)
 	}
 
-	// Start the AvalancheGo node and pass it the flags defined above
+	// Start the Lux node and pass it the flags defined above
 	nodeProcess, err := ln.nodeProcessCreator.NewNodeProcess(nodeConfig, nodeData.args...)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1024,7 +1024,7 @@ type buildArgsReturn struct {
 }
 
 // buildArgs returns the:
-// 1) Args for avago execution
+// 1) Args for luxd execution
 // 2) API port
 // 3) P2P port
 // of the node being added with config [nodeConfig], config file [configFile],
@@ -1079,7 +1079,7 @@ func (ln *localNetwork) buildArgs(
 		return buildArgsReturn{}, err
 	}
 
-	// Flags for AvalancheGo
+	// Flags for Lux
 	flags := map[string]string{
 		config.NetworkNameKey:  fmt.Sprintf("%d", ln.networkID),
 		config.DataDirKey:      dataDir,
@@ -1119,13 +1119,13 @@ func (ln *localNetwork) buildArgs(
 		flags[flagName] = fmt.Sprintf("%v", flagVal)
 	}
 
-	// map input flags to the corresponding avago version, making sure that latest flags don't break
-	// old avago versions
-	flagsForAvagoVersion := getFlagsForAvagoVersion(nodeSemVer, flags)
+	// map input flags to the corresponding luxd version, making sure that latest flags don't break
+	// old luxd versions
+	flagsForLuxdVersion := getFlagsForLuxdVersion(nodeSemVer, flags)
 
 	// create args
 	args := []string{}
-	for k, v := range flagsForAvagoVersion {
+	for k, v := range flagsForLuxdVersion {
 		args = append(args, fmt.Sprintf("--%s=%s", k, v))
 	}
 
@@ -1141,7 +1141,7 @@ func (ln *localNetwork) buildArgs(
 	}, nil
 }
 
-// Get AvalancheGo version
+// Get Lux version
 func (ln *localNetwork) getNodeSemVer(nodeConfig node.Config) (string, error) {
 	nodeVersionOutput, err := ln.nodeProcessCreator.GetNodeVersion(nodeConfig)
 	if err != nil {
@@ -1162,11 +1162,11 @@ func (ln *localNetwork) getNodeSemVer(nodeConfig node.Config) (string, error) {
 	return nodeSemVer, nil
 }
 
-// ensure flags are compatible with the running avalanchego version
-func getFlagsForAvagoVersion(avagoVersion string, givenFlags map[string]string) map[string]string {
+// ensure flags are compatible with the running node version
+func getFlagsForLuxdVersion(luxdVersion string, givenFlags map[string]string) map[string]string {
 	flags := maps.Clone(givenFlags)
 	for _, deprecatedFlagInfo := range deprecatedFlagsSupport {
-		if semver.Compare(avagoVersion, deprecatedFlagInfo.Version) < 0 {
+		if semver.Compare(luxdVersion, deprecatedFlagInfo.Version) < 0 {
 			if v, ok := flags[deprecatedFlagInfo.NewName]; ok {
 				if v != "" {
 					if deprecatedFlagInfo.ValueMap == "parent-dir" {

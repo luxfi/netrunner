@@ -8,11 +8,11 @@ import (
 	"os"
 	"time"
 
-	rpcb "github.com/ava-labs/avalanche-network-runner/rpcpb"
-	"github.com/ava-labs/avalanche-network-runner/ux"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	rpcb "github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxdefi/netrunner/ux"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/logging"
 )
 
 const (
@@ -47,8 +47,8 @@ func NetworkIDFromGenesis(genesis []byte) (uint32, error) {
 }
 
 var (
-	ErrInvalidExecPath = errors.New("avalanche exec is invalid")
-	ErrNotExists       = errors.New("avalanche exec not exists")
+	ErrInvalidExecPath = errors.New("lux exec is invalid")
+	ErrNotExists       = errors.New("lux exec not exists")
 	ErrNotExistsPlugin = errors.New("plugin exec not exists")
 )
 

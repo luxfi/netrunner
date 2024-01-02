@@ -8,24 +8,24 @@ import (
 	"net"
 	"time"
 
-	"github.com/ava-labs/avalanche-network-runner/api"
-	"github.com/ava-labs/avalanche-network-runner/network/node"
-	"github.com/ava-labs/avalanche-network-runner/network/node/status"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/message"
-	"github.com/ava-labs/avalanchego/network/peer"
-	"github.com/ava-labs/avalanchego/network/throttling"
-	"github.com/ava-labs/avalanchego/snow/networking/router"
-	"github.com/ava-labs/avalanchego/snow/networking/tracker"
-	"github.com/ava-labs/avalanchego/snow/validators"
-	"github.com/ava-labs/avalanchego/staking"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/avalanchego/utils/ips"
-	"github.com/ava-labs/avalanchego/utils/logging"
-	"github.com/ava-labs/avalanchego/utils/math/meter"
-	"github.com/ava-labs/avalanchego/utils/resource"
-	"github.com/ava-labs/avalanchego/utils/set"
-	"github.com/ava-labs/avalanchego/version"
+	"github.com/luxdefi/netrunner/api"
+	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxdefi/netrunner/network/node/status"
+	"github.com/luxdefi/node/ids"
+	"github.com/luxdefi/node/message"
+	"github.com/luxdefi/node/network/peer"
+	"github.com/luxdefi/node/network/throttling"
+	"github.com/luxdefi/node/snow/networking/router"
+	"github.com/luxdefi/node/snow/networking/tracker"
+	"github.com/luxdefi/node/snow/validators"
+	"github.com/luxdefi/node/staking"
+	"github.com/luxdefi/node/utils/constants"
+	"github.com/luxdefi/node/utils/ips"
+	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxdefi/node/utils/math/meter"
+	"github.com/luxdefi/node/utils/resource"
+	"github.com/luxdefi/node/utils/set"
+	"github.com/luxdefi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,11 +42,11 @@ const (
 	peerStartWaitTimeout        = 30 * time.Second
 )
 
-// Gives access to basic node info, and to most avalanchego apis
+// Gives access to basic node info, and to most node apis
 type localNode struct {
 	// Must be unique across all nodes in this network.
 	name string
-	// [nodeID] is this node's Avalannche Node ID.
+	// [nodeID] is this node's Lux Node ID.
 	// Set in network.AddNode
 	nodeID ids.NodeID
 	// The ID of the network this node exists in
