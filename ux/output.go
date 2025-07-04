@@ -1,4 +1,4 @@
-// Copyright (C) 2021-2024, Lux Partners Limited. All rights reserved.
+// Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 package ux
 
