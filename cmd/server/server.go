@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxdefi/netrunner/server"
-	"github.com/luxdefi/netrunner/utils"
-	"github.com/luxdefi/netrunner/utils/constants"
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/netrunner/server"
+	"github.com/luxfi/netrunner/utils"
+	"github.com/luxfi/netrunner/utils/constants"
+	"github.com/luxfi/node/utils/logging"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

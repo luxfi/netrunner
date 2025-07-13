@@ -3,7 +3,7 @@
 package main
 
 import (
-	"github.com/luxdefi/netrunner/cmd"
+	"github.com/luxfi/netrunner/cmd"
 )
 
 func main() {

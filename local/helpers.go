@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/node/config"
-	"github.com/luxdefi/node/utils/constants"
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/netrunner/network/node"
+	"github.com/luxfi/node/config"
+	"github.com/luxfi/node/utils/constants"
+	"github.com/luxfi/node/utils/logging"
 	"go.uber.org/zap"
 )
 

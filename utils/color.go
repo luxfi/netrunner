@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/node/utils/logging"
 )
 
 var supportedColors = []logging.Color{
