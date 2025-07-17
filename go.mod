@@ -1,6 +1,6 @@
 module github.com/luxfi/netrunner
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/luxfi/node v1.11.10
