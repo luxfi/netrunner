@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	coreth_params "github.com/luxdefi/coreth/params"
+	coreth_params "github.com/luxfi/geth/params"
 )
 
 //go:embed default/genesis.json
