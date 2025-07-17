@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxdefi/netrunner/local"
-	"github.com/luxdefi/netrunner/network"
-	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxfi/netrunner/local"
+	"github.com/luxfi/netrunner/network"
+	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/logging"

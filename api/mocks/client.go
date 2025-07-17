@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	api "github.com/luxdefi/netrunner/api"
+	api "github.com/luxfi/netrunner/api"
 	admin "github.com/luxfi/node/api/admin"
 
 	avm "github.com/luxfi/node/vms/avm"
