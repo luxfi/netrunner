@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxdefi/netrunner/local"
-	"github.com/luxdefi/netrunner/network"
+	"github.com/luxfi/netrunner/local"
+	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/node/utils/logging"
 	"go.uber.org/zap"
 )

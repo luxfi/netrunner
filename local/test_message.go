@@ -1,6 +1,6 @@
 package local
 
-import "github.com/luxdefi/node/message"
+import "github.com/luxfi/node/message"
 
 var _ message.OutboundMessage = &TestMsg{}
 

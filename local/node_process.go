@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/netrunner/network/node/status"
-	"github.com/luxdefi/netrunner/utils"
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/netrunner/network/node"
+	"github.com/luxfi/netrunner/network/node/status"
+	"github.com/luxfi/netrunner/utils"
+	"github.com/luxfi/node/utils/logging"
 	"github.com/shirou/gopsutil/process"
 	"go.uber.org/zap"
 )

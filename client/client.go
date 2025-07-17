@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/luxdefi/netrunner/local"
-	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxfi/netrunner/local"
+	"github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/node/utils/logging"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
