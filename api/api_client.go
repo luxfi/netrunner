@@ -3,15 +3,15 @@ package api
 import (
 	"fmt"
 
-	"github.com/luxdefi/node/api/admin"
-	"github.com/luxdefi/node/api/health"
-	"github.com/luxdefi/node/api/info"
-	"github.com/luxdefi/node/api/ipcs"
-	"github.com/luxdefi/node/api/keystore"
-	"github.com/luxdefi/node/indexer"
-	"github.com/luxdefi/node/vms/avm"
-	"github.com/luxdefi/node/vms/platformvm"
-	"github.com/luxdefi/coreth/plugin/evm"
+	"github.com/luxfi/node/api/admin"
+	"github.com/luxfi/node/api/health"
+	"github.com/luxfi/node/api/info"
+	"github.com/luxfi/node/api/ipcs"
+	"github.com/luxfi/node/api/keystore"
+	"github.com/luxfi/node/indexer"
+	"github.com/luxfi/node/vms/avm"
+	"github.com/luxfi/node/vms/platformvm"
+	"github.com/luxfi/geth/plugin/evm"
 )
 
 // interface compliance

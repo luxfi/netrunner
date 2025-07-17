@@ -5,7 +5,7 @@ package ux
 import (
 	"fmt"
 
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/node/utils/logging"
 )
 
 func Print(log logging.Logger, msg string, args ...interface{}) {

@@ -14,7 +14,7 @@ import (
 
 	"github.com/luxdefi/netrunner/local"
 	"github.com/luxdefi/netrunner/rpcpb"
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/node/utils/logging"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

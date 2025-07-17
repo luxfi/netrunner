@@ -3,7 +3,7 @@ package server
 import (
 	"encoding/json"
 
-	"github.com/luxdefi/netrunner/rpcpb"
+	"github.com/luxfi/netrunner/rpcpb"
 )
 
 func deepCopy(i *rpcpb.ClusterInfo) (*rpcpb.ClusterInfo, error) {

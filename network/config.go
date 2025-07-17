@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/netrunner/utils"
-	"github.com/luxdefi/node/genesis"
-	"github.com/luxdefi/node/ids"
-	"github.com/luxdefi/node/utils/constants"
-	"github.com/luxdefi/node/utils/formatting/address"
-	"github.com/luxdefi/node/utils/units"
+	"github.com/luxfi/netrunner/network/node"
+	"github.com/luxfi/netrunner/utils"
+	"github.com/luxfi/node/genesis"
+	"github.com/luxfi/node/ids"
+	"github.com/luxfi/node/utils/constants"
+	"github.com/luxfi/node/utils/formatting/address"
+	"github.com/luxfi/node/utils/units"
 	"golang.org/x/exp/maps"
 )
 

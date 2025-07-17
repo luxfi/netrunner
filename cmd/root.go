@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/luxdefi/netrunner/cmd/control"
-	"github.com/luxdefi/netrunner/cmd/ping"
-	"github.com/luxdefi/netrunner/cmd/server"
+	"github.com/luxfi/netrunner/cmd/control"
+	"github.com/luxfi/netrunner/cmd/ping"
+	"github.com/luxfi/netrunner/cmd/server"
 	"github.com/spf13/cobra"
 )
 

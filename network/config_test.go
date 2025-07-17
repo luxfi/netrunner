@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/luxdefi/netrunner/network"
-	"github.com/luxdefi/netrunner/network/node"
+	"github.com/luxfi/netrunner/network"
+	"github.com/luxfi/netrunner/network/node"
 	"github.com/stretchr/testify/require"
 )
 

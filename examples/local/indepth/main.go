@@ -11,9 +11,9 @@ import (
 	"github.com/luxdefi/netrunner/local"
 	"github.com/luxdefi/netrunner/network"
 	"github.com/luxdefi/netrunner/network/node"
-	"github.com/luxdefi/node/config"
-	"github.com/luxdefi/node/staking"
-	"github.com/luxdefi/node/utils/logging"
+	"github.com/luxfi/node/config"
+	"github.com/luxfi/node/staking"
+	"github.com/luxfi/node/utils/logging"
 	"go.uber.org/zap"
 )
 
@@ -64,7 +64,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/luxdefi/node/build/node")
+	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/luxfi/node/build/node")
 	if err := run(log, binaryPath); err != nil {
 		log.Fatal("fatal error", zap.Error(err))
 		os.Exit(1)
