@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/luxdefi/netrunner/api"
-	"github.com/luxdefi/netrunner/network/node/status"
-	"github.com/luxdefi/node/config"
-	"github.com/luxdefi/node/ids"
-	"github.com/luxdefi/node/network/peer"
-	"github.com/luxdefi/node/snow/networking/router"
+	"github.com/luxfi/netrunner/api"
+	"github.com/luxfi/netrunner/network/node/status"
+	"github.com/luxfi/node/config"
+	"github.com/luxfi/node/ids"
+	"github.com/luxfi/node/network/peer"
+	"github.com/luxfi/node/snow/networking/router"
 )
 
 // Node represents an Lux node

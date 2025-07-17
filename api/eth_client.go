@@ -6,10 +6,10 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/luxdefi/node/ids"
-	"github.com/luxdefi/coreth/core/types"
-	"github.com/luxdefi/coreth/ethclient"
-	"github.com/luxdefi/coreth/interfaces"
+	"github.com/luxfi/node/ids"
+	"github.com/luxfi/geth/core/types"
+	"github.com/luxfi/geth/ethclient"
+	"github.com/luxfi/geth/interfaces"
 	"github.com/ethereum/go-ethereum/common"
 )
 
