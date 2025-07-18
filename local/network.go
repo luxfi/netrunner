@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"net"
+	"net/netip"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -29,8 +29,7 @@ import (
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
-	"github.com/luxfi/node/utils/crypto/bls"
-	"github.com/luxfi/node/utils/ips"
+	"github.com/luxfi/node/utils/crypto/bls/signer/localsigner"
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/set"
 	"github.com/luxfi/node/utils/wrappers"
@@ -541,11 +540,11 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		nodeConfig.StakingKey = string(stakingKey)
 	}
 	if nodeConfig.StakingSigningKey == "" {
-		key, err := bls.NewSecretKey()
+		signer, err := localsigner.New()
 		if err != nil {
 			return nil, fmt.Errorf("couldn't generate new signing key: %w", err)
 		}
-		keyBytes := bls.SecretKeyToBytes(key)
+		keyBytes := signer.ToBytes()
 		encodedKey := base64.StdEncoding.EncodeToString(keyBytes)
 		nodeConfig.StakingSigningKey = encodedKey
 	}
@@ -635,10 +634,10 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 	// Note that we do this *after* we set this node's bootstrap IPs/IDs
 	// so this node won't try to use itself as a beacon.
 	if !isPausedNode && nodeConfig.IsBeacon {
-		err = ln.bootstraps.Add(beacon.New(nodeID, ips.IPPort{
-			IP:   net.IPv6loopback,
-			Port: nodeData.p2pPort,
-		}))
+		err = ln.bootstraps.Add(beacon.New(nodeID, netip.AddrPortFrom(
+			netip.IPv6Loopback(),
+			nodeData.p2pPort,
+		)))
 	}
 	return node, err
 }

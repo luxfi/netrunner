@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
+	"net/netip"
 	"testing"
 	"time"
 
@@ -67,13 +68,10 @@ func verifyProtocol(
 	// send the peer our version and peerlist
 
 	// create the version message
-	myIP := ips.IPPort{
-		IP:   net.IPv6zero,
-		Port: 0,
-	}
+	myIP := netip.AddrPortFrom(netip.IPv6Unspecified(), 0)
 	now := uint64(time.Now().Unix())
 	unsignedIP := peer.UnsignedIP{
-		IPPort:    myIP,
+		AddrPort:  myIP,
 		Timestamp: now,
 	}
 	signer := myTLSCert.PrivateKey.(crypto.Signer)
