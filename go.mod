@@ -5,17 +5,15 @@ go 1.23.10
 toolchain go1.24.4
 
 replace (
-	github.com/luxfi/netrunner => /Users/z/work/lux/netrunner
-	github.com/luxfi/geth => /Users/z/work/lux/geth
-	github.com/luxfi/node => /Users/z/work/lux/node
+	github.com/luxfi/geth => /home/z/work/lux/geth
+	github.com/luxfi/node => /home/z/work/lux/node
 )
 
 require (
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/netrunner v0.0.0-00010101000000-000000000000
 	github.com/luxfi/geth v0.13.7
-	github.com/luxfi/node v1.11.10
+	github.com/luxfi/node v1.12.3-name-fortuna.0
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
@@ -126,7 +124,7 @@ require (
 	github.com/status-im/keycard-go v0.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
-	github.com/supranational/blst v0.3.14 // indirect
+	github.com/supranational/blst v0.3.15 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
