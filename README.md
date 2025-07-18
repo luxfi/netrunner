@@ -185,11 +185,11 @@ Example usage of `--custom-node-configs` to get deterministic API port numbers:
 curl -X POST -k http://localhost:8081/v1/control/start -d\
 '{"execPath":"'${LUXD_EXEC_PATH}'","customNodeConfigs":
 {
-"node1":"{\"http-port\":9650}",
-"node2":"{\"http-port\":9652}",
-"node3":"{\"http-port\":9654}",
-"node4":"{\"http-port\":9656}",
-"node5":"{\"http-port\":9658}"
+"node1":"{\"http-port\":9630}",
+"node2":"{\"http-port\":9632}",
+"node3":"{\"http-port\":9634}",
+"node4":"{\"http-port\":9636}",
+"node5":"{\"http-port\":9638}"
 }
 }'
 
@@ -198,11 +198,11 @@ netrunner control start \
 --node-path ${LUXD_EXEC_PATH} \
 --custom-node-configs \
 '{
-"node1":"{\"http-port\":9650}",
-"node2":"{\"http-port\":9652}",
-"node3":"{\"http-port\":9654}",
-"node4":"{\"http-port\":9656}",
-"node5":"{\"http-port\":9658}"
+"node1":"{\"http-port\":9630}",
+"node2":"{\"http-port\":9632}",
+"node3":"{\"http-port\":9634}",
+"node4":"{\"http-port\":9636}",
+"node5":"{\"http-port\":9638}"
 }'
 ```
 
@@ -850,12 +850,12 @@ curl -X POST --data '{
         "data": "mynewblock",
         "length": 32
     }
-}' -H 'content-type:application/json;' 127.0.0.1:9650/ext/vm/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc
+}' -H 'content-type:application/json;' 127.0.0.1:9630/ext/vm/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc
 
 # in this example,
 # "E8isHenre76NMxbJ3munSQatV8GoQ4XKWQg9vD34xMBqEFJGf" is the blockchain Id
 # "timestamp" is the blockchain alias
-# You can use 127.0.0.1:9650/ext/bc/timestamp or 127.0.0.1:9650/ext/bc/E8isHenre76NMxbJ3munSQatV8GoQ4XKWQg9vD34xMBqEFJGf
+# You can use 127.0.0.1:9630/ext/bc/timestamp or 127.0.0.1:9630/ext/bc/E8isHenre76NMxbJ3munSQatV8GoQ4XKWQg9vD34xMBqEFJGf
 curl -X POST --data '{
     "jsonrpc": "2.0",
     "method": "timestampvm.proposeBlock",
@@ -863,7 +863,7 @@ curl -X POST --data '{
         "data":"0x6d796e6577626c6f636b0000000000000000000000000000000000000000000014228326"
     },
     "id": 1
-}' -H 'content-type:application/json;' 127.0.0.1:9650/ext/bc/timestamp
+}' -H 'content-type:application/json;' 127.0.0.1:9630/ext/bc/timestamp
 ```
 
 ```bash
@@ -872,7 +872,7 @@ curl -X POST --data '{
     "method": "timestampvm.getBlock",
     "params":{},
     "id": 1
-}' -H 'content-type:application/json;' 127.0.0.1:9650/ext/bc/timestamp
+}' -H 'content-type:application/json;' 127.0.0.1:9630/ext/bc/timestamp
 ```
 
 ## Configuration
