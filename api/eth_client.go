@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/luxfi/node/ids"
 	"github.com/luxfi/geth/core/types"
 	"github.com/luxfi/geth/ethclient"
 	"github.com/luxfi/geth/interfaces"
@@ -26,7 +25,6 @@ type EthClient interface {
 	BlockNumber(context.Context) (uint64, error)
 	CallContract(context.Context, interfaces.CallMsg, *big.Int) ([]byte, error)
 	NonceAt(context.Context, common.Address, *big.Int) (uint64, error)
-	AssetBalanceAt(context.Context, common.Address, ids.ID, *big.Int) (*big.Int, error)
 	SuggestGasPrice(context.Context) (*big.Int, error)
 	AcceptedCodeAt(context.Context, common.Address) ([]byte, error)
 	AcceptedNonceAt(context.Context, common.Address) (uint64, error)
@@ -161,14 +159,6 @@ func (c *ethClient) NonceAt(ctx context.Context, account common.Address, blockNu
 	return c.client.NonceAt(ctx, account, blockNumber)
 }
 
-func (c *ethClient) AssetBalanceAt(ctx context.Context, account common.Address, assetID ids.ID, blockNumber *big.Int) (*big.Int, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	if err := c.connect(); err != nil {
-		return nil, err
-	}
-	return c.client.AssetBalanceAt(ctx, account, assetID, blockNumber)
-}
 
 func (c *ethClient) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	c.lock.Lock()

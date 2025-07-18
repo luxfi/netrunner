@@ -567,7 +567,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 
 		isElastic := false
 		elasticSubnetID := ids.Empty
-		if _, err := node.GetAPIClient().PChainAPI().GetCurrentSupply(ctx, subnetID); err == nil {
+		if _, _, err := node.GetAPIClient().PChainAPI().GetCurrentSupply(ctx, subnetID); err == nil {
 			isElastic = true
 			elasticSubnetID, err = lc.nw.GetElasticSubnetID(ctx, subnetID)
 			if err != nil {

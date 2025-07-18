@@ -8,8 +8,6 @@ import (
 
 	common "github.com/ethereum/go-ethereum/common"
 
-	ids "github.com/luxfi/node/ids"
-
 	interfaces "github.com/luxfi/geth/interfaces"
 
 	mock "github.com/stretchr/testify/mock"
@@ -89,28 +87,6 @@ func (_m *EthClient) AcceptedNonceAt(_a0 context.Context, _a1 common.Address) (u
 	return r0, r1
 }
 
-// AssetBalanceAt provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *EthClient) AssetBalanceAt(_a0 context.Context, _a1 common.Address, _a2 ids.ID, _a3 *big.Int) (*big.Int, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
-
-	var r0 *big.Int
-	if rf, ok := ret.Get(0).(func(context.Context, common.Address, ids.ID, *big.Int) *big.Int); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*big.Int)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, common.Address, ids.ID, *big.Int) error); ok {
-		r1 = rf(_a0, _a1, _a2, _a3)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
 
 // BalanceAt provides a mock function with given fields: _a0, _a1, _a2
 func (_m *EthClient) BalanceAt(_a0 context.Context, _a1 common.Address, _a2 *big.Int) (*big.Int, error) {

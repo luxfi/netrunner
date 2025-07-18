@@ -8,17 +8,13 @@ import (
 
 	avm "github.com/luxfi/node/vms/avm"
 
-	evm "github.com/luxfi/geth/plugin/evm"
+	evmclient "github.com/luxfi/geth/plugin/evm/client"
 
 	health "github.com/luxfi/node/api/health"
 
 	indexer "github.com/luxfi/node/indexer"
 
 	info "github.com/luxfi/node/api/info"
-
-	ipcs "github.com/luxfi/node/api/ipcs"
-
-	keystore "github.com/luxfi/node/api/keystore"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -31,15 +27,15 @@ type Client struct {
 }
 
 // AdminAPI provides a mock function with given fields:
-func (_m *Client) AdminAPI() admin.Client {
+func (_m *Client) AdminAPI() *admin.Client {
 	ret := _m.Called()
 
-	var r0 admin.Client
-	if rf, ok := ret.Get(0).(func() admin.Client); ok {
+	var r0 *admin.Client
+	if rf, ok := ret.Get(0).(func() *admin.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(admin.Client)
+			r0 = ret.Get(0).(*admin.Client)
 		}
 	}
 
@@ -47,15 +43,15 @@ func (_m *Client) AdminAPI() admin.Client {
 }
 
 // CChainAPI provides a mock function with given fields:
-func (_m *Client) CChainAPI() evm.Client {
+func (_m *Client) CChainAPI() evmclient.Client {
 	ret := _m.Called()
 
-	var r0 evm.Client
-	if rf, ok := ret.Get(0).(func() evm.Client); ok {
+	var r0 evmclient.Client
+	if rf, ok := ret.Get(0).(func() evmclient.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(evm.Client)
+			r0 = ret.Get(0).(evmclient.Client)
 		}
 	}
 
@@ -79,15 +75,15 @@ func (_m *Client) CChainEthAPI() api.EthClient {
 }
 
 // CChainIndexAPI provides a mock function with given fields:
-func (_m *Client) CChainIndexAPI() indexer.Client {
+func (_m *Client) CChainIndexAPI() *indexer.Client {
 	ret := _m.Called()
 
-	var r0 indexer.Client
-	if rf, ok := ret.Get(0).(func() indexer.Client); ok {
+	var r0 *indexer.Client
+	if rf, ok := ret.Get(0).(func() *indexer.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(indexer.Client)
+			r0 = ret.Get(0).(*indexer.Client)
 		}
 	}
 
@@ -95,15 +91,15 @@ func (_m *Client) CChainIndexAPI() indexer.Client {
 }
 
 // HealthAPI provides a mock function with given fields:
-func (_m *Client) HealthAPI() health.Client {
+func (_m *Client) HealthAPI() *health.Client {
 	ret := _m.Called()
 
-	var r0 health.Client
-	if rf, ok := ret.Get(0).(func() health.Client); ok {
+	var r0 *health.Client
+	if rf, ok := ret.Get(0).(func() *health.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(health.Client)
+			r0 = ret.Get(0).(*health.Client)
 		}
 	}
 
@@ -111,47 +107,15 @@ func (_m *Client) HealthAPI() health.Client {
 }
 
 // InfoAPI provides a mock function with given fields:
-func (_m *Client) InfoAPI() info.Client {
+func (_m *Client) InfoAPI() *info.Client {
 	ret := _m.Called()
 
-	var r0 info.Client
-	if rf, ok := ret.Get(0).(func() info.Client); ok {
+	var r0 *info.Client
+	if rf, ok := ret.Get(0).(func() *info.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(info.Client)
-		}
-	}
-
-	return r0
-}
-
-// IpcsAPI provides a mock function with given fields:
-func (_m *Client) IpcsAPI() ipcs.Client {
-	ret := _m.Called()
-
-	var r0 ipcs.Client
-	if rf, ok := ret.Get(0).(func() ipcs.Client); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(ipcs.Client)
-		}
-	}
-
-	return r0
-}
-
-// KeystoreAPI provides a mock function with given fields:
-func (_m *Client) KeystoreAPI() keystore.Client {
-	ret := _m.Called()
-
-	var r0 keystore.Client
-	if rf, ok := ret.Get(0).(func() keystore.Client); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(keystore.Client)
+			r0 = ret.Get(0).(*info.Client)
 		}
 	}
 
@@ -159,15 +123,15 @@ func (_m *Client) KeystoreAPI() keystore.Client {
 }
 
 // PChainAPI provides a mock function with given fields:
-func (_m *Client) PChainAPI() platformvm.Client {
+func (_m *Client) PChainAPI() *platformvm.Client {
 	ret := _m.Called()
 
-	var r0 platformvm.Client
-	if rf, ok := ret.Get(0).(func() platformvm.Client); ok {
+	var r0 *platformvm.Client
+	if rf, ok := ret.Get(0).(func() *platformvm.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(platformvm.Client)
+			r0 = ret.Get(0).(*platformvm.Client)
 		}
 	}
 
@@ -175,15 +139,15 @@ func (_m *Client) PChainAPI() platformvm.Client {
 }
 
 // PChainIndexAPI provides a mock function with given fields:
-func (_m *Client) PChainIndexAPI() indexer.Client {
+func (_m *Client) PChainIndexAPI() *indexer.Client {
 	ret := _m.Called()
 
-	var r0 indexer.Client
-	if rf, ok := ret.Get(0).(func() indexer.Client); ok {
+	var r0 *indexer.Client
+	if rf, ok := ret.Get(0).(func() *indexer.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(indexer.Client)
+			r0 = ret.Get(0).(*indexer.Client)
 		}
 	}
 
@@ -191,15 +155,15 @@ func (_m *Client) PChainIndexAPI() indexer.Client {
 }
 
 // XChainAPI provides a mock function with given fields:
-func (_m *Client) XChainAPI() avm.Client {
+func (_m *Client) XChainAPI() *avm.Client {
 	ret := _m.Called()
 
-	var r0 avm.Client
-	if rf, ok := ret.Get(0).(func() avm.Client); ok {
+	var r0 *avm.Client
+	if rf, ok := ret.Get(0).(func() *avm.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(avm.Client)
+			r0 = ret.Get(0).(*avm.Client)
 		}
 	}
 
@@ -207,15 +171,15 @@ func (_m *Client) XChainAPI() avm.Client {
 }
 
 // XChainWalletAPI provides a mock function with given fields:
-func (_m *Client) XChainWalletAPI() avm.WalletClient {
+func (_m *Client) XChainWalletAPI() *avm.WalletClient {
 	ret := _m.Called()
 
-	var r0 avm.WalletClient
-	if rf, ok := ret.Get(0).(func() avm.WalletClient); ok {
+	var r0 *avm.WalletClient
+	if rf, ok := ret.Get(0).(func() *avm.WalletClient); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(avm.WalletClient)
+			r0 = ret.Get(0).(*avm.WalletClient)
 		}
 	}
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/netip"
 	"time"
 
 	"github.com/luxfi/netrunner/api"
@@ -19,8 +20,9 @@ import (
 	"github.com/luxfi/node/snow/networking/tracker"
 	"github.com/luxfi/node/snow/validators"
 	"github.com/luxfi/node/staking"
+	"github.com/luxfi/node/utils"
 	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/ips"
+	"github.com/luxfi/node/utils/crypto/bls/signer/localsigner"
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/math/meter"
 	"github.com/luxfi/node/utils/resource"
@@ -92,15 +94,13 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 	tlsConfg := peer.TLSConfig(*tlsCert, nil)
-	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg)
+	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg, prometheus.NewCounter(prometheus.CounterOpts{}))
 	conn, err := node.getConnFunc(ctx, node)
 	if err != nil {
 		return nil, err
 	}
 	mc, err := message.NewCreator(
-		logging.NoLog{},
 		prometheus.NewRegistry(),
-		"",
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
@@ -109,8 +109,6 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	}
 
 	metrics, err := peer.NewMetrics(
-		logging.NoLog{},
-		"",
 		prometheus.NewRegistry(),
 	)
 	if err != nil {
@@ -125,8 +123,13 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	if err != nil {
 		return nil, err
 	}
-	signerIP := ips.NewDynamicIPPort(net.IPv6zero, 0)
+	signerIP := utils.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
 	tls := tlsCert.PrivateKey.(crypto.Signer)
+	// Create a dummy BLS signer for now
+	blsSigner, err := localsigner.New()
+	if err != nil {
+		return nil, err
+	}
 	config := &peer.Config{
 		Metrics:              metrics,
 		MessageCreator:       mc,
@@ -134,15 +137,16 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
-		VersionCompatibility: version.GetCompatibility(node.networkID),
+		VersionCompatibility: version.GetCompatibility(time.Now()),
 		MySubnets:            set.Set[ids.ID]{},
-		Beacons:              validators.NewSet(),
+		Beacons:              validators.NewManager(),
+		Validators:           validators.NewManager(),
 		NetworkID:            node.networkID,
 		PingFrequency:        constants.DefaultPingFrequency,
 		PongTimeout:          constants.DefaultPingPongTimeout,
 		MaxClockDifference:   time.Minute,
 		ResourceTracker:      resourceTracker,
-		IPSigner:             peer.NewIPSigner(signerIP, tls),
+		IPSigner:             peer.NewIPSigner(signerIP, tls, blsSigner),
 	}
 	_, conn, cert, err := clientUpgrader.Upgrade(conn)
 	if err != nil {
@@ -153,12 +157,13 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		config,
 		conn,
 		cert,
-		ids.NodeIDFromCert(tlsCert.Leaf),
+		ids.NodeIDFromCert(cert),
 		peer.NewBlockingMessageQueue(
 			config.Metrics,
 			logging.NoLog{},
 			peerMsgQueueBufferSize,
 		),
+		false, // isIngress = false since we're connecting outbound
 	)
 	cctx, cancel := context.WithTimeout(ctx, peerStartWaitTimeout)
 	err = p.AwaitReady(cctx)
