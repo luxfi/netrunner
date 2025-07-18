@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	coreth_params "github.com/luxfi/geth/params"
+	geth_params "github.com/luxfi/geth/params"
 )
 
 //go:embed default/genesis.json
@@ -23,10 +23,10 @@ func LoadLocalGenesis() (map[string]interface{}, error) {
 	}
 
 	cChainGenesis := genesisMap["cChainGenesis"]
-	// set the cchain genesis directly from coreth
+	// set the cchain genesis directly from geth
 	// the whole of `cChainGenesis` should be set as a string, not a json object...
-	corethCChainGenesis := coreth_params.LuxLocalChainConfig
-	// but the part in coreth is only the "config" part.
+	gethCChainGenesis := geth_params.LuxLocalChainConfig
+	// but the part in geth is only the "config" part.
 	// In order to set it easily, first we get the cChainGenesis item
 	// convert it to a map
 	cChainGenesisMap, ok := cChainGenesis.(map[string]interface{})
@@ -34,8 +34,8 @@ func LoadLocalGenesis() (map[string]interface{}, error) {
 		return nil, fmt.Errorf(
 			"expected field 'cChainGenesis' of genesisMap to be a map[string]interface{}, but it failed with type %T", cChainGenesis)
 	}
-	// set the `config` key to the actual coreth object
-	cChainGenesisMap["config"] = corethCChainGenesis
+	// set the `config` key to the actual geth object
+	cChainGenesisMap["config"] = gethCChainGenesis
 	// and then marshal everything into a string
 	configBytes, err := json.Marshal(cChainGenesisMap)
 	if err != nil {
