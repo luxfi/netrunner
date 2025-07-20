@@ -2,7 +2,7 @@
 set -e
 
 PROJECT_NAME=netrunner
-OWNER=luxdefi
+OWNER=luxfi
 REPO="netrunner"
 BINARY=netrunner
 FORMAT=tar.gz
