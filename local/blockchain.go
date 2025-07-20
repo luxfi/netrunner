@@ -16,7 +16,7 @@ import (
 
 	"github.com/luxfi/node/vms/platformvm/reward"
 
-	"github.com/luxfi/node/vms/avm"
+	"github.com/luxfi/node/vms/xvm"
 	"github.com/luxfi/node/vms/components/lux"
 	"github.com/luxfi/node/vms/components/verify"
 	"github.com/luxfi/node/wallet/chain/x"
@@ -43,8 +43,8 @@ import (
 	psigner "github.com/luxfi/node/wallet/chain/p/signer"
 	xbuilder "github.com/luxfi/node/wallet/chain/x/builder"
 	xsigner "github.com/luxfi/node/wallet/chain/x/signer"
+	walletpkg "github.com/luxfi/node/wallet"
 	"github.com/luxfi/node/wallet/subnet/primary"
-	"github.com/luxfi/node/wallet/subnet/primary/common"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 )
@@ -68,7 +68,7 @@ const (
 
 var (
 	errAborted  = errors.New("aborted")
-	defaultPoll = common.WithPollFrequency(100 * time.Millisecond)
+	defaultPoll = walletpkg.WithPollFrequency(100 * time.Millisecond)
 )
 
 type blockchainInfo struct {
@@ -674,9 +674,9 @@ func newWallet(
 		}
 		pTXs[id] = tx
 	}
-	pUTXOs := common.NewChainUTXOs(constants.PlatformChainID, luxState.UTXOs)
+	pUTXOs := walletpkg.NewChainUTXOs(constants.PlatformChainID, luxState.UTXOs)
 	xChainID := luxState.XCTX.BlockchainID
-	xUTXOs := common.NewChainUTXOs(xChainID, luxState.UTXOs)
+	xUTXOs := walletpkg.NewChainUTXOs(xChainID, luxState.UTXOs)
 	var w wallet
 	w.addr = genesis.EWOQKey.PublicKey().Address()
 	// TODO: Create owners map instead of pTXs
@@ -690,7 +690,7 @@ func newWallet(
 	xBackend := x.NewBackend(luxState.XCTX, xUTXOs)
 	xBuilder := xbuilder.New(kc.Addresses(), luxState.XCTX, xBackend)
 	xSigner := xsigner.New(kc, xBackend)
-	xClient := avm.NewClient(uri, "X")
+	xClient := xvm.NewClient(uri, "X")
 	w.xWallet = x.NewWallet(xBuilder, xSigner, xClient, xBackend)
 	w.xChainID = xChainID
 	w.luxAssetID = luxState.PCTX.LUXAssetID
@@ -767,7 +767,7 @@ func (ln *localNetwork) addPrimaryValidators(
 				Addrs:     []ids.ShortID{w.addr},
 			},
 			10*10000, // 10% fee percent, times 10000 to make it as shares
-			common.WithContext(cctx),
+			walletpkg.WithContext(cctx),
 		)
 		cancel()
 		if err != nil {
@@ -799,7 +799,7 @@ func getXChainAssetID(ctx context.Context, w *wallet, tokenName string, tokenSym
 				},
 			},
 		},
-		common.WithContext(cctx),
+		walletpkg.WithContext(cctx),
 		defaultPoll,
 	)
 	if err != nil {
@@ -824,7 +824,7 @@ func exportXChainToPChain(ctx context.Context, w *wallet, owner *secp256k1fx.Out
 				},
 			},
 		},
-		common.WithContext(cctx),
+		walletpkg.WithContext(cctx),
 		defaultPoll,
 	)
 	return err
@@ -837,7 +837,7 @@ func importPChainFromXChain(ctx context.Context, w *wallet, owner *secp256k1fx.O
 	_, err := pWallet.IssueImportTx(
 		xChainID,
 		owner,
-		common.WithContext(cctx),
+		walletpkg.WithContext(cctx),
 		defaultPoll,
 	)
 	return err
@@ -897,7 +897,7 @@ func (ln *localNetwork) removeSubnetValidators(
 			tx, err := w.pWallet.IssueRemoveSubnetValidatorTx(
 				nodeID,
 				subnetID,
-				common.WithContext(cctx),
+				walletpkg.WithContext(cctx),
 				defaultPoll,
 			)
 			cancel()
@@ -1020,7 +1020,7 @@ func (ln *localNetwork) addPermissionlessValidators(
 			owner,
 			&secp256k1fx.OutputOwners{},
 			reward.PercentDenominator,
-			common.WithContext(cctx),
+			walletpkg.WithContext(cctx),
 			defaultPoll,
 		)
 		cancel()
@@ -1096,7 +1096,7 @@ func (ln *localNetwork) transformToElasticSubnets(
 			elasticSubnetSpec.MaxConsumptionRate, elasticSubnetSpec.MinValidatorStake, elasticSubnetSpec.MaxValidatorStake,
 			elasticSubnetSpec.MinStakeDuration, elasticSubnetSpec.MaxStakeDuration, elasticSubnetSpec.MinDelegationFee,
 			elasticSubnetSpec.MinDelegatorStake, elasticSubnetSpec.MaxValidatorWeightFactor, elasticSubnetSpec.UptimeRequirement,
-			common.WithContext(cctx),
+			walletpkg.WithContext(cctx),
 			defaultPoll,
 		)
 		cancel()
@@ -1135,7 +1135,7 @@ func createSubnets(
 				Threshold: 1,
 				Addrs:     []ids.ShortID{w.addr},
 			},
-			common.WithContext(cctx),
+			walletpkg.WithContext(cctx),
 			defaultPoll,
 		)
 		cancel()
@@ -1204,7 +1204,7 @@ func (ln *localNetwork) addSubnetValidators(
 					},
 					Subnet: subnetID,
 				},
-				common.WithContext(cctx),
+				walletpkg.WithContext(cctx),
 				defaultPoll,
 			)
 			cancel()
@@ -1364,7 +1364,7 @@ func createBlockchainTxs(
 			vmID,
 			nil,
 			vmName,
-			common.WithContext(cctx),
+			walletpkg.WithContext(cctx),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failure creating blockchain tx: %w", err)
@@ -1483,7 +1483,7 @@ func (*localNetwork) createBlockchains(
 
 		err = w.pWallet.IssueTx(
 			blockchainTxs[i],
-			common.WithContext(cctx),
+			walletpkg.WithContext(cctx),
 			defaultPoll,
 		)
 		if err != nil {
