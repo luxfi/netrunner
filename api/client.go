@@ -5,7 +5,7 @@ import (
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/api/info"
 	"github.com/luxfi/node/indexer"
-	"github.com/luxfi/node/vms/avm"
+	"github.com/luxfi/node/vms/xvm"
 	"github.com/luxfi/node/vms/platformvm"
 	evmclient "github.com/luxfi/geth/plugin/evm/client"
 )
@@ -14,8 +14,8 @@ import (
 // TODO: byzantine api. check if appropriate. improve implementation.
 type Client interface {
 	PChainAPI() *platformvm.Client
-	XChainAPI() *avm.Client
-	XChainWalletAPI() *avm.WalletClient
+	XChainAPI() *xvm.Client
+	XChainWalletAPI() *xvm.WalletClient
 	CChainAPI() evmclient.Client
 	CChainEthAPI() EthClient // ethclient websocket wrapper that adds mutexed calls, and lazy conn init (on first call)
 	InfoAPI() *info.Client

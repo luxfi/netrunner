@@ -6,7 +6,7 @@ import (
 	context "context"
 	big "math/big"
 
-	common "github.com/ethereum/go-ethereum/common"
+	common "github.com/luxfi/geth/common"
 
 	interfaces "github.com/luxfi/geth/interfaces"
 
