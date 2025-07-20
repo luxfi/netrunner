@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/luxdefi/netrunner;rpcpb";
+option go_package = "github.com/luxfi/netrunner;rpcpb";
 
 package rpcpb;
 
