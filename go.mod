@@ -4,7 +4,8 @@ go 1.24.5
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/node v1.13.7
+	github.com/luxfi/geth v0.15.10
+	github.com/luxfi/node v1.13.9
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
@@ -45,6 +46,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/ethereum/c-kzg-4844/v2 v2.1.0 // indirect
+	github.com/ethereum/go-ethereum v1.16.1 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
