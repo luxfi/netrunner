@@ -28,7 +28,7 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/snow/networking/router"
+	"github.com/luxfi/node/consensus/networking/router"
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/set"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
