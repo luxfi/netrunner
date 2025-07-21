@@ -2,12 +2,10 @@ module github.com/luxfi/netrunner
 
 go 1.24.5
 
-replace github.com/luxfi/geth => ../geth
-
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/geth v0.15.31
-	github.com/luxfi/node v1.13.9
+	github.com/luxfi/geth v0.15.40
+	github.com/luxfi/node v1.13.13
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
