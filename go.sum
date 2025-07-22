@@ -294,10 +294,10 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/leanovate/gopter v0.2.11 h1:vRjThO1EKPb/1NsDXuDrzldR28RLkBflWYcU9CvzWu4=
 github.com/leanovate/gopter v0.2.11/go.mod h1:aK3tzZP/C+p1m3SPRE4SYZFGP7jjkuSI4f7Xvpt0S9c=
-github.com/luxfi/geth v0.15.40 h1:h3tlT5P5x7199uAfWpo45by08EbQQXYIo2CqyPnwcBk=
-github.com/luxfi/geth v0.15.40/go.mod h1:IqfzUTLCcQjyeAqaBOPfqLaMknAOeCMsVvQHdXq9b/w=
-github.com/luxfi/node v1.13.13 h1:d9EBufYVsUAX0djLg7GJkMWnrb4TEhSUY/rDwJEbdhc=
-github.com/luxfi/node v1.13.13/go.mod h1:hjc+249TnVTMoCySYlmwjrVA3WOLCk3s9KRx7Lz7vNE=
+github.com/luxfi/geth v0.15.43 h1:Vgpk7iiIingXJIy0nSu85XbQYdh/BdxfbIXcKbHwjbQ=
+github.com/luxfi/geth v0.15.43/go.mod h1:A1degr56Dg0lPTK8hDLQDZ6GKZ6NZq5G8Q1ko0mqOwQ=
+github.com/luxfi/node v1.13.20 h1:X/vWMr1Bzeajt+7bWDPRcz9YlR+CS3A+xzVbfxEVC04=
+github.com/luxfi/node v1.13.20/go.mod h1:R0c8GGzDpOyVFe/cp2kOzRA7P906Lc9bTV/seuZiF1s=
 github.com/magiconair/properties v1.8.6 h1:5ibWZ6iY0NctNGWo87LalDlEZ6R41TqbbDamhfG/Qzo=
 github.com/magiconair/properties v1.8.6/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
