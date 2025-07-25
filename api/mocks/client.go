@@ -8,7 +8,7 @@ import (
 
 	xvm "github.com/luxfi/node/vms/xvm"
 
-	evmclient "github.com/luxfi/geth/plugin/evm/client"
+	evmclient "github.com/luxfi/evm/plugin/evm/client"
 
 	health "github.com/luxfi/node/api/health"
 

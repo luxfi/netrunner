@@ -9,7 +9,7 @@ import (
 	"github.com/luxfi/node/indexer"
 	"github.com/luxfi/node/vms/xvm"
 	"github.com/luxfi/node/vms/platformvm"
-	evmclient "github.com/luxfi/geth/plugin/evm/client"
+	evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 
 // interface compliance
