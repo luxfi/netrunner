@@ -8,7 +8,7 @@ import (
 
 	common "github.com/luxfi/geth/common"
 
-	interfaces "github.com/luxfi/geth/interfaces"
+	ethereum "github.com/luxfi/geth"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -21,11 +21,11 @@ type EthClient struct {
 }
 
 // AcceptedCallContract provides a mock function with given fields: _a0, _a1
-func (_m *EthClient) AcceptedCallContract(_a0 context.Context, _a1 interfaces.CallMsg) ([]byte, error) {
+func (_m *EthClient) AcceptedCallContract(_a0 context.Context, _a1 ethereum.CallMsg) ([]byte, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(context.Context, interfaces.CallMsg) []byte); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ethereum.CallMsg) []byte); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -34,7 +34,7 @@ func (_m *EthClient) AcceptedCallContract(_a0 context.Context, _a1 interfaces.Ca
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, interfaces.CallMsg) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ethereum.CallMsg) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
@@ -179,11 +179,11 @@ func (_m *EthClient) BlockNumber(_a0 context.Context) (uint64, error) {
 }
 
 // CallContract provides a mock function with given fields: _a0, _a1, _a2
-func (_m *EthClient) CallContract(_a0 context.Context, _a1 interfaces.CallMsg, _a2 *big.Int) ([]byte, error) {
+func (_m *EthClient) CallContract(_a0 context.Context, _a1 ethereum.CallMsg, _a2 *big.Int) ([]byte, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(context.Context, interfaces.CallMsg, *big.Int) []byte); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ethereum.CallMsg, *big.Int) []byte); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
@@ -192,7 +192,7 @@ func (_m *EthClient) CallContract(_a0 context.Context, _a1 interfaces.CallMsg, _
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, interfaces.CallMsg, *big.Int) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ethereum.CallMsg, *big.Int) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
@@ -230,18 +230,18 @@ func (_m *EthClient) CodeAt(_a0 context.Context, _a1 common.Address, _a2 *big.In
 }
 
 // EstimateGas provides a mock function with given fields: _a0, _a1
-func (_m *EthClient) EstimateGas(_a0 context.Context, _a1 interfaces.CallMsg) (uint64, error) {
+func (_m *EthClient) EstimateGas(_a0 context.Context, _a1 ethereum.CallMsg) (uint64, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 uint64
-	if rf, ok := ret.Get(0).(func(context.Context, interfaces.CallMsg) uint64); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ethereum.CallMsg) uint64); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Get(0).(uint64)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, interfaces.CallMsg) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ethereum.CallMsg) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
@@ -251,11 +251,11 @@ func (_m *EthClient) EstimateGas(_a0 context.Context, _a1 interfaces.CallMsg) (u
 }
 
 // FilterLogs provides a mock function with given fields: _a0, _a1
-func (_m *EthClient) FilterLogs(_a0 context.Context, _a1 interfaces.FilterQuery) ([]types.Log, error) {
+func (_m *EthClient) FilterLogs(_a0 context.Context, _a1 ethereum.FilterQuery) ([]types.Log, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 []types.Log
-	if rf, ok := ret.Get(0).(func(context.Context, interfaces.FilterQuery) []types.Log); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, ethereum.FilterQuery) []types.Log); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -264,7 +264,7 @@ func (_m *EthClient) FilterLogs(_a0 context.Context, _a1 interfaces.FilterQuery)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, interfaces.FilterQuery) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ethereum.FilterQuery) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
@@ -332,20 +332,20 @@ func (_m *EthClient) SendTransaction(_a0 context.Context, _a1 *types.Transaction
 }
 
 // SubscribeFilterLogs provides a mock function with given fields: _a0, _a1, _a2
-func (_m *EthClient) SubscribeFilterLogs(_a0 context.Context, _a1 interfaces.FilterQuery, _a2 chan<- types.Log) (interfaces.Subscription, error) {
+func (_m *EthClient) SubscribeFilterLogs(_a0 context.Context, _a1 ethereum.FilterQuery, _a2 chan<- types.Log) (ethereum.Subscription, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
-	var r0 interfaces.Subscription
-	if rf, ok := ret.Get(0).(func(context.Context, interfaces.FilterQuery, chan<- types.Log) interfaces.Subscription); ok {
+	var r0 ethereum.Subscription
+	if rf, ok := ret.Get(0).(func(context.Context, ethereum.FilterQuery, chan<- types.Log) ethereum.Subscription); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(interfaces.Subscription)
+			r0 = ret.Get(0).(ethereum.Subscription)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, interfaces.FilterQuery, chan<- types.Log) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, ethereum.FilterQuery, chan<- types.Log) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
