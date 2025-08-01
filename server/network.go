@@ -513,7 +513,11 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		}
 	}
 
-	blockchains, err := node.GetAPIClient().PChainAPI().GetBlockchains(ctx)
+	pChainClient := node.GetAPIClient().PChainAPI()
+	if pChainClient == nil {
+		return fmt.Errorf("P-Chain client is nil")
+	}
+	blockchains, err := (*pChainClient).GetBlockchains(ctx)
 	if err != nil {
 		return err
 	}
@@ -534,7 +538,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		}
 	}
 
-	subnets, err := node.GetAPIClient().PChainAPI().GetSubnets(ctx, nil)
+	subnets, err := (*pChainClient).GetSubnets(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -551,7 +555,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		vdrs, err := node.GetAPIClient().PChainAPI().GetCurrentValidators(ctx, subnetID, nil)
+		vdrs, err := (*pChainClient).GetCurrentValidators(ctx, subnetID, nil)
 		if err != nil {
 			return err
 		}
@@ -567,7 +571,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 
 		isElastic := false
 		elasticSubnetID := ids.Empty
-		if _, _, err := node.GetAPIClient().PChainAPI().GetCurrentSupply(ctx, subnetID); err == nil {
+		if _, _, err := (*pChainClient).GetCurrentSupply(ctx, subnetID); err == nil {
 			isElastic = true
 			elasticSubnetID, err = lc.nw.GetElasticSubnetID(ctx, subnetID)
 			if err != nil {
@@ -583,7 +587,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 	}
 
 	for chainID, chainInfo := range lc.customChainIDToInfo {
-		vs, err := node.GetAPIClient().PChainAPI().GetCurrentValidators(ctx, chainInfo.subnetID, nil)
+		vs, err := (*pChainClient).GetCurrentValidators(ctx, chainInfo.subnetID, nil)
 		if err != nil {
 			return err
 		}

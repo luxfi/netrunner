@@ -29,7 +29,7 @@ import (
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
-	"github.com/luxfi/node/utils/crypto/bls/signer/localsigner"
+	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/set"
 	"github.com/luxfi/node/utils/wrappers"
@@ -540,11 +540,11 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		nodeConfig.StakingKey = string(stakingKey)
 	}
 	if nodeConfig.StakingSigningKey == "" {
-		signer, err := localsigner.New()
+		secretKey, err := bls.NewSecretKey()
 		if err != nil {
 			return nil, fmt.Errorf("couldn't generate new signing key: %w", err)
 		}
-		keyBytes := signer.ToBytes()
+		keyBytes := bls.SecretKeyToBytes(secretKey)
 		encodedKey := base64.StdEncoding.EncodeToString(keyBytes)
 		nodeConfig.StakingSigningKey = encodedKey
 	}
@@ -689,7 +689,11 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 					// Since it is, it means the node stopped unexpectedly.
 					return fmt.Errorf("node %q stopped unexpectedly", nodeName)
 				}
-				health, err := node.client.HealthAPI().Health(ctx, nil)
+				healthClient := node.client.HealthAPI()
+				if healthClient == nil {
+					return fmt.Errorf("health client is nil for node %v", nodeName)
+				}
+				health, err := (*healthClient).Health(ctx, nil)
 				if err == nil && health.Healthy {
 					ln.log.Debug("node became healthy", zap.String("name", nodeName))
 					return nil
