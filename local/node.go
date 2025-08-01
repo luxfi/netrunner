@@ -22,7 +22,7 @@ import (
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
 	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/crypto/bls/signer/localsigner"
+	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/math/meter"
 	"github.com/luxfi/node/utils/resource"
@@ -100,6 +100,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 	mc, err := message.NewCreator(
+		logging.NoLog{},
 		prometheus.NewRegistry(),
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,
@@ -126,7 +127,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	signerIP := utils.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
 	tls := tlsCert.PrivateKey.(crypto.Signer)
 	// Create a dummy BLS signer for now
-	blsSigner, err := localsigner.New()
+	blsKey, err := bls.NewSecretKey()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +138,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
-		VersionCompatibility: version.GetCompatibility(time.Now()),
+		VersionCompatibility: version.GetCompatibility(node.networkID),
 		MySubnets:            set.Set[ids.ID]{},
 		Beacons:              validators.NewManager(),
 		Validators:           validators.NewManager(),
@@ -146,7 +147,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		PongTimeout:          constants.DefaultPingPongTimeout,
 		MaxClockDifference:   time.Minute,
 		ResourceTracker:      resourceTracker,
-		IPSigner:             peer.NewIPSigner(signerIP, tls, blsSigner),
+		IPSigner:             peer.NewIPSigner(signerIP, tls, blsKey),
 	}
 	_, conn, cert, err := clientUpgrader.Upgrade(conn)
 	if err != nil {
@@ -163,7 +164,6 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 			logging.NoLog{},
 			peerMsgQueueBufferSize,
 		),
-		false, // isIngress = false since we're connecting outbound
 	)
 	cctx, cancel := context.WithTimeout(ctx, peerStartWaitTimeout)
 	err = p.AwaitReady(cctx)

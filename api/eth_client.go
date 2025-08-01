@@ -7,8 +7,9 @@ import (
 	"sync"
 
 	"github.com/luxfi/geth/core/types"
-	"github.com/luxfi/geth/ethclient"
-	"github.com/luxfi/geth"
+	"github.com/luxfi/evm/ethclient"
+	"github.com/luxfi/evm/interfaces"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/luxfi/geth/common"
 )
 
@@ -67,7 +68,7 @@ func NewEthClientWithChainID(ipAddr string, port uint, chainID string) EthClient
 
 // connect attempts to connect with websocket ethclient API
 func (c *ethClient) connect() error {
-	if c.client == ethclient.Client(nil) {
+	if c.client == nil {
 		client, err := ethclient.Dial(fmt.Sprintf("ws://%s:%d/ext/bc/%s/ws", c.ipAddr, c.port, c.chainID))
 		if err != nil {
 			return err
@@ -79,7 +80,7 @@ func (c *ethClient) connect() error {
 
 // Close closes opened connection (if any)
 func (c *ethClient) Close() {
-	if c.client == ethclient.Client(nil) {
+	if c.client == nil {
 		return
 	}
 	c.lock.Lock()
@@ -147,7 +148,18 @@ func (c *ethClient) CallContract(ctx context.Context, msg ethereum.CallMsg, bloc
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.CallContract(ctx, msg, blockNumber)
+	// Convert ethereum.CallMsg to interfaces.CallMsg
+	callMsg := interfaces.CallMsg{
+		From:      msg.From,
+		To:        msg.To,
+		Gas:       msg.Gas,
+		GasPrice:  msg.GasPrice,
+		GasFeeCap: msg.GasFeeCap,
+		GasTipCap: msg.GasTipCap,
+		Value:     msg.Value,
+		Data:      msg.Data,
+	}
+	return c.client.CallContract(ctx, callMsg, blockNumber)
 }
 
 func (c *ethClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
@@ -175,7 +187,9 @@ func (c *ethClient) AcceptedCodeAt(ctx context.Context, account common.Address) 
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.AcceptedCodeAt(ctx, account)
+	// TODO: AcceptedCodeAt is not in standard ethclient
+	// For now, use CodeAt with latest block
+	return c.client.CodeAt(ctx, account, nil)
 }
 
 func (c *ethClient) AcceptedNonceAt(ctx context.Context, account common.Address) (uint64, error) {
@@ -184,7 +198,9 @@ func (c *ethClient) AcceptedNonceAt(ctx context.Context, account common.Address)
 	if err := c.connect(); err != nil {
 		return 0, err
 	}
-	return c.client.AcceptedNonceAt(ctx, account)
+	// TODO: AcceptedNonceAt is not in standard ethclient
+	// For now, use NonceAt with latest block
+	return c.client.NonceAt(ctx, account, nil)
 }
 
 func (c *ethClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
@@ -202,7 +218,18 @@ func (c *ethClient) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint
 	if err := c.connect(); err != nil {
 		return 0, err
 	}
-	return c.client.EstimateGas(ctx, msg)
+	// Convert ethereum.CallMsg to interfaces.CallMsg
+	callMsg := interfaces.CallMsg{
+		From:      msg.From,
+		To:        msg.To,
+		Gas:       msg.Gas,
+		GasPrice:  msg.GasPrice,
+		GasFeeCap: msg.GasFeeCap,
+		GasTipCap: msg.GasTipCap,
+		Value:     msg.Value,
+		Data:      msg.Data,
+	}
+	return c.client.EstimateGas(ctx, callMsg)
 }
 
 func (c *ethClient) AcceptedCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
@@ -211,7 +238,20 @@ func (c *ethClient) AcceptedCallContract(ctx context.Context, call ethereum.Call
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.AcceptedCallContract(ctx, call)
+	// TODO: AcceptedCallContract is not in standard ethclient
+	// For now, use CallContract with latest block
+	// Convert ethereum.CallMsg to interfaces.CallMsg
+	callMsg := interfaces.CallMsg{
+		From:      call.From,
+		To:        call.To,
+		Gas:       call.Gas,
+		GasPrice:  call.GasPrice,
+		GasFeeCap: call.GasFeeCap,
+		GasTipCap: call.GasTipCap,
+		Value:     call.Value,
+		Data:      call.Data,
+	}
+	return c.client.CallContract(ctx, callMsg, nil)
 }
 
 func (c *ethClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
@@ -238,7 +278,15 @@ func (c *ethClient) FilterLogs(ctx context.Context, query ethereum.FilterQuery) 
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.FilterLogs(ctx, query)
+	// Convert ethereum.FilterQuery to interfaces.FilterQuery
+	filterQuery := interfaces.FilterQuery{
+		BlockHash: query.BlockHash,
+		FromBlock: query.FromBlock,
+		ToBlock:   query.ToBlock,
+		Addresses: query.Addresses,
+		Topics:    query.Topics,
+	}
+	return c.client.FilterLogs(ctx, filterQuery)
 }
 
 func (c *ethClient) SubscribeFilterLogs(ctx context.Context, query ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error) {
@@ -247,5 +295,13 @@ func (c *ethClient) SubscribeFilterLogs(ctx context.Context, query ethereum.Filt
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.SubscribeFilterLogs(ctx, query, ch)
+	// Convert ethereum.FilterQuery to interfaces.FilterQuery
+	filterQuery := interfaces.FilterQuery{
+		BlockHash: query.BlockHash,
+		FromBlock: query.FromBlock,
+		ToBlock:   query.ToBlock,
+		Addresses: query.Addresses,
+		Topics:    query.Topics,
+	}
+	return c.client.SubscribeFilterLogs(ctx, filterQuery, ch)
 }

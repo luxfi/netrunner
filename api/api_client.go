@@ -38,17 +38,29 @@ type NewAPIClientF func(ipAddr string, port uint16) Client
 // NewAPIClient initialize most of node apis
 func NewAPIClient(ipAddr string, port uint16) Client {
 	uri := fmt.Sprintf("http://%s:%d", ipAddr, port)
+	cChainClient := evmclient.NewClient(uri, "C")
+	
+	// Create client instances
+	platformClient := platformvm.NewClient(uri)
+	xChainClient := xvm.NewClient(uri, "X")
+	xChainWalletClient := xvm.NewWalletClient(uri, "X")
+	infoClient := info.NewClient(uri)
+	healthClient := health.NewClient(uri)
+	adminClient := admin.NewClient(uri)
+	pindexClient := indexer.NewClient(uri + "/ext/index/P/block")
+	cindexClient := indexer.NewClient(uri + "/ext/index/C/block")
+	
 	return &APIClient{
-		platform:     platformvm.NewClient(uri),
-		xChain:       xvm.NewClient(uri, "X"),
-		xChainWallet: xvm.NewWalletClient(uri, "X"),
-		cChain:       evmclient.NewCChainClient(uri),
+		platform:     &platformClient,
+		xChain:       &xChainClient,
+		xChainWallet: &xChainWalletClient,
+		cChain:       cChainClient,
 		cChainEth:    NewEthClient(ipAddr, uint(port)), // wrapper over ethclient.Client
-		info:         info.NewClient(uri),
-		health:       health.NewClient(uri),
-		admin:        admin.NewClient(uri),
-		pindex:       indexer.NewClient(uri + "/ext/index/P/block"),
-		cindex:       indexer.NewClient(uri + "/ext/index/C/block"),
+		info:         &infoClient,
+		health:       &healthClient,
+		admin:        &adminClient,
+		pindex:       &pindexClient,
+		cindex:       &cindexClient,
 	}
 }
 
