@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/luxfi/geth"
 	"github.com/luxfi/geth/core/types"
 	"github.com/luxfi/geth/ethclient"
-	"github.com/luxfi/geth/interfaces"
+	"github.com/luxfi/evm/iface"
 	"github.com/luxfi/geth/common"
 )
 
@@ -23,18 +24,18 @@ type EthClient interface {
 	BlockByNumber(context.Context, *big.Int) (*types.Block, error)
 	BlockByHash(context.Context, common.Hash) (*types.Block, error)
 	BlockNumber(context.Context) (uint64, error)
-	CallContract(context.Context, interfaces.CallMsg, *big.Int) ([]byte, error)
+	CallContract(context.Context, iface.CallMsg, *big.Int) ([]byte, error)
 	NonceAt(context.Context, common.Address, *big.Int) (uint64, error)
 	SuggestGasPrice(context.Context) (*big.Int, error)
 	AcceptedCodeAt(context.Context, common.Address) ([]byte, error)
 	AcceptedNonceAt(context.Context, common.Address) (uint64, error)
 	CodeAt(context.Context, common.Address, *big.Int) ([]byte, error)
-	EstimateGas(context.Context, interfaces.CallMsg) (uint64, error)
-	AcceptedCallContract(context.Context, interfaces.CallMsg) ([]byte, error)
+	EstimateGas(context.Context, iface.CallMsg) (uint64, error)
+	AcceptedCallContract(context.Context, iface.CallMsg) ([]byte, error)
 	HeaderByNumber(context.Context, *big.Int) (*types.Header, error)
 	SuggestGasTipCap(context.Context) (*big.Int, error)
-	FilterLogs(context.Context, interfaces.FilterQuery) ([]types.Log, error)
-	SubscribeFilterLogs(context.Context, interfaces.FilterQuery, chan<- types.Log) (interfaces.Subscription, error)
+	FilterLogs(context.Context, iface.FilterQuery) ([]types.Log, error)
+	SubscribeFilterLogs(context.Context, iface.FilterQuery, chan<- types.Log) (iface.Subscription, error)
 }
 
 // ethClient websocket ethclient.Client with mutexed api calls and lazy conn (on first call)
@@ -43,7 +44,7 @@ type ethClient struct {
 	ipAddr  string
 	chainID string
 	port    uint
-	client  ethclient.Client
+	client  *ethclient.Client
 	lock    sync.Mutex
 }
 
@@ -67,7 +68,7 @@ func NewEthClientWithChainID(ipAddr string, port uint, chainID string) EthClient
 
 // connect attempts to connect with websocket ethclient API
 func (c *ethClient) connect() error {
-	if c.client == ethclient.Client(nil) {
+	if c.client == nil {
 		client, err := ethclient.Dial(fmt.Sprintf("ws://%s:%d/ext/bc/%s/ws", c.ipAddr, c.port, c.chainID))
 		if err != nil {
 			return err
@@ -79,7 +80,7 @@ func (c *ethClient) connect() error {
 
 // Close closes opened connection (if any)
 func (c *ethClient) Close() {
-	if c.client == ethclient.Client(nil) {
+	if c.client == nil {
 		return
 	}
 	c.lock.Lock()
@@ -141,13 +142,34 @@ func (c *ethClient) BlockNumber(ctx context.Context) (uint64, error) {
 	return c.client.BlockNumber(ctx)
 }
 
-func (c *ethClient) CallContract(ctx context.Context, msg interfaces.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (c *ethClient) CallContract(ctx context.Context, msg iface.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.CallContract(ctx, msg, blockNumber)
+	// Convert iface.CallMsg to ethereum.CallMsg
+	ethMsg := ethereum.CallMsg{
+		From:      msg.From,
+		To:        msg.To,
+		Gas:       msg.Gas,
+		GasPrice:  msg.GasPrice,
+		GasFeeCap: msg.GasFeeCap,
+		GasTipCap: msg.GasTipCap,
+		Value:     msg.Value,
+		Data:      msg.Data,
+	}
+	// Convert AccessList if present
+	if msg.AccessList != nil {
+		ethMsg.AccessList = make(types.AccessList, len(msg.AccessList))
+		for i, tuple := range msg.AccessList {
+			ethMsg.AccessList[i] = types.AccessTuple{
+				Address:     tuple.Address,
+				StorageKeys: tuple.StorageKeys,
+			}
+		}
+	}
+	return c.client.CallContract(ctx, ethMsg, blockNumber)
 }
 
 func (c *ethClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
@@ -175,7 +197,8 @@ func (c *ethClient) AcceptedCodeAt(ctx context.Context, account common.Address) 
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.AcceptedCodeAt(ctx, account)
+	// Use CodeAt with nil block number to get the latest accepted code
+	return c.client.CodeAt(ctx, account, nil)
 }
 
 func (c *ethClient) AcceptedNonceAt(ctx context.Context, account common.Address) (uint64, error) {
@@ -184,7 +207,8 @@ func (c *ethClient) AcceptedNonceAt(ctx context.Context, account common.Address)
 	if err := c.connect(); err != nil {
 		return 0, err
 	}
-	return c.client.AcceptedNonceAt(ctx, account)
+	// Use NonceAt with nil block number to get the latest accepted nonce
+	return c.client.NonceAt(ctx, account, nil)
 }
 
 func (c *ethClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
@@ -196,22 +220,64 @@ func (c *ethClient) CodeAt(ctx context.Context, account common.Address, blockNum
 	return c.client.CodeAt(ctx, account, blockNumber)
 }
 
-func (c *ethClient) EstimateGas(ctx context.Context, msg interfaces.CallMsg) (uint64, error) {
+func (c *ethClient) EstimateGas(ctx context.Context, msg iface.CallMsg) (uint64, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.connect(); err != nil {
 		return 0, err
 	}
-	return c.client.EstimateGas(ctx, msg)
+	// Convert iface.CallMsg to ethereum.CallMsg
+	ethMsg := ethereum.CallMsg{
+		From:      msg.From,
+		To:        msg.To,
+		Gas:       msg.Gas,
+		GasPrice:  msg.GasPrice,
+		GasFeeCap: msg.GasFeeCap,
+		GasTipCap: msg.GasTipCap,
+		Value:     msg.Value,
+		Data:      msg.Data,
+	}
+	// Convert AccessList if present
+	if msg.AccessList != nil {
+		ethMsg.AccessList = make(types.AccessList, len(msg.AccessList))
+		for i, tuple := range msg.AccessList {
+			ethMsg.AccessList[i] = types.AccessTuple{
+				Address:     tuple.Address,
+				StorageKeys: tuple.StorageKeys,
+			}
+		}
+	}
+	return c.client.EstimateGas(ctx, ethMsg)
 }
 
-func (c *ethClient) AcceptedCallContract(ctx context.Context, call interfaces.CallMsg) ([]byte, error) {
+func (c *ethClient) AcceptedCallContract(ctx context.Context, call iface.CallMsg) ([]byte, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.AcceptedCallContract(ctx, call)
+	// Use CallContract with nil block number to get the latest accepted result
+	ethMsg := ethereum.CallMsg{
+		From:      call.From,
+		To:        call.To,
+		Gas:       call.Gas,
+		GasPrice:  call.GasPrice,
+		GasFeeCap: call.GasFeeCap,
+		GasTipCap: call.GasTipCap,
+		Value:     call.Value,
+		Data:      call.Data,
+	}
+	// Convert AccessList if present
+	if call.AccessList != nil {
+		ethMsg.AccessList = make(types.AccessList, len(call.AccessList))
+		for i, tuple := range call.AccessList {
+			ethMsg.AccessList[i] = types.AccessTuple{
+				Address:     tuple.Address,
+				StorageKeys: tuple.StorageKeys,
+			}
+		}
+	}
+	return c.client.CallContract(ctx, ethMsg, nil)
 }
 
 func (c *ethClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
@@ -232,20 +298,36 @@ func (c *ethClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
 	return c.client.SuggestGasTipCap(ctx)
 }
 
-func (c *ethClient) FilterLogs(ctx context.Context, query interfaces.FilterQuery) ([]types.Log, error) {
+func (c *ethClient) FilterLogs(ctx context.Context, query iface.FilterQuery) ([]types.Log, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.FilterLogs(ctx, query)
+	// Convert iface.FilterQuery to ethereum.FilterQuery
+	ethQuery := ethereum.FilterQuery{
+		BlockHash: query.BlockHash,
+		FromBlock: query.FromBlock,
+		ToBlock:   query.ToBlock,
+		Addresses: query.Addresses,
+		Topics:    query.Topics,
+	}
+	return c.client.FilterLogs(ctx, ethQuery)
 }
 
-func (c *ethClient) SubscribeFilterLogs(ctx context.Context, query interfaces.FilterQuery, ch chan<- types.Log) (interfaces.Subscription, error) {
+func (c *ethClient) SubscribeFilterLogs(ctx context.Context, query iface.FilterQuery, ch chan<- types.Log) (iface.Subscription, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
-	return c.client.SubscribeFilterLogs(ctx, query, ch)
+	// Convert iface.FilterQuery to ethereum.FilterQuery
+	ethQuery := ethereum.FilterQuery{
+		BlockHash: query.BlockHash,
+		FromBlock: query.FromBlock,
+		ToBlock:   query.ToBlock,
+		Addresses: query.Addresses,
+		Topics:    query.Topics,
+	}
+	return c.client.SubscribeFilterLogs(ctx, ethQuery, ch)
 }

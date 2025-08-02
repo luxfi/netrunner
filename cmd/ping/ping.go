@@ -10,7 +10,7 @@ import (
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ func NewCommand() *cobra.Command {
 		RunE:  pingFunc,
 	}
 
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", logging.Info.String(), "log level")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", luxlog.Info.String(), "log level")
 	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "0.0.0.0:8080", "server endpoint")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")
 	cmd.PersistentFlags().DurationVar(&requestTimeout, "request-timeout", 10*time.Second, "client request timeout")
@@ -37,15 +37,15 @@ func NewCommand() *cobra.Command {
 }
 
 func pingFunc(*cobra.Command, []string) error {
-	lvl, err := logging.ToLevel(logLevel)
+	lvl, err := luxlog.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
-	lcfg := logging.Config{
+	lcfg := luxlog.Config{
 		DisplayLevel: lvl,
-		LogLevel:     logging.Off,
+		LogLevel:     luxlog.Off,
 	}
-	logFactory := logging.NewFactory(lcfg)
+	logFactory := luxlog.NewFactory(lcfg)
 	log, err := logFactory.Make(constants.LogNameControl)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func pingFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	logString := "ping response: " + logging.Green.Wrap("%s")
+	logString := "ping response: " + luxlog.Green.Wrap("%s")
 	ux.Print(log, logString, resp)
 	return nil
 }

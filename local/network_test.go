@@ -23,10 +23,10 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/consensus/networking/router"
-	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/node/quasar/networking/router"
+	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/rpc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -144,7 +144,7 @@ func TestNewNetworkEmpty(t *testing.T) {
 	networkConfig := testNetworkConfig(t)
 	networkConfig.NodeConfigs = nil
 	net, err := newNetwork(
-		logging.NoLog{},
+		luxlog.NewNoOpLogger(),
 		newMockAPISuccessful,
 		&localTestProcessUndefNodeProcessCreator{},
 		"",
@@ -207,7 +207,7 @@ func TestNewNetworkOneNode(t *testing.T) {
 	networkConfig.NodeConfigs = networkConfig.NodeConfigs[:1]
 	creator := newLocalTestOneNodeCreator(require, networkConfig)
 	net, err := newNetwork(
-		logging.NoLog{},
+		luxlog.NewNoOpLogger(),
 		newMockAPISuccessful,
 		creator,
 		"",
@@ -235,7 +235,7 @@ func TestNewNetworkFailToStartNode(t *testing.T) {
 	require := require.New(t)
 	networkConfig := testNetworkConfig(t)
 	net, err := newNetwork(
-		logging.NoLog{},
+		luxlog.NewNoOpLogger(),
 		newMockAPISuccessful,
 		&localTestFailedStartProcessCreator{},
 		"",
@@ -477,7 +477,7 @@ func TestWrongNetworkConfigs(t *testing.T) {
 	require := require.New(t)
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+			net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 			require.NoError(err)
 			err = net.loadConfig(context.Background(), tt.config)
 			require.Error(err)
@@ -491,7 +491,7 @@ func TestUnhealthyNetwork(t *testing.T) {
 	t.Parallel()
 	require := require.New(t)
 	networkConfig := testNetworkConfig(t)
-	net, err := newNetwork(logging.NoLog{}, newMockAPIUnhealthy, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPIUnhealthy, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)
@@ -506,7 +506,7 @@ func TestGeneratedNodesNames(t *testing.T) {
 	for i := range networkConfig.NodeConfigs {
 		networkConfig.NodeConfigs[i].Name = ""
 	}
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)
@@ -526,7 +526,7 @@ func TestGenerateDefaultNetwork(t *testing.T) {
 	require := require.New(t)
 	binaryPath := "pepito"
 	networkConfig := NewDefaultConfig(binaryPath)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)
@@ -576,7 +576,7 @@ func TestNetworkFromConfig(t *testing.T) {
 	t.Parallel()
 	require := require.New(t)
 	networkConfig := testNetworkConfig(t)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)
@@ -600,7 +600,7 @@ func TestNetworkNodeOps(t *testing.T) {
 	// Start a new, empty network
 	emptyNetworkConfig, err := emptyNetworkConfig()
 	require.NoError(err)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), emptyNetworkConfig)
 	require.NoError(err)
@@ -638,7 +638,7 @@ func TestNodeNotFound(t *testing.T) {
 	emptyNetworkConfig, err := emptyNetworkConfig()
 	require.NoError(err)
 	networkConfig := testNetworkConfig(t)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), emptyNetworkConfig)
 	require.NoError(err)
@@ -671,7 +671,7 @@ func TestStoppedNetwork(t *testing.T) {
 	emptyNetworkConfig, err := emptyNetworkConfig()
 	require.NoError(err)
 	networkConfig := testNetworkConfig(t)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), emptyNetworkConfig)
 	require.NoError(err)
@@ -704,7 +704,7 @@ func TestStoppedNetwork(t *testing.T) {
 func TestGetAllNodes(t *testing.T) {
 	require := require.New(t)
 	networkConfig := testNetworkConfig(t)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)
@@ -746,7 +746,7 @@ func TestFlags(t *testing.T) {
 	}
 
 	nw, err := newNetwork(
-		logging.NoLog{},
+		luxlog.NewNoOpLogger(),
 		newMockAPISuccessful,
 		&localTestFlagCheckProcessCreator{
 			// after creating the network, one flag should have been overridden by the node configs
@@ -775,7 +775,7 @@ func TestFlags(t *testing.T) {
 		v.Flags = flags
 	}
 	nw, err = newNetwork(
-		logging.NoLog{},
+		luxlog.NewNoOpLogger(),
 		newMockAPISuccessful,
 		&localTestFlagCheckProcessCreator{
 			// after creating the network, only node configs should exist
@@ -803,7 +803,7 @@ func TestFlags(t *testing.T) {
 		v.Flags = nil
 	}
 	nw, err = newNetwork(
-		logging.NoLog{},
+		luxlog.NewNoOpLogger(),
 		newMockAPISuccessful,
 		&localTestFlagCheckProcessCreator{
 			// after creating the network, only flags from the network config should exist
@@ -845,7 +845,7 @@ func TestChildCmdRedirection(t *testing.T) {
 		writtenCh: make(chan struct{}),
 	}
 	npc := &nodeProcessCreator{
-		log:         logging.NoLog{},
+		log:         luxlog.NewNoOpLogger(),
 		stdout:      buf,
 		stderr:      buf,
 		colorPicker: utils.NewColorPicker(),
@@ -895,7 +895,7 @@ func TestChildCmdRedirection(t *testing.T) {
 
 	// and it should have a specific length:
 	//             the actual output   + the color terminal escape sequence      + node name    + []<space> + color terminal reset escape sequence
-	expectedLen := len(expectedResult) + len(utils.NewColorPicker().NextColor()) + len(mockNodeName) + 3 + len(logging.Reset)
+	expectedLen := len(expectedResult) + len(utils.NewColorPicker().NextColor()) + len(mockNodeName) + 3 + len(luxlog.Reset)
 	if len(result) != expectedLen {
 		t.Fatalf("expected string length to be %d, but it was %d", expectedLen, len(result))
 	}
@@ -1273,7 +1273,7 @@ func TestRemoveBeacon(t *testing.T) {
 	// create a network with no nodes in it
 	emptyNetworkConfig, err := emptyNetworkConfig()
 	require.NoError(err)
-	net, err := newNetwork(logging.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), emptyNetworkConfig)
 	require.NoError(err)
@@ -1324,7 +1324,7 @@ func TestHealthyDuringNetworkStop(t *testing.T) {
 	require := require.New(t)
 	networkConfig := testNetworkConfig(t)
 	// Calls to a node's Healthy() function blocks until context cancelled
-	net, err := newNetwork(logging.NoLog{}, newMockAPIHealthyBlocks, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	net, err := newNetwork(luxlog.NewNoOpLogger(), newMockAPIHealthyBlocks, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)

@@ -10,9 +10,9 @@ import (
 
 	rpcb "github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 )
 
 const (
@@ -25,11 +25,12 @@ func ToNodeID(stakingKey, stakingCert []byte) (ids.NodeID, error) {
 	if err != nil {
 		return ids.EmptyNodeID, err
 	}
-	stakingCertificate := &staking.Certificate{
+	// Convert x509.Certificate to ids.Certificate
+	idsCert := &ids.Certificate{
 		Raw:       cert.Leaf.Raw,
 		PublicKey: cert.Leaf.PublicKey,
 	}
-	nodeID := ids.NodeIDFromCert(stakingCertificate)
+	nodeID := ids.NodeIDFromCert(idsCert)
 	return nodeID, nil
 }
 
@@ -98,7 +99,7 @@ func MkDirWithTimestamp(dirPrefix string) (string, error) {
 }
 
 func VerifySubnetHasCorrectParticipants(
-	log logging.Logger,
+	log luxlog.Logger,
 	subnetParticipants []string,
 	cluster *rpcb.ClusterInfo,
 	subnetID string,
@@ -117,14 +118,14 @@ func VerifySubnetHasCorrectParticipants(
 				}
 			}
 			if !nodeIsInList {
-				ux.Print(log, logging.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: %#v", cluster)))
-				ux.Print(log, logging.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: node not in list subnet %q node %q %v %v", subnetID, node, subnetParticipants, participatingNodeNames)))
+				ux.Print(log, luxlog.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: %#v", cluster)))
+				ux.Print(log, luxlog.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: node not in list subnet %q node %q %v %v", subnetID, node, subnetParticipants, participatingNodeNames)))
 				return false
 			}
 		}
 		return true
 	} else {
-		ux.Print(log, logging.Red.Wrap("VerifySubnetHasCorrectParticipants: cluster is nil"))
+		ux.Print(log, luxlog.Red.Wrap("VerifySubnetHasCorrectParticipants: cluster is nil"))
 	}
 	return false
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/node/consensus/networking/router"
+	"github.com/luxfi/node/quasar/networking/router"
 )
 
 // Node represents an Lux node

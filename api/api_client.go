@@ -9,7 +9,7 @@ import (
 	"github.com/luxfi/node/indexer"
 	"github.com/luxfi/node/vms/xvm"
 	"github.com/luxfi/node/vms/platformvm"
-	evmclient "github.com/luxfi/geth/plugin/evm/client"
+	evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 
 // interface compliance
@@ -42,7 +42,7 @@ func NewAPIClient(ipAddr string, port uint16) Client {
 		platform:     platformvm.NewClient(uri),
 		xChain:       xvm.NewClient(uri, "X"),
 		xChainWallet: xvm.NewWalletClient(uri, "X"),
-		cChain:       evmclient.NewCChainClient(uri),
+		cChain:       evmclient.NewClient(uri, "C"),
 		cChainEth:    NewEthClient(ipAddr, uint(port)), // wrapper over ethclient.Client
 		info:         info.NewClient(uri),
 		health:       health.NewClient(uri),

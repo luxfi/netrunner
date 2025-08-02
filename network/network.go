@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/luxfi/netrunner/network/node"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 )
 
 var (

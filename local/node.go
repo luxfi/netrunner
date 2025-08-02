@@ -12,20 +12,18 @@ import (
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/network/throttling"
-	"github.com/luxfi/node/consensus/networking/router"
-	"github.com/luxfi/node/consensus/networking/tracker"
-	"github.com/luxfi/node/consensus/validators"
+	"github.com/luxfi/node/network/throttling/tracker"
+	"github.com/luxfi/node/quasar/networking/router"
+	"github.com/luxfi/node/quasar/validators"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
 	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/crypto/bls/signer/localsigner"
-	"github.com/luxfi/node/utils/logging"
-	"github.com/luxfi/node/utils/math/meter"
-	"github.com/luxfi/node/utils/resource"
+	"github.com/luxfi/evm/localsigner"
+	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/set"
 	"github.com/luxfi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
@@ -39,9 +37,8 @@ var (
 type getConnFunc func(context.Context, node.Node) (net.Conn, error)
 
 const (
-	peerMsgQueueBufferSize      = 1024
-	peerResourceTrackerDuration = 10 * time.Second
-	peerStartWaitTimeout        = 30 * time.Second
+	peerMsgQueueBufferSize = 1024
+	peerStartWaitTimeout   = 30 * time.Second
 )
 
 // Gives access to basic node info, and to most node apis
@@ -114,15 +111,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	if err != nil {
 		return nil, err
 	}
-	resourceTracker, err := tracker.NewResourceTracker(
-		prometheus.NewRegistry(),
-		resource.NoUsage,
-		meter.ContinuousFactory{},
-		peerResourceTrackerDuration,
-	)
-	if err != nil {
-		return nil, err
-	}
+	resourceTracker := tracker.NewResourceTracker()
 	signerIP := utils.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
 	tls := tlsCert.PrivateKey.(crypto.Signer)
 	// Create a dummy BLS signer for now
@@ -133,7 +122,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	config := &peer.Config{
 		Metrics:              metrics,
 		MessageCreator:       mc,
-		Log:                  logging.NoLog{},
+		Log:                  luxlog.NewNoOpLogger(),
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
@@ -153,14 +142,21 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 
+	// Convert staking.Certificate to ids.Certificate for NodeID generation
+	idsCert := &ids.Certificate{
+		Raw:       cert.Raw,
+		PublicKey: cert.PublicKey,
+	}
+	nodeID := ids.NodeIDFromCert(idsCert)
+
 	p := peer.Start(
 		config,
 		conn,
 		cert,
-		ids.NodeIDFromCert(cert),
+		nodeID,
 		peer.NewBlockingMessageQueue(
 			config.Metrics,
-			logging.NoLog{},
+			luxlog.NewNoOpLogger(),
 			peerMsgQueueBufferSize,
 		),
 		false, // isIngress = false since we're connecting outbound

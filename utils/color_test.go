@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 )
 
 // TestColorAssignment tests that each color assignment is different and that it "wraps"
@@ -84,7 +84,7 @@ func TestColorAndPrepend(t *testing.T) {
 	}
 
 	// 4 is []<space>\n
-	expLen := len("test") + len(color) + len(fakeNodeName) + 4 + len(logging.Reset)
+	expLen := len("test") + len(color) + len(fakeNodeName) + 4 + len(luxlog.Reset)
 	if len(res) != expLen {
 		t.Fatalf("expected lengh to be %d, but was %d", expLen, len(res))
 	}

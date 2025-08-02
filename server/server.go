@@ -28,8 +28,8 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/consensus/networking/router"
-	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/node/quasar/networking/router"
+	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/set"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
@@ -79,7 +79,7 @@ type Config struct {
 	DialTimeout         time.Duration
 	RedirectNodesOutput bool
 	SnapshotsDir        string
-	LogLevel            logging.Level
+	LogLevel            luxlog.Level
 }
 
 type Server interface {
@@ -90,7 +90,7 @@ type server struct {
 	mu *sync.RWMutex
 
 	cfg Config
-	log logging.Logger
+	log luxlog.Logger
 
 	rootCtx    context.Context
 	rootCancel context.CancelFunc
@@ -123,7 +123,7 @@ func IsServerError(err error, serverError error) bool {
 	return status.Code() == codes.Unknown && status.Message() == serverError.Error()
 }
 
-func New(cfg Config, log logging.Logger) (Server, error) {
+func New(cfg Config, log luxlog.Logger) (Server, error) {
 	if cfg.Port == "" || cfg.GwPort == "" {
 		return nil, ErrInvalidPort
 	}
@@ -1125,15 +1125,16 @@ var _ router.InboundHandler = &loggingInboundHandler{}
 
 type loggingInboundHandler struct {
 	nodeName string
-	log      logging.Logger
+	log      luxlog.Logger
 }
 
-func (lh *loggingInboundHandler) HandleInbound(_ context.Context, m message.InboundMessage) {
+func (lh *loggingInboundHandler) HandleInbound(_ context.Context, m message.InboundMessage) error {
 	lh.log.Debug(
 		"inbound handler received a message",
 		zap.String("message", m.Op().String()),
 		zap.String("node-name", lh.nodeName),
 	)
+	return nil
 }
 
 func (s *server) AttachPeer(ctx context.Context, req *rpcpb.AttachPeerRequest) (*rpcpb.AttachPeerResponse, error) {
@@ -1423,7 +1424,7 @@ func getRemoveSubnetValidatorSpec(
 }
 
 func getNetworkBlockchainSpec(
-	log logging.Logger,
+	log luxlog.Logger,
 	spec *rpcpb.BlockchainSpec,
 	isNewEmptyNetwork bool,
 	pluginDir string,

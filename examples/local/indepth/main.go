@@ -13,7 +13,7 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +29,7 @@ var goPath = os.ExpandEnv("$GOPATH")
 // Closes [closedOnShutdownChan] amd [signalChan] when done shutting down network.
 // This function should only be called once.
 func shutdownOnSignal(
-	log logging.Logger,
+	log luxlog.Logger,
 	n network.Network,
 	signalChan chan os.Signal,
 	closedOnShutdownChan chan struct{},
@@ -55,9 +55,9 @@ func shutdownOnSignal(
 // The network runs until the user provides a SIGINT or SIGTERM.
 func main() {
 	// Create the logger
-	logFactory := logging.NewFactory(logging.Config{
-		DisplayLevel: logging.Info,
-		LogLevel:     logging.Debug,
+	logFactory := luxlog.NewFactory(luxlog.Config{
+		DisplayLevel: luxlog.Info,
+		LogLevel:     luxlog.Debug,
 	})
 	log, err := logFactory.Make("main")
 	if err != nil {
@@ -71,7 +71,7 @@ func main() {
 	}
 }
 
-func run(log logging.Logger, binaryPath string) error {
+func run(log luxlog.Logger, binaryPath string) error {
 	// Create the network
 	nw, err := local.NewDefaultNetwork(log, binaryPath, true)
 	if err != nil {
@@ -133,7 +133,7 @@ func run(log logging.Logger, binaryPath string) error {
 		// The flags below would override the config in this node's config file,
 		// if it had one.
 		Flags: map[string]interface{}{
-			config.LogLevelKey: logging.Debug,
+			config.LogLevelKey: luxlog.Debug,
 			config.HTTPHostKey: "0.0.0.0",
 		},
 	}
