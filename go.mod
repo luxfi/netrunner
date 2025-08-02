@@ -4,11 +4,6 @@ go 1.24.5
 
 replace github.com/tyler-smith/go-bip39 => github.com/luxfi/go-bip39 v1.1.0
 
-replace github.com/luxfi/geth => ../geth
-
-replace github.com/luxfi/node => ../node
-
-replace github.com/luxfi/evm => ../evm
 
 // Removed luxfi/ids replace - should use node/ids directly
 
