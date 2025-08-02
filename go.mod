@@ -2,9 +2,6 @@ module github.com/luxfi/netrunner
 
 go 1.24.5
 
-replace github.com/tyler-smith/go-bip39 => github.com/luxfi/go-bip39 v1.1.0
-
-
 // Removed luxfi/ids replace - should use node/ids directly
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
@@ -12,9 +9,9 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 require (
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/evm v0.7.12
-	github.com/luxfi/geth v1.16.2
-	github.com/luxfi/node v1.13.14
+	github.com/luxfi/evm v0.8.3
+	github.com/luxfi/geth v1.16.7
+	github.com/luxfi/node v1.13.13
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
