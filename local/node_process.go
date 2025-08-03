@@ -11,9 +11,8 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/log"
 	"github.com/shirou/gopsutil/process"
-	"go.uber.org/zap"
 )
 
 var _ NodeProcess = (*nodeProcess)(nil)
@@ -38,7 +37,7 @@ type NodeProcessCreator interface {
 }
 
 type nodeProcessCreator struct {
-	log logging.Logger
+	log log.Logger
 	// If this node's stdout or stderr are redirected, [colorPicker] determines
 	// the color of logs printed to stdout and/or stderr
 	colorPicker utils.ColorPicker
@@ -80,7 +79,7 @@ func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string
 
 type nodeProcess struct {
 	name string
-	log  logging.Logger
+	log  log.Logger
 	lock sync.RWMutex
 	cmd  *exec.Cmd
 	// Process status
@@ -89,7 +88,7 @@ type nodeProcess struct {
 	closedOnStop chan struct{}
 }
 
-func newNodeProcess(name string, log logging.Logger, cmd *exec.Cmd) (*nodeProcess, error) {
+func newNodeProcess(name string, log log.Logger, cmd *exec.Cmd) (*nodeProcess, error) {
 	np := &nodeProcess{
 		name:         name,
 		log:          log,
@@ -120,10 +119,10 @@ func (p *nodeProcess) start() error {
 // When it does, update the state and close [p.closedOnStop]
 func (p *nodeProcess) awaitExit() {
 	if err := p.cmd.Wait(); err != nil {
-		p.log.Debug("node returned error on wait", zap.String("node", p.name), zap.Error(err))
+		p.log.Debug("node returned error on wait", log.String("node", p.name), log.Err(err))
 	}
 
-	p.log.Debug("node process finished", zap.String("node", p.name))
+	p.log.Debug("node process finished", log.String("node", p.name))
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -160,15 +159,15 @@ func (p *nodeProcess) Stop(ctx context.Context) int {
 	p.lock.Unlock()
 
 	if err := proc.Signal(os.Interrupt); err != nil {
-		p.log.Warn("sending SIGINT errored", zap.Error(err))
+		p.log.Warn("sending SIGINT errored", log.Err(err))
 	}
 
 	select {
 	case <-ctx.Done():
-		p.log.Warn("context cancelled while waiting for node to stop", zap.String("node", p.name))
+		p.log.Warn("context cancelled while waiting for node to stop", log.String("node", p.name))
 		killDescendants(int32(proc.Pid), p.log)
 		if err := proc.Signal(os.Kill); err != nil {
-			p.log.Warn("sending SIGKILL errored", zap.Error(err))
+			p.log.Warn("sending SIGKILL errored", log.Err(err))
 		}
 	case <-p.closedOnStop:
 	}
@@ -187,16 +186,16 @@ func (p *nodeProcess) Status() status.Status {
 	return p.state
 }
 
-func killDescendants(pid int32, log logging.Logger) {
+func killDescendants(pid int32, log log.Logger) {
 	procs, err := process.Processes()
 	if err != nil {
-		log.Warn("couldn't get processes", zap.Error(err))
+		log.Warn("couldn't get processes", "error", err)
 		return
 	}
 	for _, proc := range procs {
 		ppid, err := proc.Ppid()
 		if err != nil {
-			log.Warn("couldn't get process ID", zap.Error(err))
+			log.Warn("couldn't get process ID", "error", err)
 			continue
 		}
 		if ppid != pid {
@@ -204,7 +203,7 @@ func killDescendants(pid int32, log logging.Logger) {
 		}
 		killDescendants(proc.Pid, log)
 		if err := proc.Kill(); err != nil {
-			log.Warn("error killing process", zap.Int32("pid", proc.Pid), zap.Error(err))
+			log.Warn("error killing process", "pid", proc.Pid, "error", err)
 		}
 	}
 }

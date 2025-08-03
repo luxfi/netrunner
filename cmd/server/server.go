@@ -14,9 +14,9 @@ import (
 	"github.com/luxfi/netrunner/server"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
-	"github.com/luxfi/node/utils/logging"
+	llog "github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -44,7 +44,7 @@ func NewCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 	}
 
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", logging.Info.String(), "log level for server logs")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level for server logs")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
 	cmd.PersistentFlags().StringVar(&port, "port", ":8080", "server port")
 	cmd.PersistentFlags().StringVar(&gwPort, "grpc-gateway-port", ":8081", "grpc-gateway server port")
@@ -70,13 +70,13 @@ func serverFunc(*cobra.Command, []string) (err error) {
 		}
 	}
 
-	logLevel, err := logging.ToLevel(logLevel)
+	logLevel, err := llog.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
 
-	logFactory := logging.NewFactory(logging.Config{
-		RotatingWriterConfig: logging.RotatingWriterConfig{
+	logFactory := llog.NewFactoryWithConfig(llog.Config{
+		RotatingWriterConfig: llog.RotatingWriterConfig{
 			Directory: logDir,
 		},
 		DisplayLevel: logLevel,
@@ -114,13 +114,13 @@ func serverFunc(*cobra.Command, []string) (err error) {
 	select {
 	case sig := <-sigChan:
 		// Got a SIGINT or SIGTERM; stop the server and wait for it to finish.
-		log.Warn("signal received: closing server", zap.String("signal", sig.String()))
+		log.Warn("signal received: closing server", llog.String("signal", sig.String()))
 		cancel()
 		waitForServerStop := <-errChan
-		log.Warn("closed server", zap.Error(waitForServerStop))
+		log.Warn("closed server", llog.Err(waitForServerStop))
 	case serverClosed := <-errChan:
 		// The server stopped.
-		log.Warn("server closed", zap.Error(serverClosed))
+		log.Warn("server closed", llog.Err(serverClosed))
 	}
 	return nil
 }

@@ -14,8 +14,7 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/logging"
-	"go.uber.org/zap"
+	"github.com/luxfi/log"
 )
 
 func init() {
@@ -223,7 +222,7 @@ func getPort(
 	return port, nil
 }
 
-func makeNodeDir(log logging.Logger, rootDir, nodeName string) (string, error) {
+func makeNodeDir(log log.Logger, rootDir, nodeName string) (string, error) {
 	if rootDir == "" {
 		log.Warn("no network root directory defined; will create this node's runtime directory in working directory")
 	}
@@ -236,7 +235,7 @@ func makeNodeDir(log logging.Logger, rootDir, nodeName string) (string, error) {
 		if !os.IsExist(err) {
 			return "", fmt.Errorf("error creating temp dir %w", err)
 		}
-		log.Warn("node root directory already exists", zap.String("root-dir", nodeRootDir))
+		log.Warn("node root directory already exists", "root-dir", nodeRootDir)
 	}
 	return nodeRootDir, nil
 }

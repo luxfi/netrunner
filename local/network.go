@@ -25,15 +25,14 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
 	"github.com/luxfi/crypto/bls"
-	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/log"
 	"github.com/luxfi/node/utils/set"
 	"github.com/luxfi/node/utils/wrappers"
-	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -79,7 +78,7 @@ var (
 // network keeps information uses for network management, and accessing all the nodes
 type localNetwork struct {
 	lock sync.RWMutex
-	log  logging.Logger
+	log  log.Logger
 	// This network's ID.
 	networkID uint32
 	// This network's genesis file.
@@ -260,7 +259,7 @@ func init() {
 // If len([dir]) == 0, files will be written underneath a new temporary directory.
 // Snapshots are saved to snapshotsDir, defaults to defaultSnapshotsDir if not given
 func NewNetwork(
-	log logging.Logger,
+	log log.Logger,
 	networkConfig network.Config,
 	rootDir string,
 	snapshotsDir string,
@@ -289,7 +288,7 @@ func NewNetwork(
 // [newAPIClientF] is used to create new API clients.
 // [nodeProcessCreator] is used to launch new node processes.
 func newNetwork(
-	log logging.Logger,
+	log log.Logger,
 	newAPIClientF api.NewAPIClientF,
 	nodeProcessCreator NodeProcessCreator,
 	rootDir string,
@@ -354,7 +353,7 @@ func newNetwork(
 // * NodeID-GWPcbFJZFfZreETSoWjPimr846mXEKCtu
 // * NodeID-P7oB2McjBGgW2NXXWVYjV8JEDFoW9xDE5
 func NewDefaultNetwork(
-	log logging.Logger,
+	log log.Logger,
 	binaryPath string,
 	reassignPortsIfUsed bool,
 ) (network.Network, error) {
@@ -426,7 +425,7 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 	if err := networkConfig.Validate(); err != nil {
 		return fmt.Errorf("config failed validation: %w", err)
 	}
-	ln.log.Info("creating network", zap.Int("node-num", len(networkConfig.NodeConfigs)))
+	ln.log.Info("creating network", log.Int("node-num", len(networkConfig.NodeConfigs)))
 
 	ln.genesis = []byte(networkConfig.Genesis)
 
@@ -469,7 +468,7 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 		if _, err := ln.addNode(nodeConfig); err != nil {
 			if err := ln.stop(ctx); err != nil {
 				// Clean up nodes already created
-				ln.log.Debug("error stopping network", zap.Error(err))
+				ln.log.Debug("error stopping network", log.Err(err))
 			}
 			return fmt.Errorf("error adding node %s: %w", nodeConfig.Name, err)
 		}
@@ -596,19 +595,19 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 
 	ln.log.Info(
 		"adding node",
-		zap.String("node-name", nodeConfig.Name),
-		zap.String("node-dir", nodeData.dataDir),
-		zap.String("log-dir", nodeData.logsDir),
-		zap.String("db-dir", nodeData.dbDir),
-		zap.Uint16("p2p-port", nodeData.p2pPort),
-		zap.Uint16("api-port", nodeData.apiPort),
+		log.String("node-name", nodeConfig.Name),
+		log.String("node-dir", nodeData.dataDir),
+		log.String("log-dir", nodeData.logsDir),
+		log.String("db-dir", nodeData.dbDir),
+		log.Uint16("p2p-port", nodeData.p2pPort),
+		log.Uint16("api-port", nodeData.apiPort),
 	)
 
 	ln.log.Debug(
 		"starting node",
-		zap.String("name", nodeConfig.Name),
-		zap.String("binaryPath", nodeConfig.BinaryPath),
-		zap.Strings("args", nodeData.args),
+		log.String("name", nodeConfig.Name),
+		log.String("binaryPath", nodeConfig.BinaryPath),
+		log.Strings("args", nodeData.args),
 	)
 
 	// Create a wrapper for this node so we can reference it later
@@ -651,7 +650,7 @@ func (ln *localNetwork) Healthy(ctx context.Context) error {
 }
 
 func (ln *localNetwork) healthy(ctx context.Context) error {
-	ln.log.Info("checking local network healthiness", zap.Int("num-of-nodes", len(ln.nodes)))
+	ln.log.Info("checking local network healthiness", log.Int("num-of-nodes", len(ln.nodes)))
 
 	// Return unhealthy if the network is stopped
 	if ln.stopCalled() {
@@ -695,7 +694,7 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 				}
 				health, err := (*healthClient).Health(ctx, nil)
 				if err == nil && health.Healthy {
-					ln.log.Debug("node became healthy", zap.String("name", nodeName))
+					ln.log.Debug("node became healthy", log.String("name", nodeName))
 					return nil
 				}
 				select {
@@ -775,7 +774,7 @@ func (ln *localNetwork) stop(ctx context.Context) error {
 	for nodeName := range ln.nodes {
 		stopCtx, stopCtxCancel := context.WithTimeout(ctx, stopTimeout)
 		if err := ln.removeNode(stopCtx, nodeName); err != nil {
-			ln.log.Error("error stopping node", zap.String("name", nodeName), zap.Error(err))
+			ln.log.Error("error stopping node", "name", nodeName, "error", err)
 			errs.Add(err)
 		}
 		stopCtxCancel()
@@ -797,7 +796,7 @@ func (ln *localNetwork) RemoveNode(ctx context.Context, nodeName string) error {
 
 // Assumes [ln.lock] is held.
 func (ln *localNetwork) removeNode(ctx context.Context, nodeName string) error {
-	ln.log.Debug("removing node", zap.String("name", nodeName))
+	ln.log.Debug("removing node", log.String("name", nodeName))
 	node, ok := ln.nodes[nodeName]
 	if !ok {
 		return fmt.Errorf("node %q not found", nodeName)
@@ -832,7 +831,7 @@ func (ln *localNetwork) PauseNode(ctx context.Context, nodeName string) error {
 
 // Assumes [ln.lock] is held.
 func (ln *localNetwork) pauseNode(ctx context.Context, nodeName string) error {
-	ln.log.Debug("pausing node", zap.String("name", nodeName))
+	ln.log.Debug("pausing node", log.String("name", nodeName))
 	node, ok := ln.nodes[nodeName]
 	if !ok {
 		return fmt.Errorf("node %q not found", nodeName)
@@ -1114,7 +1113,7 @@ func (ln *localNetwork) buildArgs(
 	// Note these will overwrite existing flags if the same flag is given twice.
 	for flagName, flagVal := range nodeConfig.Flags {
 		if _, ok := warnFlags[flagName]; ok {
-			ln.log.Warn("A provided flag can create conflicts with the runner. The suggestion is to remove this flag", zap.String("flag-name", flagName))
+			ln.log.Warn("A provided flag can create conflicts with the runner. The suggestion is to remove this flag", log.String("flag-name", flagName))
 		}
 		if portFlags.Contains(flagName) {
 			continue

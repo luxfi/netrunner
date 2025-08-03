@@ -13,15 +13,17 @@ import (
 	"time"
 
 	"github.com/luxfi/netrunner/network/node"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/constants"
 	"github.com/luxfi/node/utils/ips"
-	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/log"
 	"github.com/luxfi/node/utils/wrappers"
 	"github.com/luxfi/node/version"
+	"github.com/luxfi/crypto/bls"
+	"github.com/luxfi/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +32,11 @@ const bitmaskCodec = uint32(1 << 31)
 
 func upgradeConn(myTLSCert *tls.Certificate, conn net.Conn) (ids.NodeID, net.Conn, error) {
 	tlsConfig := peer.TLSConfig(*myTLSCert, nil)
-	upgrader := peer.NewTLSServerUpgrader(tlsConfig)
+	invalidCerts := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "test_invalid_certs",
+		Help: "test invalid certificates counter",
+	})
+	upgrader := peer.NewTLSServerUpgrader(tlsConfig, invalidCerts)
 	// this will block until the ssh handshake is done
 	peerID, tlsConn, _, err := upgrader.Upgrade(conn)
 	return peerID, tlsConn, err
@@ -75,19 +81,33 @@ func verifyProtocol(
 		Timestamp: now,
 	}
 	signer := myTLSCert.PrivateKey.(crypto.Signer)
-	signedIP, err := unsignedIP.Sign(signer)
+	// Create a dummy BLS key for testing
+	blsKey, err := bls.NewSecretKey()
 	if err != nil {
 		errCh <- err
 		return
 	}
-	verMsg, err := mc.Version(
+	signedIP, err := unsignedIP.Sign(signer, blsKey)
+	if err != nil {
+		errCh <- err
+		return
+	}
+	verMsg, err := mc.Handshake(
 		constants.MainnetID,
 		now,
 		myIP,
 		version.CurrentApp.String(),
+		uint32(version.CurrentApp.Major),
+		uint32(version.CurrentApp.Minor),
+		uint32(version.CurrentApp.Patch),
 		now,
-		signedIP.Signature,
+		signedIP.TLSSignature,
+		signedIP.BLSSignatureBytes,
 		[]ids.ID{},
+		[]uint32{}, // supportedACPs
+		[]uint32{}, // objectedACPs
+		nil,        // knownPeersFilter
+		nil,        // knownPeersSalt
 	)
 	if err != nil {
 		errCh <- err
@@ -95,7 +115,7 @@ func verifyProtocol(
 	}
 
 	// create the PeerList message
-	plMsg, err := mc.PeerList([]ips.ClaimedIPPort{}, true)
+	plMsg, err := mc.PeerList([]*ips.ClaimedIPPort{}, true)
 	if err != nil {
 		errCh <- err
 		return
@@ -195,10 +215,10 @@ func TestAttachPeer(t *testing.T) {
 	}
 
 	// For message creation and parsing
+	m := metrics.NewNoOpMetrics("test")
 	mc, err := message.NewCreator(
-		logging.NoLog{},
-		prometheus.NewRegistry(),
-		"",
+		log.NoLog{},
+		m,
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
@@ -206,7 +226,7 @@ func TestAttachPeer(t *testing.T) {
 
 	// Expect the peer to send these messages in this order.
 	expectedMessages := []message.Op{
-		message.VersionOp,
+		message.HandshakeOp,
 		message.PeerListOp,
 		message.ChitsOp,
 	}
@@ -231,7 +251,11 @@ func TestAttachPeer(t *testing.T) {
 	requestID := uint32(42)
 	chainID := constants.PlatformChainID
 	// create the Chits message
-	msg, err := mc.Chits(chainID, requestID, []ids.ID{}, containerIDs)
+	// For the test, we'll use the same ID for all three parameters
+	preferredID := containerIDs[0]
+	preferredIDAtHeight := containerIDs[1]
+	acceptedID := containerIDs[2]
+	msg, err := mc.Chits(chainID, requestID, preferredID, preferredIDAtHeight, acceptedID)
 	require.NoError(err)
 	// send chits to [node]
 	ok := p.Send(context.Background(), msg)
