@@ -154,7 +154,7 @@ func (ln *localNetwork) RegisterBlockchainAliases(
 			if adminClient == nil {
 				return fmt.Errorf("admin client is nil for node %v", nodeName)
 			}
-			if err := (*adminClient).AliasChain(ctx, chainID, blockchainAlias); err != nil {
+			if err := adminClient.AliasChain(ctx, chainID, blockchainAlias); err != nil {
 				return fmt.Errorf("failure to register blockchain alias %v on node %v: %w", blockchainAlias, nodeName, err)
 			}
 		}

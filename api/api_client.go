@@ -20,16 +20,16 @@ var (
 
 // APIClient gives access to most node apis (or suitable wrappers)
 type APIClient struct {
-	platform     *platformvm.Client
-	xChain       *xvm.Client
-	xChainWallet *xvm.WalletClient
+	platform     platformvm.Client
+	xChain       xvm.Client
+	xChainWallet xvm.WalletClient
 	cChain       evmclient.Client
 	cChainEth    EthClient
-	info         *info.Client
-	health       *health.Client
-	admin        *admin.Client
-	pindex       *indexer.Client
-	cindex       *indexer.Client
+	info         info.Client
+	health       health.Client
+	admin        admin.Client
+	pindex       indexer.Client
+	cindex       indexer.Client
 }
 
 // Returns a new API client for a node at [ipAddr]:[port].
@@ -51,28 +51,28 @@ func NewAPIClient(ipAddr string, port uint16) Client {
 	cindexClient := indexer.NewClient(uri + "/ext/index/C/block")
 	
 	return &APIClient{
-		platform:     &platformClient,
-		xChain:       &xChainClient,
-		xChainWallet: &xChainWalletClient,
+		platform:     platformClient,
+		xChain:       xChainClient,
+		xChainWallet: xChainWalletClient,
 		cChain:       cChainClient,
 		cChainEth:    NewEthClient(ipAddr, uint(port)), // wrapper over ethclient.Client
-		info:         &infoClient,
-		health:       &healthClient,
-		admin:        &adminClient,
-		pindex:       &pindexClient,
-		cindex:       &cindexClient,
+		info:         infoClient,
+		health:       healthClient,
+		admin:        adminClient,
+		pindex:       pindexClient,
+		cindex:       cindexClient,
 	}
 }
 
-func (c APIClient) PChainAPI() *platformvm.Client {
+func (c APIClient) PChainAPI() platformvm.Client {
 	return c.platform
 }
 
-func (c APIClient) XChainAPI() *xvm.Client {
+func (c APIClient) XChainAPI() xvm.Client {
 	return c.xChain
 }
 
-func (c APIClient) XChainWalletAPI() *xvm.WalletClient {
+func (c APIClient) XChainWalletAPI() xvm.WalletClient {
 	return c.xChainWallet
 }
 
@@ -84,22 +84,22 @@ func (c APIClient) CChainEthAPI() EthClient {
 	return c.cChainEth
 }
 
-func (c APIClient) InfoAPI() *info.Client {
+func (c APIClient) InfoAPI() info.Client {
 	return c.info
 }
 
-func (c APIClient) HealthAPI() *health.Client {
+func (c APIClient) HealthAPI() health.Client {
 	return c.health
 }
 
-func (c APIClient) AdminAPI() *admin.Client {
+func (c APIClient) AdminAPI() admin.Client {
 	return c.admin
 }
 
-func (c APIClient) PChainIndexAPI() *indexer.Client {
+func (c APIClient) PChainIndexAPI() indexer.Client {
 	return c.pindex
 }
 
-func (c APIClient) CChainIndexAPI() *indexer.Client {
+func (c APIClient) CChainIndexAPI() indexer.Client {
 	return c.cindex
 }
