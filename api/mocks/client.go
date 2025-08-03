@@ -27,15 +27,15 @@ type Client struct {
 }
 
 // AdminAPI provides a mock function with given fields:
-func (_m *Client) AdminAPI() *admin.Client {
+func (_m *Client) AdminAPI() admin.Client {
 	ret := _m.Called()
 
-	var r0 *admin.Client
-	if rf, ok := ret.Get(0).(func() *admin.Client); ok {
+	var r0 admin.Client
+	if rf, ok := ret.Get(0).(func() admin.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*admin.Client)
+			r0 = ret.Get(0).(admin.Client)
 		}
 	}
 
@@ -75,15 +75,15 @@ func (_m *Client) CChainEthAPI() api.EthClient {
 }
 
 // CChainIndexAPI provides a mock function with given fields:
-func (_m *Client) CChainIndexAPI() *indexer.Client {
+func (_m *Client) CChainIndexAPI() indexer.Client {
 	ret := _m.Called()
 
-	var r0 *indexer.Client
-	if rf, ok := ret.Get(0).(func() *indexer.Client); ok {
+	var r0 indexer.Client
+	if rf, ok := ret.Get(0).(func() indexer.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*indexer.Client)
+			r0 = ret.Get(0).(indexer.Client)
 		}
 	}
 
@@ -91,15 +91,15 @@ func (_m *Client) CChainIndexAPI() *indexer.Client {
 }
 
 // HealthAPI provides a mock function with given fields:
-func (_m *Client) HealthAPI() *health.Client {
+func (_m *Client) HealthAPI() health.Client {
 	ret := _m.Called()
 
-	var r0 *health.Client
-	if rf, ok := ret.Get(0).(func() *health.Client); ok {
+	var r0 health.Client
+	if rf, ok := ret.Get(0).(func() health.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*health.Client)
+			r0 = ret.Get(0).(health.Client)
 		}
 	}
 
@@ -107,15 +107,15 @@ func (_m *Client) HealthAPI() *health.Client {
 }
 
 // InfoAPI provides a mock function with given fields:
-func (_m *Client) InfoAPI() *info.Client {
+func (_m *Client) InfoAPI() info.Client {
 	ret := _m.Called()
 
-	var r0 *info.Client
-	if rf, ok := ret.Get(0).(func() *info.Client); ok {
+	var r0 info.Client
+	if rf, ok := ret.Get(0).(func() info.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*info.Client)
+			r0 = ret.Get(0).(info.Client)
 		}
 	}
 
@@ -123,15 +123,15 @@ func (_m *Client) InfoAPI() *info.Client {
 }
 
 // PChainAPI provides a mock function with given fields:
-func (_m *Client) PChainAPI() *platformvm.Client {
+func (_m *Client) PChainAPI() platformvm.Client {
 	ret := _m.Called()
 
-	var r0 *platformvm.Client
-	if rf, ok := ret.Get(0).(func() *platformvm.Client); ok {
+	var r0 platformvm.Client
+	if rf, ok := ret.Get(0).(func() platformvm.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*platformvm.Client)
+			r0 = ret.Get(0).(platformvm.Client)
 		}
 	}
 
@@ -139,15 +139,15 @@ func (_m *Client) PChainAPI() *platformvm.Client {
 }
 
 // PChainIndexAPI provides a mock function with given fields:
-func (_m *Client) PChainIndexAPI() *indexer.Client {
+func (_m *Client) PChainIndexAPI() indexer.Client {
 	ret := _m.Called()
 
-	var r0 *indexer.Client
-	if rf, ok := ret.Get(0).(func() *indexer.Client); ok {
+	var r0 indexer.Client
+	if rf, ok := ret.Get(0).(func() indexer.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*indexer.Client)
+			r0 = ret.Get(0).(indexer.Client)
 		}
 	}
 
@@ -155,15 +155,15 @@ func (_m *Client) PChainIndexAPI() *indexer.Client {
 }
 
 // XChainAPI provides a mock function with given fields:
-func (_m *Client) XChainAPI() *xvm.Client {
+func (_m *Client) XChainAPI() xvm.Client {
 	ret := _m.Called()
 
-	var r0 *xvm.Client
-	if rf, ok := ret.Get(0).(func() *xvm.Client); ok {
+	var r0 xvm.Client
+	if rf, ok := ret.Get(0).(func() xvm.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*xvm.Client)
+			r0 = ret.Get(0).(xvm.Client)
 		}
 	}
 
@@ -171,15 +171,15 @@ func (_m *Client) XChainAPI() *xvm.Client {
 }
 
 // XChainWalletAPI provides a mock function with given fields:
-func (_m *Client) XChainWalletAPI() *xvm.WalletClient {
+func (_m *Client) XChainWalletAPI() xvm.WalletClient {
 	ret := _m.Called()
 
-	var r0 *xvm.WalletClient
-	if rf, ok := ret.Get(0).(func() *xvm.WalletClient); ok {
+	var r0 xvm.WalletClient
+	if rf, ok := ret.Get(0).(func() xvm.WalletClient); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*xvm.WalletClient)
+			r0 = ret.Get(0).(xvm.WalletClient)
 		}
 	}
 

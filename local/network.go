@@ -692,7 +692,7 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 				if healthClient == nil {
 					return fmt.Errorf("health client is nil for node %v", nodeName)
 				}
-				health, err := (*healthClient).Health(ctx, nil)
+				health, err := healthClient.Health(ctx, nil)
 				if err == nil && health.Healthy {
 					ln.log.Debug("node became healthy", log.String("name", nodeName))
 					return nil

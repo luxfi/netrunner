@@ -18,7 +18,6 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/utils/constants"
-	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
 	luxd_constants "github.com/luxfi/node/utils/constants"
@@ -232,7 +231,7 @@ func (lc *localNetwork) Start(ctx context.Context) error {
 		return err
 	}
 
-	ux.Print(lc.log, log.Blue.Wrap(log.Bold.Wrap("create and run local network")))
+	lc.log.Info(log.Blue.Wrap(log.Bold.Wrap("create and run local network")))
 	nw, err := local.NewNetwork(lc.log, lc.cfg, lc.options.rootDataDir, lc.options.snapshotsDir, lc.options.reassignPortsIfUsed)
 	if err != nil {
 		return err
@@ -298,7 +297,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 	defer lc.lock.Unlock()
 
 	if len(validatorSpecs) == 0 {
-		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no validator specs provided...")))
+		lc.log.Info(log.Orange.Wrap(log.Bold.Wrap("no validator specs provided...")))
 		return nil
 	}
 
@@ -328,7 +327,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 		return err
 	}
 
-	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished adding permissionless validators")))
+	lc.log.Info(log.Green.Wrap(log.Bold.Wrap("finished adding permissionless validators")))
 	return nil
 }
 
@@ -337,7 +336,7 @@ func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpec
 	defer lc.lock.Unlock()
 
 	if len(validatorSpecs) == 0 {
-		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no validator specs provided...")))
+		lc.log.Info(log.Orange.Wrap(log.Bold.Wrap("no validator specs provided...")))
 		return nil
 	}
 
@@ -367,7 +366,7 @@ func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpec
 		return err
 	}
 
-	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished removing subnet validators")))
+	lc.log.Info(log.Green.Wrap(log.Bold.Wrap("finished removing subnet validators")))
 	return nil
 }
 
@@ -376,7 +375,7 @@ func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs
 	defer lc.lock.Unlock()
 
 	if len(elasticSubnetSpecs) == 0 {
-		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no subnets specified...")))
+		lc.log.Info(log.Orange.Wrap(log.Bold.Wrap("no subnets specified...")))
 		return nil, nil, nil
 	}
 
@@ -406,7 +405,7 @@ func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs
 		return nil, nil, err
 	}
 
-	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished transforming subnets")))
+	lc.log.Info(log.Green.Wrap(log.Bold.Wrap("finished transforming subnets")))
 	return chainIDs, assetIDs, nil
 }
 
@@ -417,7 +416,7 @@ func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network
 	defer lc.lock.Unlock()
 
 	if len(subnetSpecs) == 0 {
-		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no subnets specified...")))
+		lc.log.Info(log.Orange.Wrap(log.Bold.Wrap("no subnets specified...")))
 		return nil, nil
 	}
 
@@ -447,7 +446,7 @@ func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network
 		return nil, err
 	}
 
-	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished adding subnets")))
+	lc.log.Info(log.Green.Wrap(log.Bold.Wrap("finished adding subnets")))
 	return subnetIDs, nil
 }
 
@@ -457,7 +456,7 @@ func (lc *localNetwork) LoadSnapshot(snapshotName string) error {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
-	ux.Print(lc.log, log.Blue.Wrap(log.Bold.Wrap("create and run local network from snapshot")))
+	lc.log.Info(log.Blue.Wrap(log.Bold.Wrap("create and run local network from snapshot")))
 
 	var globalNodeConfig map[string]interface{}
 	if lc.options.globalNodeConfig != "" {
@@ -517,7 +516,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 	if pChainClient == nil {
 		return fmt.Errorf("P-Chain client is nil")
 	}
-	blockchains, err := (*pChainClient).GetBlockchains(ctx)
+	blockchains, err := pChainClient.GetBlockchains(ctx)
 	if err != nil {
 		return err
 	}
@@ -538,7 +537,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		}
 	}
 
-	subnets, err := (*pChainClient).GetSubnets(ctx, nil)
+	subnets, err := pChainClient.GetSubnets(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -555,7 +554,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		vdrs, err := (*pChainClient).GetCurrentValidators(ctx, subnetID, nil)
+		vdrs, err := pChainClient.GetCurrentValidators(ctx, subnetID, nil)
 		if err != nil {
 			return err
 		}
@@ -571,7 +570,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 
 		isElastic := false
 		elasticSubnetID := ids.Empty
-		if _, _, err := (*pChainClient).GetCurrentSupply(ctx, subnetID); err == nil {
+		if _, _, err := pChainClient.GetCurrentSupply(ctx, subnetID); err == nil {
 			isElastic = true
 			elasticSubnetID, err = lc.nw.GetElasticSubnetID(ctx, subnetID)
 			if err != nil {
@@ -587,7 +586,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 	}
 
 	for chainID, chainInfo := range lc.customChainIDToInfo {
-		vs, err := (*pChainClient).GetCurrentValidators(ctx, chainInfo.subnetID, nil)
+		vs, err := pChainClient.GetCurrentValidators(ctx, chainInfo.subnetID, nil)
 		if err != nil {
 			return err
 		}
@@ -628,7 +627,7 @@ func (lc *localNetwork) AwaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 // Updates node and subnet info.
 // Assumes [lc.lock] is held.
 func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) error {
-	ux.Print(lc.log, log.Blue.Wrap(log.Bold.Wrap("waiting for all nodes to report healthy...")))
+	lc.log.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for all nodes to report healthy...")))
 
 	if err := lc.nw.Healthy(ctx); err != nil {
 		return err
@@ -737,7 +736,7 @@ func (lc *localNetwork) Stop(ctx context.Context) {
 			if err != nil {
 				msg += fmt.Sprintf(" (error %v)", err)
 			}
-			ux.Print(lc.log, log.Red.Wrap(msg))
+			lc.log.Info(log.Red.Wrap(msg))
 		}
 	})
 }
