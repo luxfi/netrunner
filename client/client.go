@@ -14,8 +14,7 @@ import (
 
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/rpcpb"
-	"github.com/luxfi/node/utils/logging"
-	"go.uber.org/zap"
+	"github.com/luxfi/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -58,7 +57,7 @@ type Client interface {
 
 type client struct {
 	cfg Config
-	log logging.Logger
+	log log.Logger
 
 	conn *grpc.ClientConn
 
@@ -69,8 +68,8 @@ type client struct {
 	closeOnce sync.Once
 }
 
-func New(cfg Config, log logging.Logger) (Client, error) {
-	log.Debug("dialing server at ", zap.String("endpoint", cfg.Endpoint))
+func New(cfg Config, log log.Logger) (Client, error) {
+	log.Debug("dialing server at", "endpoint", cfg.Endpoint)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.DialTimeout)
 	conn, err := grpc.DialContext(
@@ -223,7 +222,7 @@ func (c *client) StreamStatus(ctx context.Context, pushInterval time.Duration) (
 	ch := make(chan *rpcpb.ClusterInfo, 1)
 	go func() {
 		defer func() {
-			c.log.Debug("closing stream send", zap.Error(stream.CloseSend()))
+			c.log.Debug("closing stream send", log.Err(stream.CloseSend()))
 			close(ch)
 		}()
 		c.log.Info("start receive routine")
@@ -249,9 +248,9 @@ func (c *client) StreamStatus(ctx context.Context, pushInterval time.Duration) (
 				return
 			}
 			if isClientCanceled(stream.Context().Err(), err) {
-				c.log.Warn("failed to receive status request from gRPC stream due to client cancellation", zap.Error(err))
+				c.log.Warn("failed to receive status request from gRPC stream due to client cancellation", log.Err(err))
 			} else {
-				c.log.Warn("failed to receive status request from gRPC stream", zap.Error(err))
+				c.log.Warn("failed to receive status request from gRPC stream", log.Err(err))
 			}
 			return
 		}
@@ -281,22 +280,22 @@ func (c *client) AddNode(ctx context.Context, name string, execPath string, opts
 		req.PluginDir = ret.pluginDir
 	}
 
-	c.log.Info("add node", zap.String("name", name))
+	c.log.Info("add node", log.String("name", name))
 	return c.controlc.AddNode(ctx, req)
 }
 
 func (c *client) RemoveNode(ctx context.Context, name string) (*rpcpb.RemoveNodeResponse, error) {
-	c.log.Info("remove node", zap.String("name", name))
+	c.log.Info("remove node", log.String("name", name))
 	return c.controlc.RemoveNode(ctx, &rpcpb.RemoveNodeRequest{Name: name})
 }
 
 func (c *client) PauseNode(ctx context.Context, name string) (*rpcpb.PauseNodeResponse, error) {
-	c.log.Info("pause node", zap.String("name", name))
+	c.log.Info("pause node", log.String("name", name))
 	return c.controlc.PauseNode(ctx, &rpcpb.PauseNodeRequest{Name: name})
 }
 
 func (c *client) ResumeNode(ctx context.Context, name string) (*rpcpb.ResumeNodeResponse, error) {
-	c.log.Info("resume node", zap.String("name", name))
+	c.log.Info("resume node", log.String("name", name))
 	return c.controlc.ResumeNode(ctx, &rpcpb.ResumeNodeRequest{Name: name})
 }
 
@@ -318,17 +317,17 @@ func (c *client) RestartNode(ctx context.Context, name string, opts ...OpOption)
 	req.UpgradeConfigs = ret.upgradeConfigs
 	req.SubnetConfigs = ret.subnetConfigs
 
-	c.log.Info("restart node", zap.String("name", name))
+	c.log.Info("restart node", log.String("name", name))
 	return c.controlc.RestartNode(ctx, req)
 }
 
 func (c *client) AttachPeer(ctx context.Context, nodeName string) (*rpcpb.AttachPeerResponse, error) {
-	c.log.Info("attaching peer", zap.String("name", nodeName))
+	c.log.Info("attaching peer", log.String("name", nodeName))
 	return c.controlc.AttachPeer(ctx, &rpcpb.AttachPeerRequest{NodeName: nodeName})
 }
 
 func (c *client) SendOutboundMessage(ctx context.Context, nodeName string, peerID string, op uint32, msgBody []byte) (*rpcpb.SendOutboundMessageResponse, error) {
-	c.log.Info("sending outbound message", zap.String("name", nodeName), zap.String("peer-ID", peerID))
+	c.log.Info("sending outbound message", log.String("name", nodeName), log.String("peer-ID", peerID))
 	return c.controlc.SendOutboundMessage(ctx, &rpcpb.SendOutboundMessageRequest{
 		NodeName: nodeName,
 		PeerId:   peerID,
@@ -338,12 +337,12 @@ func (c *client) SendOutboundMessage(ctx context.Context, nodeName string, peerI
 }
 
 func (c *client) SaveSnapshot(ctx context.Context, snapshotName string) (*rpcpb.SaveSnapshotResponse, error) {
-	c.log.Info("save snapshot", zap.String("snapshot-name", snapshotName))
+	c.log.Info("save snapshot", log.String("snapshot-name", snapshotName))
 	return c.controlc.SaveSnapshot(ctx, &rpcpb.SaveSnapshotRequest{SnapshotName: snapshotName})
 }
 
 func (c *client) LoadSnapshot(ctx context.Context, snapshotName string, opts ...OpOption) (*rpcpb.LoadSnapshotResponse, error) {
-	c.log.Info("load snapshot", zap.String("snapshot-name", snapshotName))
+	c.log.Info("load snapshot", log.String("snapshot-name", snapshotName))
 	ret := &Op{}
 	ret.applyOpts(opts)
 	req := rpcpb.LoadSnapshotRequest{
@@ -369,7 +368,7 @@ func (c *client) LoadSnapshot(ctx context.Context, snapshotName string, opts ...
 }
 
 func (c *client) RemoveSnapshot(ctx context.Context, snapshotName string) (*rpcpb.RemoveSnapshotResponse, error) {
-	c.log.Info("remove snapshot", zap.String("snapshot-name", snapshotName))
+	c.log.Info("remove snapshot", log.String("snapshot-name", snapshotName))
 	return c.controlc.RemoveSnapshot(ctx, &rpcpb.RemoveSnapshotRequest{SnapshotName: snapshotName})
 }
 

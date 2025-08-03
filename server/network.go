@@ -20,9 +20,9 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	luxd_constants "github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/log"
 	"golang.org/x/exp/maps"
 )
 
@@ -51,7 +51,7 @@ scrape_configs:
 
 type localNetwork struct {
 	lock sync.Mutex
-	log  logging.Logger
+	log  log.Logger
 
 	execPath  string
 	pluginDir string
@@ -102,7 +102,7 @@ type localNetworkOptions struct {
 
 	snapshotsDir string
 
-	logLevel logging.Level
+	logLevel log.Level
 
 	reassignPortsIfUsed bool
 
@@ -110,8 +110,8 @@ type localNetworkOptions struct {
 }
 
 func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
-	logFactory := logging.NewFactory(logging.Config{
-		RotatingWriterConfig: logging.RotatingWriterConfig{
+	logFactory := log.NewFactoryWithConfig(log.Config{
+		RotatingWriterConfig: log.RotatingWriterConfig{
 			Directory: opts.rootDataDir,
 		},
 		LogLevel:     opts.logLevel,
@@ -232,7 +232,7 @@ func (lc *localNetwork) Start(ctx context.Context) error {
 		return err
 	}
 
-	ux.Print(lc.log, logging.Blue.Wrap(logging.Bold.Wrap("create and run local network")))
+	ux.Print(lc.log, log.Blue.Wrap(log.Bold.Wrap("create and run local network")))
 	nw, err := local.NewNetwork(lc.log, lc.cfg, lc.options.rootDataDir, lc.options.snapshotsDir, lc.options.reassignPortsIfUsed)
 	if err != nil {
 		return err
@@ -298,7 +298,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 	defer lc.lock.Unlock()
 
 	if len(validatorSpecs) == 0 {
-		ux.Print(lc.log, logging.Orange.Wrap(logging.Bold.Wrap("no validator specs provided...")))
+		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no validator specs provided...")))
 		return nil
 	}
 
@@ -328,7 +328,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 		return err
 	}
 
-	ux.Print(lc.log, logging.Green.Wrap(logging.Bold.Wrap("finished adding permissionless validators")))
+	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished adding permissionless validators")))
 	return nil
 }
 
@@ -337,7 +337,7 @@ func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpec
 	defer lc.lock.Unlock()
 
 	if len(validatorSpecs) == 0 {
-		ux.Print(lc.log, logging.Orange.Wrap(logging.Bold.Wrap("no validator specs provided...")))
+		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no validator specs provided...")))
 		return nil
 	}
 
@@ -367,7 +367,7 @@ func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpec
 		return err
 	}
 
-	ux.Print(lc.log, logging.Green.Wrap(logging.Bold.Wrap("finished removing subnet validators")))
+	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished removing subnet validators")))
 	return nil
 }
 
@@ -376,7 +376,7 @@ func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs
 	defer lc.lock.Unlock()
 
 	if len(elasticSubnetSpecs) == 0 {
-		ux.Print(lc.log, logging.Orange.Wrap(logging.Bold.Wrap("no subnets specified...")))
+		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no subnets specified...")))
 		return nil, nil, nil
 	}
 
@@ -406,7 +406,7 @@ func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs
 		return nil, nil, err
 	}
 
-	ux.Print(lc.log, logging.Green.Wrap(logging.Bold.Wrap("finished transforming subnets")))
+	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished transforming subnets")))
 	return chainIDs, assetIDs, nil
 }
 
@@ -417,7 +417,7 @@ func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network
 	defer lc.lock.Unlock()
 
 	if len(subnetSpecs) == 0 {
-		ux.Print(lc.log, logging.Orange.Wrap(logging.Bold.Wrap("no subnets specified...")))
+		ux.Print(lc.log, log.Orange.Wrap(log.Bold.Wrap("no subnets specified...")))
 		return nil, nil
 	}
 
@@ -447,7 +447,7 @@ func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network
 		return nil, err
 	}
 
-	ux.Print(lc.log, logging.Green.Wrap(logging.Bold.Wrap("finished adding subnets")))
+	ux.Print(lc.log, log.Green.Wrap(log.Bold.Wrap("finished adding subnets")))
 	return subnetIDs, nil
 }
 
@@ -457,7 +457,7 @@ func (lc *localNetwork) LoadSnapshot(snapshotName string) error {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
-	ux.Print(lc.log, logging.Blue.Wrap(logging.Bold.Wrap("create and run local network from snapshot")))
+	ux.Print(lc.log, log.Blue.Wrap(log.Bold.Wrap("create and run local network from snapshot")))
 
 	var globalNodeConfig map[string]interface{}
 	if lc.options.globalNodeConfig != "" {
@@ -609,7 +609,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 			if nodeInfo.Paused {
 				continue
 			}
-			lc.log.Info(fmt.Sprintf(logging.LightBlue.Wrap("[blockchain RPC for %q] \"%s/ext/bc/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
+			lc.log.Info(fmt.Sprintf(log.LightBlue.Wrap("[blockchain RPC for %q] \"%s/ext/bc/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
 		}
 	}
 
@@ -628,7 +628,7 @@ func (lc *localNetwork) AwaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 // Updates node and subnet info.
 // Assumes [lc.lock] is held.
 func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) error {
-	ux.Print(lc.log, logging.Blue.Wrap(logging.Bold.Wrap("waiting for all nodes to report healthy...")))
+	ux.Print(lc.log, log.Blue.Wrap(log.Bold.Wrap("waiting for all nodes to report healthy...")))
 
 	if err := lc.nw.Healthy(ctx); err != nil {
 		return err
@@ -649,7 +649,7 @@ func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 		if nodeInfo.Paused {
 			continue
 		}
-		lc.log.Debug(fmt.Sprintf(logging.Cyan.Wrap("node-info: node-name %s, node-ID: %s, URI: %s"), nodeName, nodeInfo.Id, nodeInfo.Uri))
+		lc.log.Debug(fmt.Sprintf(log.Cyan.Wrap("node-info: node-name %s, node-ID: %s, URI: %s"), nodeName, nodeInfo.Id, nodeInfo.Uri))
 	}
 
 	return nil
@@ -706,7 +706,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 func (lc *localNetwork) generatePrometheusConf() error {
 	if lc.prometheusConfPath == "" {
 		lc.prometheusConfPath = filepath.Join(lc.options.rootDataDir, prometheusConfFname)
-		lc.log.Info(fmt.Sprintf(logging.Cyan.Wrap("prometheus conf file %s"), lc.prometheusConfPath))
+		lc.log.Info(fmt.Sprintf(log.Cyan.Wrap("prometheus conf file %s"), lc.prometheusConfPath))
 	}
 	prometheusConf := prometheusConfCommon
 	for _, nodeInfo := range lc.nodeInfos {
@@ -737,7 +737,7 @@ func (lc *localNetwork) Stop(ctx context.Context) {
 			if err != nil {
 				msg += fmt.Sprintf(" (error %v)", err)
 			}
-			ux.Print(lc.log, logging.Red.Wrap(msg))
+			ux.Print(lc.log, log.Red.Wrap(msg))
 		}
 	})
 }

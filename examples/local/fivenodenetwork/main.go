@@ -11,8 +11,8 @@ import (
 
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
-	"github.com/luxfi/node/utils/logging"
-	"go.uber.org/zap"
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 )
 
 const (
@@ -26,15 +26,15 @@ var goPath = os.ExpandEnv("$GOPATH")
 // Closes [closedOnShutdownChan] amd [signalChan] when done shutting down network.
 // This function should only be called once.
 func shutdownOnSignal(
-	log logging.Logger,
+	log log.Logger,
 	n network.Network,
 	signalChan chan os.Signal,
 	closedOnShutdownChan chan struct{},
 ) {
 	sig := <-signalChan
-	log.Info("got OS signal", zap.Stringer("signal", sig))
+	log.Info("got OS signal", "signal", sig)
 	if err := n.Stop(context.Background()); err != nil {
-		log.Info("error stopping network", zap.Error(err))
+		log.Info("error stopping network", "error", err)
 	}
 	signal.Reset()
 	close(signalChan)
@@ -47,11 +47,11 @@ func shutdownOnSignal(
 // The network runs until the user provides a SIGINT or SIGTERM.
 func main() {
 	// Create the logger
-	logFactory := logging.NewFactory(logging.Config{
-		DisplayLevel: logging.Info,
-		LogLevel:     logging.Debug,
+	logFactory := log.NewFactoryWithConfig(log.Config{
+		DisplayLevel: level.Info,
+		LogLevel:     level.Debug,
 	})
-	log, err := logFactory.Make("main")
+	logger, err := logFactory.Make("main")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -60,13 +60,13 @@ func main() {
 		goPath = build.Default.GOPATH
 	}
 	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/luxfi/node/build/node")
-	if err := run(log, binaryPath); err != nil {
-		log.Fatal("fatal error", zap.Error(err))
+	if err := run(logger, binaryPath); err != nil {
+		logger.Fatal("fatal error", log.Err(err))
 		os.Exit(1)
 	}
 }
 
-func run(log logging.Logger, binaryPath string) error {
+func run(log log.Logger, binaryPath string) error {
 	// Create the network
 	nw, err := local.NewDefaultNetwork(log, binaryPath, true)
 	if err != nil {
@@ -74,7 +74,7 @@ func run(log logging.Logger, binaryPath string) error {
 	}
 	defer func() { // Stop the network when this function returns
 		if err := nw.Stop(context.Background()); err != nil {
-			log.Info("error stopping network", zap.Error(err))
+			log.Info("error stopping network", "error", err)
 		}
 	}()
 
