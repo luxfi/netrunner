@@ -7,9 +7,9 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 require (
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/evm v0.7.8
+	github.com/luxfi/evm v0.7.9
 	github.com/luxfi/geth v1.16.1
-	github.com/luxfi/node v1.13.4
+	github.com/luxfi/node v1.13.5
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
