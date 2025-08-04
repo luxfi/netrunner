@@ -2,16 +2,14 @@ module github.com/luxfi/netrunner
 
 go 1.24.5
 
-// Removed luxfi/ids replace - should use node/ids directly
-
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 require (
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/evm v0.8.3
-	github.com/luxfi/geth v1.16.7
-	github.com/luxfi/node v1.13.13
+	github.com/luxfi/evm v0.8.5
+	github.com/luxfi/geth v1.16.24
+	github.com/luxfi/node v1.13.4
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
@@ -33,7 +31,7 @@ require (
 	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
-	github.com/StephenButtolph/canoto v0.17.1 // indirect
+	github.com/StephenButtolph/canoto v0.17.2 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.20.0 // indirect
@@ -66,7 +64,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
+	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
@@ -92,7 +90,7 @@ require (
 	github.com/luxfi/ids v1.0.2 // indirect
 	github.com/luxfi/log v0.1.1 // indirect
 	github.com/luxfi/metrics v1.1.1 // indirect
-	github.com/luxfi/trace v0.1.0 // indirect
+	github.com/luxfi/trace v0.1.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -143,7 +141,7 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250721164621-a45f3dfb1074 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250728155136-f173205681a0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
