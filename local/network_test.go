@@ -23,7 +23,7 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/consensus/networking/router"
 	"github.com/luxfi/node/utils/logging"
