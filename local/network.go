@@ -25,7 +25,7 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"

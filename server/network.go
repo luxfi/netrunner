@@ -20,7 +20,7 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	luxd_constants "github.com/luxfi/node/utils/constants"
 	"github.com/luxfi/node/utils/logging"
 	"golang.org/x/exp/maps"
