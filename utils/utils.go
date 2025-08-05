@@ -10,7 +10,7 @@ import (
 
 	rpcb "github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/node/ids"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/logging"
 )
