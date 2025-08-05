@@ -10,7 +10,7 @@ require (
 	github.com/luxfi/crypto v1.2.1
 	github.com/luxfi/evm v0.7.9
 	github.com/luxfi/geth v1.16.26
-	github.com/luxfi/node v1.13.5
+	github.com/luxfi/node v1.13.16
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
