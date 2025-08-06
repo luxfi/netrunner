@@ -25,7 +25,7 @@ func ToNodeID(stakingKey, stakingCert []byte) (ids.NodeID, error) {
 	if err != nil {
 		return ids.EmptyNodeID, err
 	}
-	stakingCertificate := &staking.Certificate{
+	stakingCertificate := &ids.Certificate{
 		Raw:       cert.Leaf.Raw,
 		PublicKey: cert.Leaf.PublicKey,
 	}

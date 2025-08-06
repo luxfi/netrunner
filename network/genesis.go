@@ -25,7 +25,8 @@ func LoadLocalGenesis() (map[string]interface{}, error) {
 	cChainGenesis := genesisMap["cChainGenesis"]
 	// set the cchain genesis directly from geth
 	// the whole of `cChainGenesis` should be set as a string, not a json object...
-	gethCChainGenesis := geth_params.LuxLocalChainConfig
+	// Use TestChainConfig as local config
+	gethCChainGenesis := geth_params.TestChainConfig
 	// but the part in geth is only the "config" part.
 	// In order to set it easily, first we get the cChainGenesis item
 	// convert it to a map
