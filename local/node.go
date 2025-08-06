@@ -23,7 +23,8 @@ import (
 	"github.com/luxfi/node/utils"
 	"github.com/luxfi/node/utils/constants"
 	"github.com/luxfi/crypto/bls"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
+	luxmetrics "github.com/luxfi/metrics"
 	"github.com/luxfi/node/utils/math/meter"
 	"github.com/luxfi/node/utils/resource"
 	"github.com/luxfi/node/utils/set"
@@ -100,8 +101,8 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 	mc, err := message.NewCreator(
-		logging.NoLog{},
-		prometheus.NewRegistry(),
+		luxlog.NewNoOpLogger(),
+		luxmetrics.NewPrometheusMetrics("netrunner", prometheus.NewRegistry()),
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
@@ -134,7 +135,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	config := &peer.Config{
 		Metrics:              metrics,
 		MessageCreator:       mc,
-		Log:                  logging.NoLog{},
+		Log:                  luxlog.NewNoLog(),
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
@@ -158,10 +159,13 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		config,
 		conn,
 		cert,
-		ids.NodeIDFromCert(cert),
+		ids.NodeIDFromCert(&ids.Certificate{
+			Raw:       cert.Raw,
+			PublicKey: cert.PublicKey,
+		}),
 		peer.NewBlockingMessageQueue(
 			config.Metrics,
-			logging.NoLog{},
+			luxlog.NewNoOpLogger(),
 			peerMsgQueueBufferSize,
 		),
 	)
