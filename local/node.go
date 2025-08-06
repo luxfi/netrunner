@@ -135,7 +135,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	config := &peer.Config{
 		Metrics:              metrics,
 		MessageCreator:       mc,
-		Log:                  luxlog.NewNoLog(),
+		Log:                  luxlog.NewNoOpLogger(),
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
