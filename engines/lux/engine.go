@@ -18,7 +18,12 @@ import (
 )
 
 func init() {
-	engines.Register(engines.EngineLux, NewLuxEngine)
+	engines.Register(engines.EngineLux, LuxFactory)
+}
+
+// LuxFactory creates Lux engines
+func LuxFactory(name string, binary string) (engines.Engine, error) {
+	return NewLuxEngine(name, binary)
 }
 
 // LuxEngine wraps luxd node management
