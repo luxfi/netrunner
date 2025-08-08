@@ -5,7 +5,6 @@ go 1.24.5
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 require (
-	github.com/ava-labs/avalanchego v1.13.4
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/crypto v1.2.2
 	github.com/luxfi/evm v0.8.2
@@ -38,10 +37,8 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/StephenButtolph/canoto v0.17.2 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.5 // indirect
-	github.com/ava-labs/libevm v1.13.14-0.3.0.rc.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.3 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

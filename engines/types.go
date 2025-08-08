@@ -19,6 +19,7 @@ const (
 	EngineAvalanche EngineType = "avalanche"
 	EngineGeth      EngineType = "geth"
 	EngineOP        EngineType = "op"
+	EngineEth2      EngineType = "eth2"
 )
 
 // ChainInfo describes a blockchain's network properties
