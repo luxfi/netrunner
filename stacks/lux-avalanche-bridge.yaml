@@ -1,0 +1,45 @@
+name: lux-avalanche-bridge
+version: 1.0.0
+description: Lux L1 + Avalanche C-Chain with AWM bridge
+
+engines:
+  - name: lux-l1
+    type: lux
+    network_id: 96369
+    http_port: 9630
+    staking_port: 9631
+    log_level: info
+    wait_healthy: true
+    extra:
+      staking-enabled: false
+      sybil-protection-enabled: false
+      health-check-frequency: 2s
+      
+  - name: avalanche-c
+    type: avalanche
+    network_id: 43114
+    http_port: 9650
+    staking_port: 9651
+    log_level: info
+    wait_healthy: true
+    depends_on:
+      - lux-l1
+
+bridge:
+  type: awm
+  source: avalanche-c
+  destination: lux-l1
+  contracts:
+    messenger: "0x0000000000000000000000000000000000000000"
+    registry: "0x0000000000000000000000000000000000000000"
+
+networks:
+  - name: lux-mainnet
+    type: l1
+    engine: lux-l1
+    chain_id: 96369
+    
+  - name: avalanche-mainnet
+    type: l1
+    engine: avalanche-c
+    chain_id: 43114
