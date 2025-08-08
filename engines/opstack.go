@@ -363,7 +363,8 @@ func (e *OPStackEngine) ChainID() ids.ID {
 	if e.rollupConfig != nil {
 		// Create a deterministic ID from L2 chain ID
 		chainIDStr := fmt.Sprintf("op-l2-%d", e.rollupConfig.L2ChainID)
-		chainID = ids.ID(ids.SHA256([]byte(chainIDStr)))
+		hash := ids.Checksum256([]byte(chainIDStr))
+		chainID = ids.ID(hash)
 	}
 	return chainID
 }
@@ -395,7 +396,8 @@ func (e *OPStackEngine) ParentChain() *ChainInfo {
 		return nil
 	}
 	// OP Stack L2s have an L1 parent
-	parentChainID := ids.ID(ids.SHA256([]byte(fmt.Sprintf("l1-%d", e.rollupConfig.L1ChainID))))
+	parentHash := ids.Checksum256([]byte(fmt.Sprintf("l1-%d", e.rollupConfig.L1ChainID)))
+	parentChainID := ids.ID(parentHash)
 	return &ChainInfo{
 		ChainID:   parentChainID,
 		NetworkID: uint32(e.rollupConfig.L1ChainID),
