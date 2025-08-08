@@ -1,0 +1,152 @@
+name: multi-consensus-stack
+version: 1.0.0
+description: Multi-consensus architecture with Lux, Avalanche, Ethereum, and OP Stack
+
+engines:
+  # Lux Primary Network
+  - name: lux-mainnet
+    type: lux
+    binary: "luxd"
+    network_id: 96369
+    http_port: 9630
+    ws_port: 9631
+    staking_port: 9651
+    extra:
+      chain_id: 96369
+      consensus: snowman
+    wait_healthy: true
+
+  # Avalanche for compatibility testing
+  - name: avalanche-c-chain
+    type: avalanche
+    binary: "avalanchego"
+    network_id: 43114
+    http_port: 9650
+    ws_port: 9651
+    staking_port: 9671
+    extra:
+      chain_id: 43114
+    wait_healthy: true
+
+  # Ethereum 2.0 as settlement layer
+  - name: eth2-settlement
+    type: eth2
+    binary: "prysm:geth"
+    network_id: 1
+    http_port: 8545
+    ws_port: 8546
+    consensus_client: prysm
+    execution_client: geth
+    validator_enabled: true
+    extra:
+      chain_id: 1
+      network_name: mainnet-fork
+    wait_healthy: true
+
+  # OP Stack L2 on Ethereum
+  - name: op-rollup
+    type: op
+    binary: "op-node:op-geth"
+    network_id: 10
+    http_port: 8555
+    ws_port: 8556
+    l1_rpc: "http://localhost:8545"
+    sequencer: true
+    extra:
+      l1_chain_id: 1
+      l2_chain_id: 10
+    depends_on:
+      - eth2-settlement
+    wait_healthy: true
+
+  # ZOO L2 on Lux
+  - name: zoo-subnet
+    type: lux
+    binary: "subnet-evm"
+    network_id: 200200
+    http_port: 9640
+    ws_port: 9641
+    extra:
+      chain_id: 200200
+      parent_chain: lux-mainnet
+      subnet_id: "2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt"
+    depends_on:
+      - lux-mainnet
+    wait_healthy: true
+
+  # SPC L2 on Lux
+  - name: spc-subnet
+    type: lux
+    binary: "subnet-evm"
+    network_id: 36911
+    http_port: 9642
+    ws_port: 9643
+    extra:
+      chain_id: 36911
+      parent_chain: lux-mainnet
+      subnet_id: "2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt"
+    depends_on:
+      - lux-mainnet
+    wait_healthy: true
+
+bridge:
+  type: awm
+  source: lux-mainnet
+  destination: avalanche-c-chain
+  relayer_key: "relayer.key"
+  contracts:
+    teleporter: "0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf"
+
+networks:
+  # L1 Networks
+  - name: lux
+    type: l1
+    engine: lux-mainnet
+    chain_id: 96369
+    endpoints:
+      - "http://localhost:9630"
+      - "ws://localhost:9631"
+  
+  - name: avalanche
+    type: l1
+    engine: avalanche-c-chain
+    chain_id: 43114
+    endpoints:
+      - "http://localhost:9650"
+      - "ws://localhost:9651"
+  
+  - name: ethereum
+    type: l1
+    engine: eth2-settlement
+    chain_id: 1
+    endpoints:
+      - "http://localhost:8545"
+      - "ws://localhost:8546"
+  
+  # L2 Networks
+  - name: optimism
+    type: l2
+    engine: op-rollup
+    parent: ethereum
+    chain_id: 10
+    endpoints:
+      - "http://localhost:8555"
+      - "ws://localhost:8556"
+  
+  - name: zoo
+    type: l2
+    engine: zoo-subnet
+    parent: lux
+    chain_id: 200200
+    endpoints:
+      - "http://localhost:9640"
+      - "ws://localhost:9641"
+  
+  - name: spc
+    type: l2
+    engine: spc-subnet
+    parent: lux
+    chain_id: 36911
+    endpoints:
+      - "http://localhost:9642"
+      - "ws://localhost:9643"

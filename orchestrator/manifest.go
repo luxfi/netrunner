@@ -26,7 +26,7 @@ type StackManifest struct {
 // EngineConfig defines an engine configuration
 type EngineConfig struct {
 	Name         string                 `yaml:"name" json:"name"`
-	Type         string                 `yaml:"type" json:"type"` // lux, avalanche, geth, op
+	Type         string                 `yaml:"type" json:"type"` // lux, avalanche, geth, op, eth2
 	Binary       string                 `yaml:"binary,omitempty" json:"binary,omitempty"`
 	NetworkID    uint32                 `yaml:"network_id" json:"network_id"`
 	HTTPPort     uint16                 `yaml:"http_port,omitempty" json:"http_port,omitempty"`
@@ -38,6 +38,15 @@ type EngineConfig struct {
 	Extra        map[string]interface{} `yaml:"extra,omitempty" json:"extra,omitempty"`
 	WaitHealthy  bool                   `yaml:"wait_healthy,omitempty" json:"wait_healthy,omitempty"`
 	DependsOn    []string               `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	
+	// OP Stack specific
+	L1RPC      string `yaml:"l1_rpc,omitempty" json:"l1_rpc,omitempty"`
+	Sequencer  bool   `yaml:"sequencer,omitempty" json:"sequencer,omitempty"`
+	
+	// Eth2 specific
+	ConsensusClient string `yaml:"consensus_client,omitempty" json:"consensus_client,omitempty"`
+	ExecutionClient string `yaml:"execution_client,omitempty" json:"execution_client,omitempty"`
+	ValidatorEnabled bool  `yaml:"validator_enabled,omitempty" json:"validator_enabled,omitempty"`
 }
 
 // BridgeConfig defines bridge configuration between engines
@@ -82,7 +91,7 @@ func (m *StackManifest) Validate() error {
 		
 		// Validate engine type
 		switch e.Type {
-		case "lux", "avalanche", "geth", "op":
+		case "lux", "avalanche", "geth", "op", "eth2":
 			// Valid
 		default:
 			return fmt.Errorf("invalid engine type: %s", e.Type)

@@ -1,0 +1,87 @@
+name: op-stack-example
+version: 1.0.0
+description: OP Stack rollup on Ethereum L1
+
+engines:
+  # Ethereum L1 (using Eth2)
+  - name: ethereum-l1
+    type: eth2
+    binary: "lighthouse:geth"  # beacon:execution
+    network_id: 1337
+    http_port: 8545
+    ws_port: 8546
+    consensus_client: lighthouse
+    execution_client: geth
+    validator_enabled: false
+    extra:
+      chain_id: 1337
+      network_name: testnet
+    wait_healthy: true
+
+  # OP Stack L2
+  - name: optimism-l2
+    type: op
+    binary: "op-node:op-geth"
+    network_id: 11337
+    http_port: 9545
+    ws_port: 9546
+    l1_rpc: "http://localhost:8545"
+    sequencer: true
+    extra:
+      l1_chain_id: 1337
+      l2_chain_id: 11337
+    depends_on:
+      - ethereum-l1
+    wait_healthy: true
+
+  # Another OP Stack L2 (non-sequencer)
+  - name: base-l2
+    type: op
+    binary: "op-node:op-geth"
+    network_id: 21337
+    http_port: 10545
+    ws_port: 10546
+    l1_rpc: "http://localhost:8545"
+    sequencer: false
+    extra:
+      l1_chain_id: 1337
+      l2_chain_id: 21337
+    depends_on:
+      - ethereum-l1
+    wait_healthy: true
+
+bridge:
+  type: native-bridge
+  source: optimism-l2
+  destination: base-l2
+  contracts:
+    l1_bridge: "0x..."
+    l2_bridge_optimism: "0x..."
+    l2_bridge_base: "0x..."
+
+networks:
+  - name: ethereum
+    type: l1
+    engine: ethereum-l1
+    chain_id: 1337
+    endpoints:
+      - "http://localhost:8545"
+      - "ws://localhost:8546"
+  
+  - name: optimism
+    type: l2
+    engine: optimism-l2
+    parent: ethereum
+    chain_id: 11337
+    endpoints:
+      - "http://localhost:9545"
+      - "ws://localhost:9546"
+  
+  - name: base
+    type: l2
+    engine: base-l2
+    parent: ethereum
+    chain_id: 21337
+    endpoints:
+      - "http://localhost:10545"
+      - "ws://localhost:10546"
