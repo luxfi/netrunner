@@ -544,7 +544,8 @@ func (e *Eth2Engine) NetworkID() uint32 {
 func (e *Eth2Engine) ChainID() ids.ID {
 	// Convert chain ID to ids.ID
 	chainIDStr := fmt.Sprintf("eth2-%d", e.chainID)
-	return ids.ID(ids.SHA256([]byte(chainIDStr)))
+	hash := ids.Checksum256([]byte(chainIDStr))
+	return ids.ID(hash)
 }
 
 func (e *Eth2Engine) RPCEndpoint() string {
