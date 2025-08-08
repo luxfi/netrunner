@@ -9,7 +9,7 @@ import (
 	"github.com/luxfi/node/indexer"
 	"github.com/luxfi/node/vms/xvm"
 	"github.com/luxfi/node/vms/platformvm"
-	evmclient "github.com/luxfi/evm/plugin/evm/client"
+	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 
 // interface compliance
@@ -23,7 +23,7 @@ type APIClient struct {
 	platform     *platformvm.Client
 	xChain       *xvm.Client
 	xChainWallet *xvm.WalletClient
-	cChain       evmclient.Client
+	cChain       interface{} // evmclient.Client
 	cChainEth    EthClient
 	info         *info.Client
 	health       *health.Client
@@ -38,7 +38,7 @@ type NewAPIClientF func(ipAddr string, port uint16) Client
 // NewAPIClient initialize most of node apis
 func NewAPIClient(ipAddr string, port uint16) Client {
 	uri := fmt.Sprintf("http://%s:%d", ipAddr, port)
-	cChainClient := evmclient.NewClient(uri, "C")
+	// cChainClient := evmclient.NewClient(uri, "C")
 	
 	// Create client instances
 	platformClient := platformvm.NewClient(uri)
@@ -54,8 +54,8 @@ func NewAPIClient(ipAddr string, port uint16) Client {
 		platform:     &platformClient,
 		xChain:       &xChainClient,
 		xChainWallet: &xChainWalletClient,
-		cChain:       cChainClient,
-		cChainEth:    NewEthClient(ipAddr, uint(port)), // wrapper over ethclient.Client
+		cChain:       nil, // cChainClient,
+		cChainEth:    nil, // NewEthClient(ipAddr, uint(port)), // wrapper over ethclient.Client
 		info:         &infoClient,
 		health:       &healthClient,
 		admin:        &adminClient,
@@ -76,7 +76,7 @@ func (c APIClient) XChainWalletAPI() *xvm.WalletClient {
 	return c.xChainWallet
 }
 
-func (c APIClient) CChainAPI() evmclient.Client {
+func (c APIClient) CChainAPI() interface{} { // evmclient.Client {
 	return c.cChain
 }
 
