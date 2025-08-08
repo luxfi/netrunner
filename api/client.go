@@ -7,8 +7,11 @@ import (
 	"github.com/luxfi/node/indexer"
 	"github.com/luxfi/node/vms/xvm"
 	"github.com/luxfi/node/vms/platformvm"
-	evmclient "github.com/luxfi/evm/plugin/evm/client"
+	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
+
+// EthClient is a placeholder interface for ethereum client
+type EthClient interface{}
 
 // Issues API calls to a node
 // TODO: byzantine api. check if appropriate. improve implementation.
@@ -16,7 +19,7 @@ type Client interface {
 	PChainAPI() *platformvm.Client
 	XChainAPI() *xvm.Client
 	XChainWalletAPI() *xvm.WalletClient
-	CChainAPI() evmclient.Client
+	CChainAPI() interface{} // evmclient.Client
 	CChainEthAPI() EthClient // ethclient websocket wrapper that adds mutexed calls, and lazy conn init (on first call)
 	InfoAPI() *info.Client
 	HealthAPI() *health.Client

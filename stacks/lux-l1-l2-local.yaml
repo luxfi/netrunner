@@ -1,0 +1,48 @@
+name: lux-l1-l2-local
+version: 1.0.0
+description: Local Lux L1 with OP-based L2
+
+engines:
+  - name: lux-l1
+    type: lux
+    network_id: 96369
+    http_port: 9630
+    staking_port: 9631
+    log_level: info
+    wait_healthy: true
+    extra:
+      staking-enabled: false
+      sybil-protection-enabled: false
+      snow-sample-size: 1
+      snow-quorum-size: 1
+      
+  - name: lux-l2-op
+    type: op
+    network_id: 200200
+    http_port: 8545
+    ws_port: 8546
+    staking_port: 30303
+    log_level: info
+    depends_on:
+      - lux-l1
+    extra:
+      l1-rpc: http://localhost:9630/ext/bc/C/rpc
+      sequencer: true
+      sequencer-l1-confs: 0
+
+networks:
+  - name: lux-local
+    type: l1
+    engine: lux-l1
+    chain_id: 96369
+    endpoints:
+      - http://localhost:9630
+      
+  - name: lux-l2
+    type: l2
+    engine: lux-l2-op
+    parent: lux-local
+    chain_id: 200200
+    endpoints:
+      - http://localhost:8545
+      - ws://localhost:8546
