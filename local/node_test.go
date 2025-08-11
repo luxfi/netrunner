@@ -22,6 +22,7 @@ import (
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/wrappers"
 	"github.com/luxfi/node/version"
+	"github.com/luxfi/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
@@ -197,7 +198,7 @@ func TestAttachPeer(t *testing.T) {
 	// For message creation and parsing
 	mc, err := message.NewCreator(
 		logging.NoLog{},
-		prometheus.NewRegistry(),
+		metrics.NewRegistry(),
 		"",
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,

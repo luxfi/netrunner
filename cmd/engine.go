@@ -10,7 +10,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/luxfi/netrunner/engines"
 	"github.com/luxfi/netrunner/orchestrator"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +40,7 @@ var startEngineCmd = &cobra.Command{
 		name := args[0]
 		
 		host := orchestrator.NewHost()
-		config := &engines.NodeConfig{
+		config := &orchestrator.EngineOptions{
 			NetworkID:   networkID,
 			HTTPPort:    httpPort,
 			StakingPort: stakingPort,
@@ -49,7 +48,7 @@ var startEngineCmd = &cobra.Command{
 			LogLevel:    logLevel,
 		}
 		
-		if err := host.StartEngine(context.Background(), name, engines.EngineType(engineType), config); err != nil {
+		if err := host.StartEngine(context.Background(), name, engineType, config); err != nil {
 			return fmt.Errorf("failed to start engine: %w", err)
 		}
 		
