@@ -6,11 +6,11 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/crypto v1.2.2
-	github.com/luxfi/evm v0.8.2
+	github.com/luxfi/crypto v1.2.9
+	github.com/luxfi/evm v0.7.8-lux
 	github.com/luxfi/geth v1.16.26
 	github.com/luxfi/ids v1.0.2
-	github.com/luxfi/log v1.0.2
+	github.com/luxfi/log v1.0.5
 	github.com/luxfi/metrics v1.1.1
 	github.com/luxfi/node v1.16.15
 	github.com/onsi/ginkgo/v2 v2.23.4
@@ -27,7 +27,7 @@ require (
 	golang.org/x/sync v0.16.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250721164621-a45f3dfb1074
 	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -38,7 +38,7 @@ require (
 	github.com/StephenButtolph/canoto v0.17.2 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.22.0 // indirect
+	github.com/bits-and-blooms/bitset v1.24.0 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.3 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -93,8 +93,8 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/database v1.1.9 // indirect
-	github.com/luxfi/trace v0.1.1 // indirect
+	github.com/luxfi/database v1.1.10 // indirect
+	github.com/luxfi/trace v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

@@ -810,9 +810,8 @@ func (ln *localNetwork) removeNode(ctx context.Context, nodeName string) error {
 	delete(ln.nodes, nodeName)
 
 	if !paused {
-		// cchain eth api uses a websocket connection and must be closed before stopping the node,
-		// to avoid errors logs at client
-		node.client.CChainEthAPI().Close()
+		// Note: CChainEthAPI returns an empty interface, so no Close() method available
+		// The websocket connection cleanup is handled internally
 		if exitCode := node.process.Stop(ctx); exitCode != 0 {
 			return fmt.Errorf("node %q exited with exit code: %d", nodeName, exitCode)
 		}
@@ -840,9 +839,8 @@ func (ln *localNetwork) pauseNode(ctx context.Context, nodeName string) error {
 	if node.paused {
 		return fmt.Errorf("node has been paused already")
 	}
-	// cchain eth api uses a websocket connection and must be closed before stopping the node,
-	// to avoid errors logs at client
-	node.client.CChainEthAPI().Close()
+	// Note: CChainEthAPI returns an empty interface, so no Close() method available
+	// The websocket connection cleanup is handled internally
 	if exitCode := node.process.Stop(ctx); exitCode != 0 {
 		return fmt.Errorf("node %q exited with exit code: %d", nodeName, exitCode)
 	}

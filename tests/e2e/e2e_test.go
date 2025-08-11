@@ -29,6 +29,7 @@ import (
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/utils/logging"
+	"github.com/luxfi/metrics"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
@@ -628,7 +629,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 
 			mc, err := message.NewCreator(
 				logging.NoLog{},
-				prometheus.NewRegistry(),
+				metrics.NewRegistry(),
 				"",
 				luxd_constants.DefaultNetworkCompressionType,
 				10*time.Second,
