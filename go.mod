@@ -8,11 +8,11 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/crypto v1.2.9
 	github.com/luxfi/evm v0.7.8-lux
-	github.com/luxfi/geth v1.16.26
+	github.com/luxfi/geth v1.16.2-lux.4
 	github.com/luxfi/ids v1.0.2
-	github.com/luxfi/log v1.0.5
-	github.com/luxfi/metrics v1.1.1
-	github.com/luxfi/node v1.16.15
+	github.com/luxfi/log v1.0.7
+	github.com/luxfi/metric v1.3.0
+	github.com/luxfi/node v1.13.4-lux.15
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a
+	golang.org/x/exp v0.0.0-20250811191247-51f88131bc50
 	golang.org/x/mod v0.27.0
 	golang.org/x/sync v0.16.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250721164621-a45f3dfb1074
@@ -80,7 +80,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/holiman/billy v0.0.0-20250707135307-f2f9b9aae7db // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
@@ -94,6 +94,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/database v1.1.10 // indirect
+	github.com/luxfi/metrics v1.1.1 // indirect
 	github.com/luxfi/trace v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
