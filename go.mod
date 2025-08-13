@@ -31,6 +31,15 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+// Replace directives removed for CI compatibility
+// For local development, uncomment the replace block below:
+// replace (
+//     github.com/luxfi/node => ../node
+//     github.com/luxfi/database => ../database
+//     github.com/luxfi/geth => ../geth
+//     github.com/luxfi/evm => ../evm
+// )
+
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
