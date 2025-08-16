@@ -29,7 +29,7 @@ import (
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/utils/logging"
-	"github.com/luxfi/metrics"
+	"github.com/luxfi/metric"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
