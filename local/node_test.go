@@ -22,7 +22,7 @@ import (
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/wrappers"
 	"github.com/luxfi/node/version"
-	"github.com/luxfi/metrics"
+	"github.com/luxfi/metric"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
