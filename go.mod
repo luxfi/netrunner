@@ -8,8 +8,8 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/ethereum/go-ethereum v1.16.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/consensus v1.1.2
-	github.com/luxfi/crypto v1.2.9
+	github.com/luxfi/consensus v1.1.3
+	github.com/luxfi/crypto v1.3.2
 	github.com/luxfi/evm v0.7.7-lux
 	github.com/luxfi/geth v1.16.34
 	github.com/luxfi/ids v1.0.2
