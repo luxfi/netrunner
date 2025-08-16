@@ -16,15 +16,15 @@ import (
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/network/throttling"
-	"github.com/luxfi/node/consensus/networking/router"
-	"github.com/luxfi/node/consensus/networking/tracker"
-	"github.com/luxfi/node/consensus/validators"
+	"github.com/luxfi/consensus/networking/router"
+	"github.com/luxfi/consensus/networking/tracker"
+	"github.com/luxfi/consensus/validators"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
 	"github.com/luxfi/node/utils/constants"
 	"github.com/luxfi/crypto/bls"
 	luxlog "github.com/luxfi/log"
-	luxmetrics "github.com/luxfi/metrics"
+	metric "github.com/luxfi/metric"
 	"github.com/luxfi/node/utils/math/meter"
 	"github.com/luxfi/node/utils/resource"
 	"github.com/luxfi/node/utils/set"
@@ -102,7 +102,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	}
 	mc, err := message.NewCreator(
 		luxlog.NewNoOpLogger(),
-		luxmetrics.NewPrometheusMetrics("netrunner", prometheus.NewRegistry()),
+		metric.NewPrometheusMetrics("netrunner", prometheus.NewRegistry()),
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
