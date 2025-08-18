@@ -26,3 +26,7 @@ bin/
 *.iml
 
 build/
+LLM.md
+CLAUDE.md
+AGENTS.md
+GEMINI.md

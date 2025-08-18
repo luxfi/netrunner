@@ -659,7 +659,7 @@ func newWallet(
 	preloadTXs []ids.ID,
 ) (*wallet, error) {
 	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
-	luxState, err := primary.FetchState(ctx, uri, kc.Addresses())
+	luxState, err := primary.FetchState(ctx, uri, kc.Addrs)
 	if err != nil {
 		return nil, err
 	}
@@ -683,12 +683,12 @@ func newWallet(
 	w.addr = genesis.EWOQKey.PublicKey().Address()
 	// TODO: Create owners map instead of pTXs
 	w.pBackend = pwallet.NewBackend(luxState.PCTX, pUTXOs, pTXs)
-	w.pBuilder = pbuilder.New(kc.Addresses(), luxState.PCTX, w.pBackend)
+	w.pBuilder = pbuilder.New(kc.Addrs, luxState.PCTX, w.pBackend)
 	w.pSigner = psigner.New(kc, w.pBackend)
 	w.pWallet = pwallet.NewWallet(w.pBuilder, w.pSigner, pClient, w.pBackend)
 
 	xBackend := x.NewBackend(luxState.XCTX, xUTXOs)
-	xBuilder := xbuilder.New(kc.Addresses(), luxState.XCTX, xBackend)
+	xBuilder := xbuilder.New(kc.Addrs, luxState.XCTX, xBackend)
 	xSigner := xsigner.New(kc, xBackend)
 	xClient := xvm.NewClient(uri, "X")
 	w.xWallet = x.NewWallet(xBuilder, xSigner, xClient, xBackend)

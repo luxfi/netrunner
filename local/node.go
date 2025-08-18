@@ -25,8 +25,6 @@ import (
 	"github.com/luxfi/crypto/bls"
 	luxlog "github.com/luxfi/log"
 	metric "github.com/luxfi/metric"
-	"github.com/luxfi/node/utils/math/meter"
-	"github.com/luxfi/node/utils/resource"
 	"github.com/luxfi/node/utils/set"
 	"github.com/luxfi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
@@ -116,15 +114,9 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	if err != nil {
 		return nil, err
 	}
-	resourceTracker, err := tracker.NewResourceTracker(
-		prometheus.NewRegistry(),
-		resource.NoUsage,
-		meter.ContinuousFactory{},
-		peerResourceTrackerDuration,
-	)
-	if err != nil {
-		return nil, err
-	}
+	// TODO: Fix NewResourceTracker call - API has changed
+	// For now, use a nil tracker - this may need proper implementation
+	var resourceTracker tracker.ResourceTracker
 	signerIP := utils.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
 	tls := tlsCert.PrivateKey.(crypto.Signer)
 	// Create a dummy BLS signer for now

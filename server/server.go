@@ -28,7 +28,9 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/message"
+	"github.com/luxfi/consensus/core"
 	"github.com/luxfi/consensus/networking/router"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/node/utils/logging"
 	"github.com/luxfi/node/utils/set"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -1128,12 +1130,60 @@ type loggingInboundHandler struct {
 	log      logging.Logger
 }
 
-func (lh *loggingInboundHandler) HandleInbound(_ context.Context, m message.InboundMessage) {
+func (lh *loggingInboundHandler) HandleInbound(_ context.Context, msg interface{}) {
+	// Type assert to InboundMessage if needed
+	if m, ok := msg.(message.InboundMessage); ok {
+		lh.log.Debug(
+			"inbound handler received a message",
+			zap.String("message", m.Op().String()),
+			zap.String("node-name", lh.nodeName),
+		)
+	} else {
+		lh.log.Debug(
+			"inbound handler received unknown message type",
+			zap.String("node-name", lh.nodeName),
+		)
+	}
+}
+
+func (lh *loggingInboundHandler) AppRequest(ctx context.Context, nodeID ids.NodeID, requestID uint32, deadline time.Time, appRequestBytes []byte) error {
 	lh.log.Debug(
-		"inbound handler received a message",
-		zap.String("message", m.Op().String()),
+		"AppRequest received",
 		zap.String("node-name", lh.nodeName),
+		zap.Stringer("nodeID", nodeID),
+		zap.Uint32("requestID", requestID),
 	)
+	return nil
+}
+
+func (lh *loggingInboundHandler) AppRequestFailed(ctx context.Context, nodeID ids.NodeID, requestID uint32, appErr *core.AppError) error {
+	lh.log.Debug(
+		"AppRequestFailed received",
+		zap.String("node-name", lh.nodeName),
+		zap.Stringer("nodeID", nodeID),
+		zap.Uint32("requestID", requestID),
+	)
+	return nil
+}
+
+func (lh *loggingInboundHandler) AppResponse(ctx context.Context, nodeID ids.NodeID, requestID uint32, appResponseBytes []byte) error {
+	lh.log.Debug(
+		"AppResponse received",
+		zap.String("node-name", lh.nodeName),
+		zap.Stringer("nodeID", nodeID),
+		zap.Uint32("requestID", requestID),
+	)
+	return nil
+}
+
+func (lh *loggingInboundHandler) AppGossip(ctx context.Context, nodeID ids.NodeID, appGossipBytes []byte) error {
+	lh.log.Debug(
+		"AppGossip received",
+		zap.String("node-name", lh.nodeName),
+		zap.Stringer("nodeID", nodeID),
+		zap.Int("gossipSize", len(appGossipBytes)),
+	)
+	return nil
 }
 
 func (s *server) AttachPeer(ctx context.Context, req *rpcpb.AttachPeerRequest) (*rpcpb.AttachPeerResponse, error) {
