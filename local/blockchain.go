@@ -41,8 +41,8 @@ import (
 	psigner "github.com/luxfi/node/wallet/chain/p/signer"
 	xbuilder "github.com/luxfi/node/wallet/chain/x/builder"
 	xsigner "github.com/luxfi/node/wallet/chain/x/signer"
-	primary "github.com/luxfi/node/wallet/subnet/primary"
-	common "github.com/luxfi/node/wallet/subnet/primary/common"
+	primary "github.com/luxfi/node/wallet/net/primary"
+	common "github.com/luxfi/node/wallet/net/primary/common"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 )
