@@ -14,7 +14,8 @@ import (
 	"github.com/luxfi/netrunner/server"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -44,7 +45,7 @@ func NewCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 	}
 
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", logging.Info.String(), "log level for server logs")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level for server logs")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
 	cmd.PersistentFlags().StringVar(&port, "port", ":8080", "server port")
 	cmd.PersistentFlags().StringVar(&gwPort, "grpc-gateway-port", ":8081", "grpc-gateway server port")
@@ -70,13 +71,13 @@ func serverFunc(*cobra.Command, []string) (err error) {
 		}
 	}
 
-	logLevel, err := logging.ToLevel(logLevel)
+	logLevel, err := luxlog.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
 
-	logFactory := logging.NewFactory(logging.Config{
-		RotatingWriterConfig: logging.RotatingWriterConfig{
+	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
+		RotatingWriterConfig: luxlog.RotatingWriterConfig{
 			Directory: logDir,
 		},
 		DisplayLevel: logLevel,
