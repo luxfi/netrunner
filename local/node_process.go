@@ -11,7 +11,7 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"github.com/shirou/gopsutil/process"
 	"go.uber.org/zap"
 )
@@ -38,7 +38,7 @@ type NodeProcessCreator interface {
 }
 
 type nodeProcessCreator struct {
-	log logging.Logger
+	log luxlog.Logger
 	// If this node's stdout or stderr are redirected, [colorPicker] determines
 	// the color of logs printed to stdout and/or stderr
 	colorPicker utils.ColorPicker
@@ -80,7 +80,7 @@ func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string
 
 type nodeProcess struct {
 	name string
-	log  logging.Logger
+	log  luxlog.Logger
 	lock sync.RWMutex
 	cmd  *exec.Cmd
 	// Process status
@@ -89,7 +89,7 @@ type nodeProcess struct {
 	closedOnStop chan struct{}
 }
 
-func newNodeProcess(name string, log logging.Logger, cmd *exec.Cmd) (*nodeProcess, error) {
+func newNodeProcess(name string, log luxlog.Logger, cmd *exec.Cmd) (*nodeProcess, error) {
 	np := &nodeProcess{
 		name:         name,
 		log:          log,
@@ -187,7 +187,7 @@ func (p *nodeProcess) Status() status.Status {
 	return p.state
 }
 
-func killDescendants(pid int32, log logging.Logger) {
+func killDescendants(pid int32, log luxlog.Logger) {
 	procs, err := process.Processes()
 	if err != nil {
 		log.Warn("couldn't get processes", zap.Error(err))

@@ -28,7 +28,7 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/metric"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -153,7 +153,7 @@ func init() {
 
 var (
 	cli client.Client
-	log logging.Logger
+	log luxlog.Logger
 )
 
 var _ = ginkgo.BeforeSuite(func() {

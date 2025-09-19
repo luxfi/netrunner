@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 )
 
 // TestColorAssignment tests that each color assignment is different and that it "wraps"

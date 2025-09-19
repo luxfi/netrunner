@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	badger "github.com/dgraph-io/badger/v3"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/luxfi/geth/common"
 )
 
 func main() {

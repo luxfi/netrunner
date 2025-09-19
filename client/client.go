@@ -14,7 +14,7 @@ import (
 
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/rpcpb"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -58,7 +58,7 @@ type Client interface {
 
 type client struct {
 	cfg Config
-	log logging.Logger
+	log luxlog.Logger
 
 	conn *grpc.ClientConn
 
@@ -69,7 +69,7 @@ type client struct {
 	closeOnce sync.Once
 }
 
-func New(cfg Config, log logging.Logger) (Client, error) {
+func New(cfg Config, log luxlog.Logger) (Client, error) {
 	log.Debug("dialing server at ", zap.String("endpoint", cfg.Endpoint))
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.DialTimeout)

@@ -13,8 +13,8 @@ engines:
     extra:
       staking-enabled: false
       sybil-protection-enabled: false
-      snow-sample-size: 1
-      snow-quorum-size: 1
+      consensus-sample-size: 1
+      consensus-quorum-size: 1
       
   - name: lux-l2-op
     type: op

@@ -1,5 +1,5 @@
 {
-  "snowman-api-enabled": false,
+  "consensus-api-enabled": false,
   "geth-admin-api-enabled": false,
   "geth-admin-api-dir": "",
   "eth-apis": ["eth", "eth-filter", "net", "web3", "internal-eth", "internal-blockchain",  "internal-transaction", "internal-account"],

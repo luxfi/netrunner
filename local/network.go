@@ -30,7 +30,7 @@ import (
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
 	"github.com/luxfi/crypto/bls"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/set"
 	"github.com/luxfi/node/utils/wrappers"
 	"go.uber.org/zap"
@@ -79,7 +79,7 @@ var (
 // network keeps information uses for network management, and accessing all the nodes
 type localNetwork struct {
 	lock sync.RWMutex
-	log  logging.Logger
+	log  luxlog.Logger
 	// This network's ID.
 	networkID uint32
 	// This network's genesis file.
@@ -260,7 +260,7 @@ func init() {
 // If len([dir]) == 0, files will be written underneath a new temporary directory.
 // Snapshots are saved to snapshotsDir, defaults to defaultSnapshotsDir if not given
 func NewNetwork(
-	log logging.Logger,
+	log luxlog.Logger,
 	networkConfig network.Config,
 	rootDir string,
 	snapshotsDir string,
@@ -289,7 +289,7 @@ func NewNetwork(
 // [newAPIClientF] is used to create new API clients.
 // [nodeProcessCreator] is used to launch new node processes.
 func newNetwork(
-	log logging.Logger,
+	log luxlog.Logger,
 	newAPIClientF api.NewAPIClientF,
 	nodeProcessCreator NodeProcessCreator,
 	rootDir string,
@@ -354,7 +354,7 @@ func newNetwork(
 // * NodeID-GWPcbFJZFfZreETSoWjPimr846mXEKCtu
 // * NodeID-P7oB2McjBGgW2NXXWVYjV8JEDFoW9xDE5
 func NewDefaultNetwork(
-	log logging.Logger,
+	log luxlog.Logger,
 	binaryPath string,
 	reassignPortsIfUsed bool,
 ) (network.Network, error) {
