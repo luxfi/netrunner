@@ -25,7 +25,7 @@ import (
 	"github.com/luxfi/crypto/bls"
 	luxlog "github.com/luxfi/log"
 	metric "github.com/luxfi/metric"
-	"github.com/luxfi/node/utils/set"
+	"github.com/luxfi/math/set"
 	"github.com/luxfi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -93,7 +93,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 	tlsConfg := peer.TLSConfig(*tlsCert, nil)
-	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg, prometheus.NewCounter(prometheus.CounterOpts{}))
+	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg, metric.NewCounter(metric.CounterOpts{}))
 	conn, err := node.getConnFunc(ctx, node)
 	if err != nil {
 		return nil, err

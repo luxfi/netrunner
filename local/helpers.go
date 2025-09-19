@@ -14,7 +14,7 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 	"go.uber.org/zap"
 )
 
@@ -223,7 +223,7 @@ func getPort(
 	return port, nil
 }
 
-func makeNodeDir(log logging.Logger, rootDir, nodeName string) (string, error) {
+func makeNodeDir(log luxlog.Logger, rootDir, nodeName string) (string, error) {
 	if rootDir == "" {
 		log.Warn("no network root directory defined; will create this node's runtime directory in working directory")
 	}

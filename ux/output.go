@@ -5,10 +5,10 @@ package ux
 import (
 	"fmt"
 
-	"github.com/luxfi/node/utils/logging"
+	luxlog "github.com/luxfi/log"
 )
 
-func Print(log logging.Logger, msg string, args ...interface{}) {
+func Print(log luxlog.Logger, msg string, args ...interface{}) {
 	fmtMsg := fmt.Sprintf(msg, args...)
 	log.Info(fmtMsg)
 }
