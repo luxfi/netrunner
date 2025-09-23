@@ -1,23 +1,21 @@
 module github.com/luxfi/netrunner
 
-go 1.24.6
-
-toolchain go1.24.7
+go 1.25.1
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/consensus v1.18.0
-	github.com/luxfi/crypto v1.16.16
-	github.com/luxfi/evm v0.7.7-lux
-	github.com/luxfi/geth v1.16.34
-	github.com/luxfi/ids v1.0.2
+	github.com/luxfi/consensus v1.18.1
+	github.com/luxfi/crypto v1.17.0
+	github.com/luxfi/evm v1.16.18
+	github.com/luxfi/geth v1.14.2-lux-lean
+	github.com/luxfi/ids v1.1.0
 	github.com/luxfi/log v1.1.22
-	github.com/luxfi/math v0.1.0
-	github.com/luxfi/metric v1.3.0
-	github.com/luxfi/node v1.16.15
+	github.com/luxfi/math v0.1.1
+	github.com/luxfi/metric v1.4.0
+	github.com/luxfi/node v1.16.20-lean
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
@@ -36,17 +34,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace (
-	github.com/luxfi/consensus => ../consensus
-	github.com/luxfi/crypto => ../crypto
-	github.com/luxfi/evm => ../evm
-	github.com/luxfi/geth => ../geth
-	github.com/luxfi/ids => ../ids
-	github.com/luxfi/log => ../log
-	github.com/luxfi/math => ../math
-	github.com/luxfi/metric => ../metric
-	github.com/luxfi/node => ../node
-)
 
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
@@ -118,7 +105,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/database v1.1.13 // indirect
+	github.com/luxfi/database v1.2.0 // indirect
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
 	github.com/luxfi/trace v0.1.2 // indirect
