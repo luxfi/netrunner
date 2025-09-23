@@ -10,7 +10,7 @@ require (
 	github.com/luxfi/consensus v1.18.1
 	github.com/luxfi/crypto v1.17.0
 	github.com/luxfi/evm v1.16.18
-	github.com/luxfi/geth v1.14.2-lux-lean
+	github.com/luxfi/geth v1.16.35
 	github.com/luxfi/ids v1.1.0
 	github.com/luxfi/log v1.1.22
 	github.com/luxfi/math v0.1.1
@@ -33,7 +33,6 @@ require (
 	google.golang.org/protobuf v1.36.8
 	gopkg.in/yaml.v3 v3.0.1
 )
-
 
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
