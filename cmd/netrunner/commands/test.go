@@ -40,7 +40,7 @@ func newTestAllCmd(logger *zap.Logger) *cobra.Command {
 			fmt.Println("🧪 Testing all engine types...")
 			fmt.Println()
 			
-			engineTypes := []string{"lux", "avalanche", "geth", "op", "eth2"}
+			engineTypes := []string{"lux", "lux", "geth", "op", "eth2"}
 			results := make(map[string]bool)
 			
 			for _, engineType := range engineTypes {
@@ -159,8 +159,8 @@ func testEngine(ctx context.Context, logger *zap.Logger, engineType string) erro
 	switch engineType {
 	case "lux":
 		binary = "luxd"
-	case "avalanche":
-		binary = "avalanchego"
+	case "lux":
+		binary = "luxd"
 	case "geth":
 		binary = "geth"
 	case "op":

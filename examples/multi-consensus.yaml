@@ -1,6 +1,6 @@
 name: multi-consensus-stack
 version: 1.0.0
-description: Multi-consensus architecture with Lux, Avalanche, Ethereum, and OP Stack
+description: Multi-consensus architecture with Lux, Lux, Ethereum, and OP Stack
 
 engines:
   # Lux Primary Network
@@ -16,10 +16,10 @@ engines:
       consensus: snowman
     wait_healthy: true
 
-  # Avalanche for compatibility testing
-  - name: avalanche-c-chain
-    type: avalanche
-    binary: "avalanchego"
+  # Lux for compatibility testing
+  - name: lux-c-chain
+    type: lux
+    binary: "luxd"
     network_id: 43114
     http_port: 9650
     ws_port: 9651
@@ -92,7 +92,7 @@ engines:
 bridge:
   type: awm
   source: lux-mainnet
-  destination: avalanche-c-chain
+  destination: lux-c-chain
   relayer_key: "relayer.key"
   contracts:
     teleporter: "0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf"
@@ -107,9 +107,9 @@ networks:
       - "http://localhost:9630"
       - "ws://localhost:9631"
   
-  - name: avalanche
+  - name: lux
     type: l1
-    engine: avalanche-c-chain
+    engine: lux-c-chain
     chain_id: 43114
     endpoints:
       - "http://localhost:9650"

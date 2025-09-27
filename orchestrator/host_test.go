@@ -64,14 +64,14 @@ func TestMultiEngineOrchestration(t *testing.T) {
 		err := host.StartEngine(ctx, "lux-1", engines.EngineLux, luxConfig)
 		require.NoError(t, err)
 
-		// Start Avalanche
+		// Start Lux
 		avaConfig := &engines.NodeConfig{
 			NetworkID:   43114,
 			HTTPPort:    19650,
 			StakingPort: 19651,
 			LogLevel:    "info",
 		}
-		err = host.StartEngine(ctx, "ava-1", engines.EngineAvalanche, avaConfig)
+		err = host.StartEngine(ctx, "ava-1", engines.EngineLux, avaConfig)
 		require.NoError(t, err)
 
 		// Check both are running
