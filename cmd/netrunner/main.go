@@ -35,7 +35,7 @@ func main() {
 		Use:   "netrunner",
 		Short: "Multi-consensus blockchain orchestrator",
 		Long: `Netrunner is a powerful orchestration tool for running multiple blockchain
-consensus engines simultaneously. It supports Lux, Avalanche, Ethereum 2.0,
+consensus engines simultaneously. It supports Lux, Lux, Ethereum 2.0,
 OP Stack, and more.`,
 		Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
 	}

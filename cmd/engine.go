@@ -28,7 +28,7 @@ var (
 var engineCmd = &cobra.Command{
 	Use:   "engine",
 	Short: "Manage consensus engines",
-	Long:  `Start, stop, and manage multiple consensus engines (luxd, avalanchego, etc.)`,
+	Long:  `Start, stop, and manage multiple consensus engines (luxd, luxd, etc.)`,
 }
 
 // startCmd starts an engine
@@ -174,7 +174,7 @@ func init() {
 	engineCmd.AddCommand(listEnginesCmd)
 	
 	// Engine start flags
-	startEngineCmd.Flags().StringVar(&engineType, "type", "lux", "Engine type (lux, avalanche, geth, op)")
+	startEngineCmd.Flags().StringVar(&engineType, "type", "lux", "Engine type (lux, lux, geth, op)")
 	startEngineCmd.Flags().Uint32Var(&networkID, "network-id", 96369, "Network ID")
 	startEngineCmd.Flags().Uint16Var(&httpPort, "http-port", 9630, "HTTP RPC port")
 	startEngineCmd.Flags().Uint16Var(&stakingPort, "staking-port", 9631, "P2P staking port")
