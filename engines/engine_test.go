@@ -15,7 +15,7 @@ func TestEngineTypes(t *testing.T) {
 	// Test that engine types are defined correctly
 	engines := []EngineType{
 		EngineLux,
-		EngineAvalanche,
+		EngineLux,
 		EngineGeth,
 		EngineOP,
 		EngineEth2,

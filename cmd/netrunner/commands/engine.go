@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/luxfi/netrunner/engines"
-	_ "github.com/luxfi/netrunner/engines/avalanche"
+	_ "github.com/luxfi/netrunner/engines/lux"
 	_ "github.com/luxfi/netrunner/engines/geth"
 	_ "github.com/luxfi/netrunner/engines/lux"
 	"github.com/spf13/cobra"
@@ -139,7 +139,7 @@ func newEngineStartCmd(logger *zap.Logger) *cobra.Command {
 	}
 	
 	// General flags
-	cmd.Flags().StringVarP(&engineType, "type", "t", "lux", "Engine type (lux, avalanche, geth, op, eth2)")
+	cmd.Flags().StringVarP(&engineType, "type", "t", "lux", "Engine type (lux, lux, geth, op, eth2)")
 	cmd.Flags().Uint32Var(&networkID, "network-id", 1337, "Network ID")
 	cmd.Flags().Uint16Var(&httpPort, "http-port", 8545, "HTTP RPC port")
 	cmd.Flags().Uint16Var(&wsPort, "ws-port", 8546, "WebSocket port")
@@ -204,7 +204,7 @@ func newEngineListCmd(logger *zap.Logger) *cobra.Command {
 			fmt.Fprintln(w, "TYPE\tDESCRIPTION\tSTATUS")
 			fmt.Fprintln(w, "----\t-----------\t------")
 			fmt.Fprintln(w, "lux\tLux primary network\t✅ Ready")
-			fmt.Fprintln(w, "avalanche\tAvalanche network\t✅ Ready")
+			fmt.Fprintln(w, "lux\tLux network\t✅ Ready")
 			fmt.Fprintln(w, "geth\tEthereum (Geth)\t✅ Ready")
 			fmt.Fprintln(w, "op\tOP Stack L2\t✅ Ready")
 			fmt.Fprintln(w, "eth2\tEthereum 2.0\t✅ Ready")
@@ -290,7 +290,7 @@ func newEngineTestCmd(logger *zap.Logger) *cobra.Command {
 					
 					// Type-specific tests
 					switch engineType {
-					case "lux", "avalanche":
+					case "lux", "lux":
 						fmt.Printf("  🆔 Network ID: %d\n", engine.NetworkID())
 						fmt.Printf("  ⛓️ Chain ID: %s\n", engine.ChainID())
 					case "op":
@@ -326,8 +326,8 @@ func createEngine(engineType, name, binary string) (engines.Engine, error) {
 		switch engineType {
 		case "lux":
 			binary = "luxd"
-		case "avalanche":
-			binary = "avalanchego"
+		case "lux":
+			binary = "luxd"
 		case "geth":
 			binary = "geth"
 		case "op":

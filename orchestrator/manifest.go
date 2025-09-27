@@ -26,7 +26,7 @@ type StackManifest struct {
 // EngineConfig defines an engine configuration
 type EngineConfig struct {
 	Name         string                 `yaml:"name" json:"name"`
-	Type         string                 `yaml:"type" json:"type"` // lux, avalanche, geth, op, eth2
+	Type         string                 `yaml:"type" json:"type"` // lux, lux, geth, op, eth2
 	Binary       string                 `yaml:"binary,omitempty" json:"binary,omitempty"`
 	NetworkID    uint32                 `yaml:"network_id" json:"network_id"`
 	HTTPPort     uint16                 `yaml:"http_port,omitempty" json:"http_port,omitempty"`
@@ -91,7 +91,7 @@ func (m *StackManifest) Validate() error {
 		
 		// Validate engine type
 		switch e.Type {
-		case "lux", "avalanche", "geth", "op", "eth2":
+		case "lux", "lux", "geth", "op", "eth2":
 			// Valid
 		default:
 			return fmt.Errorf("invalid engine type: %s", e.Type)

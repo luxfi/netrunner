@@ -1,7 +1,7 @@
 // Copyright (C) 2025, Lux Industries Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
-package avalanche
+package lux
 
 import (
 	"bytes"
@@ -20,11 +20,11 @@ import (
 )
 
 func init() {
-	engines.Register(engines.EngineAvalanche, NewAvalancheEngine)
+	engines.Register(engines.EngineLux, NewLuxEngine)
 }
 
-// AvalancheEngine wraps avalanchego node management
-type AvalancheEngine struct {
+// LuxEngine wraps luxd node management
+type LuxEngine struct {
 	name         string
 	binary       string
 	dataDir      string
@@ -39,30 +39,30 @@ type AvalancheEngine struct {
 	chainID   ids.ID
 }
 
-// NewAvalancheEngine creates a new Avalanche engine
-func NewAvalancheEngine(name string, binary string) (engines.Engine, error) {
+// NewLuxEngine creates a new Lux engine
+func NewLuxEngine(name string, binary string) (engines.Engine, error) {
 	if binary == "" {
-		binary = "avalanchego"
+		binary = "luxd"
 	}
-	return &AvalancheEngine{
+	return &LuxEngine{
 		name:   name,
 		binary: binary,
 	}, nil
 }
 
-func (e *AvalancheEngine) Name() string                   { return e.name }
-func (e *AvalancheEngine) Type() engines.EngineType       { return engines.EngineAvalanche }
-func (e *AvalancheEngine) NetworkID() uint32              { return e.networkID }
-func (e *AvalancheEngine) ChainID() ids.ID                { return e.chainID }
-func (e *AvalancheEngine) ParentChain() *engines.ChainInfo { return nil } // L1
+func (e *LuxEngine) Name() string                   { return e.name }
+func (e *LuxEngine) Type() engines.EngineType       { return engines.EngineLux }
+func (e *LuxEngine) NetworkID() uint32              { return e.networkID }
+func (e *LuxEngine) ChainID() ids.ID                { return e.chainID }
+func (e *LuxEngine) ParentChain() *engines.ChainInfo { return nil } // L1
 
-func (e *AvalancheEngine) Start(ctx context.Context, config *engines.NodeConfig) error {
+func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error {
 	e.config = config
 	e.networkID = config.NetworkID
 	
 	// Setup data directory
 	if config.DataDir == "" {
-		config.DataDir = filepath.Join(os.TempDir(), "avalanche", e.name)
+		config.DataDir = filepath.Join(os.TempDir(), "lux", e.name)
 	}
 	e.dataDir = config.DataDir
 	
@@ -72,7 +72,7 @@ func (e *AvalancheEngine) Start(ctx context.Context, config *engines.NodeConfig)
 	
 	// Build command arguments
 	args := []string{
-		fmt.Sprintf("--network-id=%s", getAvalancheNetwork(config.NetworkID)),
+		fmt.Sprintf("--network-id=%s", getLuxNetwork(config.NetworkID)),
 		fmt.Sprintf("--http-port=%d", config.HTTPPort),
 		fmt.Sprintf("--staking-port=%d", config.StakingPort),
 		fmt.Sprintf("--data-dir=%s", e.dataDir),
@@ -107,7 +107,7 @@ func (e *AvalancheEngine) Start(ctx context.Context, config *engines.NodeConfig)
 	e.process.Stderr = logFile
 	
 	if err := e.process.Start(); err != nil {
-		return fmt.Errorf("failed to start avalanchego: %w", err)
+		return fmt.Errorf("failed to start luxd: %w", err)
 	}
 	
 	e.startTime = time.Now()
@@ -118,7 +118,7 @@ func (e *AvalancheEngine) Start(ctx context.Context, config *engines.NodeConfig)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	
-	timeout := time.After(60 * time.Second) // Avalanche can take longer
+	timeout := time.After(60 * time.Second) // Lux can take longer
 	for {
 		select {
 		case <-ticker.C:
@@ -130,14 +130,14 @@ func (e *AvalancheEngine) Start(ctx context.Context, config *engines.NodeConfig)
 				return nil
 			}
 		case <-timeout:
-			return fmt.Errorf("avalanchego failed to start within 60 seconds")
+			return fmt.Errorf("luxd failed to start within 60 seconds")
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
 }
 
-func (e *AvalancheEngine) Stop(ctx context.Context) error {
+func (e *LuxEngine) Stop(ctx context.Context) error {
 	if e.process == nil || e.process.Process == nil {
 		return nil
 	}
@@ -162,7 +162,7 @@ func (e *AvalancheEngine) Stop(ctx context.Context) error {
 	}
 }
 
-func (e *AvalancheEngine) Restart(ctx context.Context) error {
+func (e *LuxEngine) Restart(ctx context.Context) error {
 	if err := e.Stop(ctx); err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (e *AvalancheEngine) Restart(ctx context.Context) error {
 	return e.Start(ctx, e.config)
 }
 
-func (e *AvalancheEngine) Health(ctx context.Context) (*engines.HealthStatus, error) {
+func (e *LuxEngine) Health(ctx context.Context) (*engines.HealthStatus, error) {
 	if e.httpClient == nil {
 		return &engines.HealthStatus{Healthy: false}, nil
 	}
@@ -195,40 +195,40 @@ func (e *AvalancheEngine) Health(ctx context.Context) (*engines.HealthStatus, er
 	}, nil
 }
 
-func (e *AvalancheEngine) IsRunning() bool {
+func (e *LuxEngine) IsRunning() bool {
 	return e.process != nil && e.process.Process != nil
 }
 
-func (e *AvalancheEngine) Uptime() time.Duration {
+func (e *LuxEngine) Uptime() time.Duration {
 	if !e.IsRunning() {
 		return 0
 	}
 	return time.Since(e.startTime)
 }
 
-func (e *AvalancheEngine) RPCEndpoint() string {
+func (e *LuxEngine) RPCEndpoint() string {
 	if e.config == nil {
 		return ""
 	}
 	return fmt.Sprintf("http://localhost:%d", e.config.HTTPPort)
 }
 
-func (e *AvalancheEngine) WSEndpoint() string {
+func (e *LuxEngine) WSEndpoint() string {
 	if e.config == nil {
 		return ""
 	}
-	// Avalanche uses same port for HTTP and WS
+	// Lux uses same port for HTTP and WS
 	return fmt.Sprintf("ws://localhost:%d/ext/bc/C/ws", e.config.HTTPPort)
 }
 
-func (e *AvalancheEngine) P2PEndpoint() string {
+func (e *LuxEngine) P2PEndpoint() string {
 	if e.config == nil {
 		return ""
 	}
 	return fmt.Sprintf("localhost:%d", e.config.StakingPort)
 }
 
-func (e *AvalancheEngine) Metrics() map[string]interface{} {
+func (e *LuxEngine) Metrics() map[string]interface{} {
 	return map[string]interface{}{
 		"uptime_seconds": e.Uptime().Seconds(),
 		"running":        e.IsRunning(),
@@ -237,8 +237,8 @@ func (e *AvalancheEngine) Metrics() map[string]interface{} {
 	}
 }
 
-// getAvalancheNetwork converts network ID to avalanche network name
-func getAvalancheNetwork(networkID uint32) string {
+// getLuxNetwork converts network ID to lux network name
+func getLuxNetwork(networkID uint32) string {
 	switch networkID {
 	case 1:
 		return "mainnet"
@@ -255,7 +255,7 @@ func getAvalancheNetwork(networkID uint32) string {
 
 // Helper methods for RPC calls
 
-func (e *AvalancheEngine) callRPC(ctx context.Context, endpoint string, method string, params interface{}) (json.RawMessage, error) {
+func (e *LuxEngine) callRPC(ctx context.Context, endpoint string, method string, params interface{}) (json.RawMessage, error) {
 	reqBody := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      1,
@@ -304,7 +304,7 @@ func (e *AvalancheEngine) callRPC(ctx context.Context, endpoint string, method s
 	return result.Result, nil
 }
 
-func (e *AvalancheEngine) getNodeID(ctx context.Context) (string, error) {
+func (e *LuxEngine) getNodeID(ctx context.Context) (string, error) {
 	result, err := e.callRPC(ctx, "/ext/info", "info.getNodeID", struct{}{})
 	if err != nil {
 		return "", err
@@ -320,7 +320,7 @@ func (e *AvalancheEngine) getNodeID(ctx context.Context) (string, error) {
 	return resp.NodeID, nil
 }
 
-func (e *AvalancheEngine) getBlockchainID(ctx context.Context, alias string) (ids.ID, error) {
+func (e *LuxEngine) getBlockchainID(ctx context.Context, alias string) (ids.ID, error) {
 	result, err := e.callRPC(ctx, "/ext/info", "info.getBlockchainID", map[string]string{"alias": alias})
 	if err != nil {
 		return ids.Empty, err
@@ -336,7 +336,7 @@ func (e *AvalancheEngine) getBlockchainID(ctx context.Context, alias string) (id
 	return ids.FromString(resp.BlockchainID)
 }
 
-func (e *AvalancheEngine) getHealth(ctx context.Context) (bool, error) {
+func (e *LuxEngine) getHealth(ctx context.Context) (bool, error) {
 	result, err := e.callRPC(ctx, "/ext/health", "health.health", struct{}{})
 	if err != nil {
 		return false, err
@@ -352,7 +352,7 @@ func (e *AvalancheEngine) getHealth(ctx context.Context) (bool, error) {
 	return resp.Healthy, nil
 }
 
-func (e *AvalancheEngine) getPeerCount(ctx context.Context) (int, error) {
+func (e *LuxEngine) getPeerCount(ctx context.Context) (int, error) {
 	result, err := e.callRPC(ctx, "/ext/info", "info.peers", struct{}{})
 	if err != nil {
 		return 0, err
@@ -377,7 +377,7 @@ func (e *AvalancheEngine) getPeerCount(ctx context.Context) (int, error) {
 	return len(resp.Peers), nil
 }
 
-func (e *AvalancheEngine) getNodeVersion(ctx context.Context) (string, error) {
+func (e *LuxEngine) getNodeVersion(ctx context.Context) (string, error) {
 	result, err := e.callRPC(ctx, "/ext/info", "info.getNodeVersion", struct{}{})
 	if err != nil {
 		return "", err

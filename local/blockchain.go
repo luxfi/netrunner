@@ -694,7 +694,7 @@ func newWallet(
 	xClient := xvm.NewClient(uri, "X")
 	w.xWallet = x.NewWallet(xBuilder, xSigner, xClient, xBackend)
 	w.xChainID = xChainID
-	w.luxAssetID = luxState.PCTX.LUXAssetID
+	w.luxAssetID = luxState.PCTX.XAssetID
 	return &w, nil
 }
 
