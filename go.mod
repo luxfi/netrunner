@@ -1,21 +1,21 @@
 module github.com/luxfi/netrunner
 
-go 1.25
+go 1.25.1
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/consensus v1.18.1
-	github.com/luxfi/crypto v1.17.0
+	github.com/luxfi/consensus v1.19.7
+	github.com/luxfi/crypto v1.17.4
 	github.com/luxfi/evm v1.16.18
 	github.com/luxfi/geth v1.16.35
-	github.com/luxfi/ids v1.1.0
+	github.com/luxfi/ids v1.1.1
 	github.com/luxfi/log v1.1.22
 	github.com/luxfi/math v0.1.1
 	github.com/luxfi/metric v1.4.0
-	github.com/luxfi/node v1.16.20-lean
+	github.com/luxfi/node v1.18.10
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.37.0
 	github.com/otiai10/copy v1.14.1
@@ -104,7 +104,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/database v1.2.0 // indirect
+	github.com/luxfi/database v1.2.1 // indirect
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
 	github.com/luxfi/trace v0.1.2 // indirect
