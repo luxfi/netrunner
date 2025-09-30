@@ -159,8 +159,6 @@ func testEngine(ctx context.Context, logger *zap.Logger, engineType string) erro
 	switch engineType {
 	case "lux":
 		binary = "luxd"
-	case "lux":
-		binary = "luxd"
 	case "geth":
 		binary = "geth"
 	case "op":

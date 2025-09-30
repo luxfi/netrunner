@@ -91,7 +91,7 @@ func (m *StackManifest) Validate() error {
 		
 		// Validate engine type
 		switch e.Type {
-		case "lux", "lux", "geth", "op", "eth2":
+		case "lux", "geth", "op", "eth2":
 			// Valid
 		default:
 			return fmt.Errorf("invalid engine type: %s", e.Type)
