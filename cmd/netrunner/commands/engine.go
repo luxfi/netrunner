@@ -290,7 +290,7 @@ func newEngineTestCmd(logger *zap.Logger) *cobra.Command {
 					
 					// Type-specific tests
 					switch engineType {
-					case "lux", "lux":
+					case "lux":
 						fmt.Printf("  🆔 Network ID: %d\n", engine.NetworkID())
 						fmt.Printf("  ⛓️ Chain ID: %s\n", engine.ChainID())
 					case "op":
@@ -324,8 +324,6 @@ func createEngine(engineType, name, binary string) (engines.Engine, error) {
 	// Set default binaries if not specified
 	if binary == "" {
 		switch engineType {
-		case "lux":
-			binary = "luxd"
 		case "lux":
 			binary = "luxd"
 		case "geth":

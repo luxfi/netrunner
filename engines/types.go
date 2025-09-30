@@ -16,7 +16,6 @@ type EngineType string
 
 const (
 	EngineLux       EngineType = "lux"
-	EngineLux EngineType = "lux"
 	EngineGeth      EngineType = "geth"
 	EngineOP        EngineType = "op"
 	EngineEth2      EngineType = "eth2"
