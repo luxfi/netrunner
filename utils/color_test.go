@@ -84,7 +84,7 @@ func TestColorAndPrepend(t *testing.T) {
 	}
 
 	// 4 is []<space>\n
-	expLen := len("test") + len(color) + len(fakeNodeName) + 4 + len(logging.Reset)
+	expLen := len("test") + len(color) + len(fakeNodeName) + 4 + len(luxlog.Reset)
 	if len(res) != expLen {
 		t.Fatalf("expected lengh to be %d, but was %d", expLen, len(res))
 	}

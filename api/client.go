@@ -11,7 +11,7 @@ import (
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/api/info"
 	"github.com/luxfi/node/indexer"
-	"github.com/luxfi/node/vms/xvm"
+	"github.com/luxfi/node/vms/exchangevm"
 	"github.com/luxfi/node/vms/platformvm"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
@@ -58,8 +58,8 @@ type EthClient interface {
 // TODO: byzantine api. check if appropriate. improve implementation.
 type Client interface {
 	PChainAPI() *platformvm.Client
-	XChainAPI() *xvm.Client
-	XChainWalletAPI() *xvm.WalletClient
+	XChainAPI() *exchangevm.Client
+	XChainWalletAPI() *exchangevm.WalletClient
 	CChainAPI() interface{} // evmclient.Client
 	CChainEthAPI() EthClient // ethclient websocket wrapper that adds mutexed calls, and lazy conn init (on first call)
 	InfoAPI() *info.Client
