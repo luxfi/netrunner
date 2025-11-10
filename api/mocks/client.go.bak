@@ -6,7 +6,7 @@ import (
 	api "github.com/luxfi/netrunner/api"
 	admin "github.com/luxfi/node/api/admin"
 
-	exchangevm "github.com/luxfi/node/vms/exchangevm"
+	xvm "github.com/luxfi/node/vms/xvm"
 
 	evmclient "github.com/luxfi/evm/plugin/evm/client"
 
@@ -155,15 +155,15 @@ func (_m *Client) PChainIndexAPI() *indexer.Client {
 }
 
 // XChainAPI provides a mock function with given fields:
-func (_m *Client) XChainAPI() *exchangevm.Client {
+func (_m *Client) XChainAPI() *xvm.Client {
 	ret := _m.Called()
 
-	var r0 *exchangevm.Client
-	if rf, ok := ret.Get(0).(func() *exchangevm.Client); ok {
+	var r0 *xvm.Client
+	if rf, ok := ret.Get(0).(func() *xvm.Client); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exchangevm.Client)
+			r0 = ret.Get(0).(*xvm.Client)
 		}
 	}
 
@@ -171,15 +171,15 @@ func (_m *Client) XChainAPI() *exchangevm.Client {
 }
 
 // XChainWalletAPI provides a mock function with given fields:
-func (_m *Client) XChainWalletAPI() *exchangevm.WalletClient {
+func (_m *Client) XChainWalletAPI() *xvm.WalletClient {
 	ret := _m.Called()
 
-	var r0 *exchangevm.WalletClient
-	if rf, ok := ret.Get(0).(func() *exchangevm.WalletClient); ok {
+	var r0 *xvm.WalletClient
+	if rf, ok := ret.Get(0).(func() *xvm.WalletClient); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*exchangevm.WalletClient)
+			r0 = ret.Get(0).(*xvm.WalletClient)
 		}
 	}
 
