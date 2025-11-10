@@ -7,7 +7,7 @@ import (
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/api/info"
 	"github.com/luxfi/node/indexer"
-	"github.com/luxfi/node/vms/xvm"
+	"github.com/luxfi/node/vms/exchangevm"
 	"github.com/luxfi/node/vms/platformvm"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
@@ -21,8 +21,8 @@ var (
 // APIClient gives access to most node apis (or suitable wrappers)
 type APIClient struct {
 	platform     *platformvm.Client
-	xChain       *xvm.Client
-	xChainWallet *xvm.WalletClient
+	xChain       *exchangevm.Client
+	xChainWallet *exchangevm.WalletClient
 	cChain       interface{} // evmclient.Client
 	cChainEth    EthClient
 	info         *info.Client
@@ -39,17 +39,17 @@ type NewAPIClientF func(ipAddr string, port uint16) Client
 func NewAPIClient(ipAddr string, port uint16) Client {
 	uri := fmt.Sprintf("http://%s:%d", ipAddr, port)
 	// cChainClient := evmclient.NewClient(uri, "C")
-	
+
 	// Create client instances
 	platformClient := platformvm.NewClient(uri)
-	xChainClient := xvm.NewClient(uri, "X")
-	xChainWalletClient := xvm.NewWalletClient(uri, "X")
+	xChainClient := exchangevm.NewClient(uri, "X")
+	xChainWalletClient := exchangevm.NewWalletClient(uri, "X")
 	infoClient := info.NewClient(uri)
 	healthClient := health.NewClient(uri)
 	adminClient := admin.NewClient(uri)
 	pindexClient := indexer.NewClient(uri + "/ext/index/P/block")
 	cindexClient := indexer.NewClient(uri + "/ext/index/C/block")
-	
+
 	return &APIClient{
 		platform:     &platformClient,
 		xChain:       &xChainClient,
@@ -68,11 +68,11 @@ func (c APIClient) PChainAPI() *platformvm.Client {
 	return c.platform
 }
 
-func (c APIClient) XChainAPI() *xvm.Client {
+func (c APIClient) XChainAPI() *exchangevm.Client {
 	return c.xChain
 }
 
-func (c APIClient) XChainWalletAPI() *xvm.WalletClient {
+func (c APIClient) XChainWalletAPI() *exchangevm.WalletClient {
 	return c.xChainWallet
 }
 

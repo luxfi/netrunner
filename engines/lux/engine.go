@@ -33,8 +33,8 @@ type LuxEngine struct {
 	dataDir      string
 	config       *engines.NodeConfig
 	process      *exec.Cmd
-	infoClient   info.Client
-	healthClient health.Client
+	infoClient   *info.Client
+	healthClient *health.Client
 	startTime    time.Time
 	
 	// Cached info
