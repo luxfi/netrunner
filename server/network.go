@@ -186,7 +186,7 @@ func (lc *localNetwork) createConfig() error {
 		}
 
 		if lc.options.trackSubnets != "" {
-			cfg.NodeConfigs[i].Flags[config.TrackSubnetsKey] = lc.options.trackSubnets
+			cfg.NodeConfigs[i].Flags[config.TrackNetsKey] = lc.options.trackSubnets
 		}
 
 		cfg.NodeConfigs[i].BinaryPath = lc.execPath
@@ -538,7 +538,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		}
 	}
 
-	subnets, err := (*pChainClient).GetSubnets(ctx, nil)
+	subnets, err := (*pChainClient).GetNets(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -674,7 +674,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 
 	lc.nodeInfos = make(map[string]*rpcpb.NodeInfo)
 	for name, node := range nodes {
-		trackSubnets, err := node.GetFlag(config.TrackSubnetsKey)
+		trackSubnets, err := node.GetFlag(config.TrackNetsKey)
 		if err != nil {
 			return err
 		}

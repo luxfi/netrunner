@@ -51,16 +51,16 @@ func NewAPIClient(ipAddr string, port uint16) Client {
 	cindexClient := indexer.NewClient(uri + "/ext/index/C/block")
 
 	return &APIClient{
-		platform:     &platformClient,
-		xChain:       &xChainClient,
-		xChainWallet: &xChainWalletClient,
+		platform:     platformClient,
+		xChain:       xChainClient,
+		xChainWallet: xChainWalletClient,
 		cChain:       nil, // cChainClient,
 		cChainEth:    nil, // NewEthClient(ipAddr, uint(port)), // wrapper over ethclient.Client
-		info:         &infoClient,
-		health:       &healthClient,
-		admin:        &adminClient,
-		pindex:       &pindexClient,
-		cindex:       &cindexClient,
+		info:         infoClient,
+		health:       healthClient,
+		admin:        adminClient,
+		pindex:       pindexClient,
+		cindex:       cindexClient,
 	}
 }
 
