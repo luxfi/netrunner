@@ -16,16 +16,16 @@ import (
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/network/throttling"
+	"github.com/luxfi/node/network/tracker"
 	"github.com/luxfi/consensus/networking/router"
-	"github.com/luxfi/consensus/networking/tracker"
-	"github.com/luxfi/consensus/validator"
+	"github.com/luxfi/consensus/validator" // package name is validators
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
 	"github.com/luxfi/node/utils/constants"
 	"github.com/luxfi/crypto/bls"
 	luxlog "github.com/luxfi/log"
-	metric "github.com/luxfi/metric"
 	"github.com/luxfi/math/set"
+	"github.com/luxfi/metric"
 	"github.com/luxfi/node/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -99,8 +99,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		return nil, err
 	}
 	mc, err := message.NewCreator(
-		luxlog.NewNoOpLogger(),
-		metric.NewPrometheusMetrics("netrunner", prometheus.NewRegistry()),
+		prometheus.NewRegistry(),
 		constants.DefaultNetworkCompressionType,
 		10*time.Second,
 	)
@@ -114,9 +113,8 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Fix NewResourceTracker call - API has changed
-	// For now, use a nil tracker - this may need proper implementation
-	var resourceTracker tracker.ResourceTracker
+	// Use a nil resource tracker for now - this is acceptable for netrunner testing
+	var resourceTracker tracker.ResourceTracker = nil
 	signerIP := utils.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
 	tls := tlsCert.PrivateKey.(crypto.Signer)
 	// Create a dummy BLS signer for now
@@ -131,8 +129,8 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
-		VersionCompatibility: version.GetCompatibility(node.networkID),
-		MySubnets:            set.Set[ids.ID]{},
+		VersionCompatibility: version.GetCompatibility(time.Now()),
+		MyNets:               set.Set[ids.ID]{},
 		Beacons:              validators.NewManager(),
 		Validators:           validators.NewManager(),
 		NetworkID:            node.networkID,
@@ -160,6 +158,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 			luxlog.NewNoOpLogger(),
 			peerMsgQueueBufferSize,
 		),
+		false, // isIngress - this is an outbound connection
 	)
 	cctx, cancel := context.WithTimeout(ctx, peerStartWaitTimeout)
 	err = p.AwaitReady(cctx)

@@ -7,22 +7,25 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/consensus v1.21.2
-	github.com/luxfi/crypto v1.17.6
-	github.com/luxfi/genesis v0.0.0
-	github.com/luxfi/geth v1.16.39
+	github.com/luxfi/consensus v1.22.1
+	github.com/luxfi/crypto v1.17.7
+	github.com/luxfi/evm v1.16.19
+	github.com/luxfi/genesis v1.2.2
+	github.com/luxfi/geth v1.16.40
 	github.com/luxfi/ids v1.1.2
 	github.com/luxfi/log v1.1.22
 	github.com/luxfi/math v0.1.4
 	github.com/luxfi/metric v1.4.5
-	github.com/luxfi/node v1.20.3
+	github.com/luxfi/node v1.20.5
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
 	github.com/otiai10/copy v1.14.1
+	github.com/prometheus/client_golang v1.23.2
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/multierr v1.11.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
 	golang.org/x/mod v0.28.0
 	golang.org/x/sync v0.17.0
@@ -43,7 +46,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.2-0.20251027185721-da1faa40b98c // indirect
 	github.com/cockroachdb/errors v1.12.0 // indirect
 	github.com/cockroachdb/fifo v0.0.0-20240816210425-c5d0cb0b6fc0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
@@ -60,7 +63,7 @@ require (
 	github.com/dgraph-io/ristretto v0.2.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.2.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ethereum/c-kzg-4844/v2 v2.1.3 // indirect
+	github.com/ethereum/c-kzg-4844/v2 v2.1.5 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/getsentry/sentry-go v0.35.1 // indirect
@@ -71,7 +74,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/golang/mock v1.6.0 // indirect
+	github.com/golang/mock v1.7.0-rc.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/btree v1.1.3 // indirect
@@ -86,12 +89,10 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kasperdi/SPHINCSPLUS-golang v0.0.0-20231223193046-84468b93f7e9 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/database v1.2.7 // indirect
-	github.com/luxfi/evm v1.16.19 // indirect
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
 	github.com/luxfi/trace v0.1.2 // indirect
@@ -102,7 +103,6 @@ require (
 	github.com/pires/go-proxyproto v0.8.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
@@ -134,7 +134,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/net v0.45.0 // indirect
@@ -147,12 +146,16 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-replace github.com/luxfi/consensus => ../consensus
-
-replace github.com/luxfi/node => ../node
-
-replace github.com/luxfi/evm => ../evm
-
-replace github.com/luxfi/geth => ../geth
-
-replace github.com/luxfi/genesis => ../genesis
+replace (
+	github.com/luxfi/consensus => /home/z/work/lux/consensus
+	github.com/luxfi/crypto => /home/z/work/lux/crypto
+	github.com/luxfi/database => /home/z/work/lux/database
+	github.com/luxfi/evm => /home/z/work/lux/evm
+	github.com/luxfi/genesis => /home/z/work/lux/genesis
+	github.com/luxfi/geth => /home/z/work/lux/geth
+	github.com/luxfi/ids => /home/z/work/lux/ids
+	github.com/luxfi/log => /home/z/work/lux/log
+	github.com/luxfi/math => /home/z/work/lux/math
+	github.com/luxfi/metric => /home/z/work/lux/metric
+	github.com/luxfi/node => /home/z/work/lux/node
+)

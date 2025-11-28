@@ -41,7 +41,7 @@ func fixDeprecatedLuxdFlags(flags map[string]interface{}) error {
 			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedWhitelistedSubnetsKey, vIntf)
 		}
 		if v != "" {
-			flags[config.TrackSubnetsKey] = v
+			flags[config.TrackNetsKey] = v
 		}
 		delete(flags, deprecatedWhitelistedSubnetsKey)
 	}

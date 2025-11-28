@@ -24,17 +24,24 @@ func LoadLocalGenesis() (map[string]interface{}, error) {
 
 	cChainGenesis := genesisMap["cChainGenesis"]
 	// set the cchain genesis directly from geth
-	// the whole of `cChainGenesis` should be set as a string, not a json object...
 	// Use TestChainConfig as local config
 	gethCChainGenesis := geth_params.TestChainConfig
-	// but the part in geth is only the "config" part.
-	// In order to set it easily, first we get the cChainGenesis item
-	// convert it to a map
-	cChainGenesisMap, ok := cChainGenesis.(map[string]interface{})
-	if !ok {
+
+	// Handle both string (already serialized) and map cases
+	var cChainGenesisMap map[string]interface{}
+	switch v := cChainGenesis.(type) {
+	case string:
+		// cChainGenesis is already a JSON string, parse it
+		if err := json.Unmarshal([]byte(v), &cChainGenesisMap); err != nil {
+			return nil, fmt.Errorf("failed to parse cChainGenesis string: %w", err)
+		}
+	case map[string]interface{}:
+		cChainGenesisMap = v
+	default:
 		return nil, fmt.Errorf(
-			"expected field 'cChainGenesis' of genesisMap to be a map[string]interface{}, but it failed with type %T", cChainGenesis)
+			"expected field 'cChainGenesis' to be string or map[string]interface{}, but got %T", cChainGenesis)
 	}
+
 	// set the `config` key to the actual geth object
 	cChainGenesisMap["config"] = gethCChainGenesis
 	// and then marshal everything into a string

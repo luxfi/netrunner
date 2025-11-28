@@ -687,8 +687,8 @@ func newWallet(
 	// Wrap the keychain for wallet compatibility
 	wrappedKC := secp256k1fx.WrapKeychain(kc)
 	w.pSigner = psigner.New(wrappedKC, w.pBackend)
-	// Wrap platform client for wallet compatibility
-	walletClient := newWalletClient(pClient)
+	// Create P-Chain wallet client
+	walletClient := pwallet.NewClient(pClient, w.pBackend)
 	w.pWallet = pwalletwallet.New(walletClient, w.pBuilder, w.pSigner)
 
 	xBackend := x.NewBackend(luxState.XCTX, xUTXOs)
@@ -703,8 +703,7 @@ func newWallet(
 
 func (w *wallet) reload(uri string) {
 	pClient := platformvm.NewClient(uri)
-	// Wrap platform client for wallet compatibility
-	walletClient := newWalletClient(pClient)
+	walletClient := pwallet.NewClient(pClient, w.pBackend)
 	w.pWallet = pwalletwallet.New(walletClient, w.pBuilder, w.pSigner)
 }
 
