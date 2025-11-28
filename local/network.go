@@ -31,7 +31,7 @@ import (
 	"github.com/luxfi/node/utils/beacon"
 	"github.com/luxfi/crypto/bls"
 	luxlog "github.com/luxfi/log"
-	"github.com/luxfi/node/utils/set"
+	"github.com/luxfi/math/set"
 	"github.com/luxfi/node/utils/wrappers"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
@@ -939,7 +939,7 @@ func (ln *localNetwork) restartNode(
 	}
 
 	if trackSubnets != "" {
-		nodeConfig.Flags[config.TrackSubnetsKey] = trackSubnets
+		nodeConfig.Flags[config.TrackNetsKey] = trackSubnets
 	}
 
 	// keep same ports, dbdir in node flags

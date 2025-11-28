@@ -131,7 +131,7 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 	if err := os.MkdirAll(subnetConfigDir, 0o750); err != nil {
 		return nil, err
 	}
-	flags[config.SubnetConfigDirKey] = subnetConfigDir
+	flags[config.NetConfigDirKey] = subnetConfigDir
 	// chain configs
 	for chainAlias, chainConfigFile := range nodeConfig.ChainConfigFiles {
 		chainConfigPath := filepath.Join(chainConfigDir, chainAlias, configFileName)
