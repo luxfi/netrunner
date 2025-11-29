@@ -137,17 +137,44 @@ func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 // TODO document.
 // Assumes [lc.lock] is held.
 func (lc *localNetwork) createConfig() error {
-	cfg, err := local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
-	if err != nil {
-		return err
-	}
-
 	var globalConfig map[string]interface{}
 
 	if lc.options.globalNodeConfig != "" {
 		if err := json.Unmarshal([]byte(lc.options.globalNodeConfig), &globalConfig); err != nil {
 			return err
 		}
+	}
+
+	// Check if a specific network-id is requested in globalConfig
+	// If so, use the appropriate genesis configuration
+	var cfg network.Config
+	var err error
+	networkID := luxd_constants.LocalID // default to local
+	if networkIDVal, ok := globalConfig["network-id"]; ok {
+		switch v := networkIDVal.(type) {
+		case float64:
+			networkID = uint32(v)
+		case int:
+			networkID = uint32(v)
+		case string:
+			// Parse string representation
+			var n int
+			fmt.Sscanf(v, "%d", &n)
+			networkID = uint32(n)
+		}
+	}
+
+	// Use the appropriate genesis configuration based on network ID
+	switch networkID {
+	case 96369: // LUX Mainnet
+		cfg, err = local.NewMainnetConfig(lc.options.execPath, lc.options.numNodes)
+	case 96368: // LUX Testnet
+		cfg, err = local.NewTestnetConfig(lc.options.execPath, lc.options.numNodes)
+	default:
+		cfg, err = local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
+	}
+	if err != nil {
+		return err
 	}
 
 	// set flags applied to all nodes
