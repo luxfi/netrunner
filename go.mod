@@ -146,16 +146,3 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-replace (
-	github.com/luxfi/consensus => /home/z/work/lux/consensus
-	github.com/luxfi/crypto => /home/z/work/lux/crypto
-	github.com/luxfi/database => /home/z/work/lux/database
-	github.com/luxfi/evm => /home/z/work/lux/evm
-	github.com/luxfi/genesis => /home/z/work/lux/genesis
-	github.com/luxfi/geth => /home/z/work/lux/geth
-	github.com/luxfi/ids => /home/z/work/lux/ids
-	github.com/luxfi/log => /home/z/work/lux/log
-	github.com/luxfi/math => /home/z/work/lux/math
-	github.com/luxfi/metric => /home/z/work/lux/metric
-	github.com/luxfi/node => /home/z/work/lux/node
-)
