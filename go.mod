@@ -9,14 +9,14 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/consensus v1.22.2
 	github.com/luxfi/crypto v1.17.7
-	github.com/luxfi/evm v0.8.1
-	github.com/luxfi/genesis v1.2.3
+	github.com/luxfi/evm v1.16.20
+	github.com/luxfi/genesis v1.2.4
 	github.com/luxfi/geth v1.16.40
 	github.com/luxfi/ids v1.1.2
 	github.com/luxfi/log v1.1.24
 	github.com/luxfi/math v0.1.5
 	github.com/luxfi/metric v1.4.5
-	github.com/luxfi/node v1.21.1
+	github.com/luxfi/node v1.21.3
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
 	github.com/otiai10/copy v1.14.1
@@ -96,7 +96,7 @@ require (
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
 	github.com/luxfi/trace v0.1.2 // indirect
-	github.com/luxfi/warp v1.16.26 // indirect
+	github.com/luxfi/warp v1.16.19 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect

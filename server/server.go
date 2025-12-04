@@ -45,13 +45,16 @@ import (
 const (
 	// RPCVersion should be bumped anytime changes are made which require
 	// the RPC client to upgrade to latest RPC server to be compatible
-	RPCVersion   uint32 = 1
+	// Note: This should match the node's RPC protocol version for compatibility
+	RPCVersion   uint32 = 42
 	MinNodes     uint32 = 1
 	DefaultNodes uint32 = 5
 
 	stopTimeout           = 5 * time.Second
 	defaultStartTimeout   = 5 * time.Minute
-	waitForHealthyTimeout = 3 * time.Minute
+	// waitForHealthyTimeout increased from 3 to 10 minutes to allow proper
+	// bootstrapping of staking validators in mainnet configuration
+	waitForHealthyTimeout = 10 * time.Minute
 
 	networkRootDirPrefix   = "network"
 	TimeParseLayout        = "2006-01-02 15:04:05"

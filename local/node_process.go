@@ -56,6 +56,9 @@ type nodeProcessCreator struct {
 func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string) (NodeProcess, error) {
 	// Start the Lux node and pass it the flags defined above
 	cmd := exec.Command(config.BinaryPath, args...) //nolint
+	// Inherit environment variables from the parent process
+	// This is important for passing DISABLE_MIGRATION_DETECTION and other env vars
+	cmd.Env = os.Environ()
 	// assign a new color to this process (might not be used if the config isn't set for it)
 	color := npc.colorPicker.NextColor()
 	// Optionally redirect stdout and stderr

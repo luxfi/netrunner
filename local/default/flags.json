@@ -6,5 +6,12 @@
   "api-admin-enabled":true,
   "index-enabled":true,
   "log-display-level":"ERROR",
-  "log-level": "DEBUG"
+  "log-level": "DEBUG",
+  "consensus-sample-size": 1,
+  "consensus-quorum-size": 1,
+  "consensus-commit-threshold": 1,
+  "sybil-protection-enabled": false,
+  "network-health-min-conn-peers": 0,
+  "skip-bootstrap": true,
+  "poa-single-node-mode": true
 }
