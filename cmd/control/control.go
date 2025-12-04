@@ -52,7 +52,7 @@ func NewCommand() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
-	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "0.0.0.0:8080", "server endpoint")
+	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "0.0.0.0:9000", "server endpoint")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")
 	cmd.PersistentFlags().DurationVar(&requestTimeout, "request-timeout", 3*time.Minute, "client request timeout")
 
