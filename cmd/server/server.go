@@ -47,8 +47,8 @@ func NewCommand() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level for server logs")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
-	cmd.PersistentFlags().StringVar(&port, "port", ":8080", "server port")
-	cmd.PersistentFlags().StringVar(&gwPort, "grpc-gateway-port", ":8081", "grpc-gateway server port")
+	cmd.PersistentFlags().StringVar(&port, "port", ":9000", "server port")
+	cmd.PersistentFlags().StringVar(&gwPort, "grpc-gateway-port", ":9001", "grpc-gateway server port")
 	cmd.PersistentFlags().BoolVar(&gwDisabled, "disable-grpc-gateway", false, "true to disable grpc-gateway server (overrides --grpc-gateway-port)")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")
 	cmd.PersistentFlags().BoolVar(&disableNodesOutput, "disable-nodes-output", false, "true to disable nodes stdout/stderr")
