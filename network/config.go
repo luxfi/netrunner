@@ -169,6 +169,10 @@ func NewLuxGenesis(
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
 					{
+						Amount:   100 * units.MegaLux, // Unlocked P-Chain balance for subnet deployment
+						Locktime: 0,                   // Locktime 0 = immediately available
+					},
+					{
 						Amount:   validatorStake * uint64(len(genesisVdrs)), // Stake
 						Locktime: uint64(time.Now().Add(7 * 24 * time.Hour).Unix()),
 					},

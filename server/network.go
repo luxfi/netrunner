@@ -540,6 +540,10 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		}
 	}
 
+	if node == nil {
+		return fmt.Errorf("no active nodes found in network")
+	}
+
 	pChainClient := node.GetAPIClient().PChainAPI()
 	if pChainClient == nil {
 		return fmt.Errorf("P-Chain client is nil")

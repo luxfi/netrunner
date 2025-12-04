@@ -48,7 +48,8 @@ const (
 	stakingSigningKeyFileName = "signer.key"
 	genesisFileName           = "genesis.json"
 	stopTimeout               = 30 * time.Second
-	healthCheckFreq           = 3 * time.Second
+	// healthCheckFreq reduced from 3s to 1s for faster health polling
+	healthCheckFreq           = 1 * time.Second
 	DefaultNumNodes           = 5
 	snapshotPrefix            = "anr-snapshot-"
 	networkRootDirPrefix      = "network"
