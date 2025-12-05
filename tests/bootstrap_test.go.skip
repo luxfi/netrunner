@@ -1,0 +1,99 @@
+package tests
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/luxfi/netrunner/local"
+	luxlog "github.com/luxfi/log"
+	"github.com/stretchr/testify/require"
+)
+
+func TestFiveNodeBootstrap(t *testing.T) {
+	require := require.New(t)
+
+	logger := luxlog.NewLogger(
+		"test",
+		luxlog.NewWrappedCore(
+			luxlog.Info,
+			luxlog.Stdout,
+			luxlog.Plain.ConsoleEncoder(),
+		),
+	)
+
+	// Get luxd path from environment or use default
+	luxdPath := os.Getenv("LUXD_PATH")
+	if luxdPath == "" {
+		luxdPath = "/Users/z/work/lux/node/build/luxd"
+	}
+
+	fmt.Println("\n=== Testing 5-Node Network Bootstrap ===")
+	fmt.Printf("Using luxd: %s\n\n", luxdPath)
+
+	startTime := time.Now()
+
+	// Create network with default 5-node configuration
+	network, err := local.NewDefaultNetwork(logger, luxdPath, true)
+	require.NoError(err, "Failed to create network")
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = network.Stop(ctx)
+	}()
+
+	fmt.Println("✅ Network created")
+	fmt.Println("⏳ Waiting for network to become healthy...")
+
+	// Wait for network to bootstrap with 2 minute timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	err = network.Healthy(ctx)
+	require.NoError(err, "Network failed to become healthy")
+
+	elapsed := time.Since(startTime)
+	fmt.Printf("\n✅ SUCCESS! All chains bootstrapped in %v\n", elapsed)
+
+	// Verify we have 5 nodes
+	nodes := network.GetAllNodes()
+	require.Len(nodes, 5, "Expected 5 nodes")
+
+	// Print node information
+	fmt.Println("\n=== Node Information ===")
+	for name, node := range nodes {
+		nodeID, err := node.GetNodeID()
+		require.NoError(err, "Failed to get node ID for %s", name)
+		fmt.Printf("%s: NodeID-%s, HTTP: %s\n", name, nodeID, node.GetAPIClient().BaseURL())
+	}
+
+	// Verify all nodes are bootstrapped
+	for name, node := range nodes {
+		client := node.GetAPIClient()
+		
+		// Check Platform chain
+		pBootstrapped, err := client.PChainAPI().IsBootstrapped(ctx)
+		require.NoError(err, "Failed to check P-chain bootstrap for %s", name)
+		require.True(pBootstrapped, "%s P-chain not bootstrapped", name)
+
+		// Check X chain
+		xBootstrapped, err := client.XChainAPI().IsBootstrapped(ctx)
+		require.NoError(err, "Failed to check X-chain bootstrap for %s", name)
+		require.True(xBootstrapped, "%s X-chain not bootstrapped", name)
+
+		// Check C chain
+		cBootstrapped, err := client.CChainEthAPI().Syncing(ctx)
+		require.NoError(err, "Failed to check C-chain sync for %s", name)
+		require.Nil(cBootstrapped, "%s C-chain still syncing", name)
+	}
+
+	fmt.Println("\n✅ All validation checks passed!")
+	fmt.Printf("⏱️  Total bootstrap time: %v\n", elapsed)
+
+	// Verify bootstrap time is under 60 seconds
+	require.Less(elapsed.Seconds(), 60.0, "Bootstrap took longer than 60 seconds")
+
+	fmt.Println("\n🎉 Test completed successfully!")
+}

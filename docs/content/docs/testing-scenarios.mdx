@@ -1,0 +1,722 @@
+---
+title: Testing Scenarios
+description: Common testing scenarios and patterns for Lux Netrunner
+---
+
+# Testing Scenarios
+
+This guide presents common testing scenarios for blockchain development using Lux Netrunner, including unit tests, integration tests, performance tests, and chaos engineering.
+
+## Testing Framework
+
+### Test Structure
+
+```go
+type TestScenario struct {
+    Name        string
+    Description string
+    Setup       func(context.Context) error
+    Execute     func(context.Context) error
+    Verify      func(context.Context) error
+    Cleanup     func(context.Context) error
+}
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+netrunner test all
+
+# Run specific test
+netrunner test engine lux
+
+# Run test suite
+netrunner test stack
+```
+
+## Unit Testing
+
+### Testing Individual Components
+
+#### Node Health Check Test
+
+```go
+func TestNodeHealth(t *testing.T) {
+    ctx := context.Background()
+
+    // Start single node
+    node, err := startTestNode(ctx, "test-node")
+    require.NoError(t, err)
+    defer node.Stop(ctx)
+
+    // Wait for bootstrap
+    maxAttempts := 30
+    for i := 0; i < maxAttempts; i++ {
+        health, err := node.Health(ctx)
+        if err == nil && health.Healthy {
+            break
+        }
+        time.Sleep(2 * time.Second)
+    }
+
+    // Verify health
+    health, err := node.Health(ctx)
+    assert.NoError(t, err)
+    assert.True(t, health.Healthy)
+}
+```
+
+#### API Endpoint Test
+
+```bash
+#!/bin/bash
+
+# Start node
+netrunner control start \
+  --number-of-nodes=1 \
+  --node-path ${LUXD_PATH}
+
+# Test P-Chain height
+HEIGHT=$(curl -s -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "platform.getHeight",
+  "params": {},
+  "id": 1
+}' -H 'content-type:application/json' \
+  http://localhost:9630/ext/bc/P | jq -r '.result.height')
+
+if [ -z "$HEIGHT" ]; then
+  echo "Failed to get height"
+  exit 1
+fi
+
+echo "Current height: $HEIGHT"
+```
+
+## Integration Testing
+
+### Multi-Node Networks
+
+#### Consensus Test
+
+```go
+func TestConsensus(t *testing.T) {
+    ctx := context.Background()
+
+    // Start 5-node network
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes:   5,
+        BinaryPath: luxdPath,
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Wait for consensus
+    require.NoError(t, network.Healthy(ctx))
+
+    // Get heights from all nodes
+    nodes, err := network.GetAllNodes()
+    require.NoError(t, err)
+
+    heights := make(map[string]uint64)
+    for name, node := range nodes {
+        client := node.GetAPIClient()
+        height, err := client.PChainAPI().GetHeight(ctx)
+        require.NoError(t, err)
+        heights[name] = height
+    }
+
+    // Verify all nodes at same height
+    var expectedHeight uint64
+    for name, height := range heights {
+        if expectedHeight == 0 {
+            expectedHeight = height
+        }
+        assert.Equal(t, expectedHeight, height,
+            "Node %s has different height", name)
+    }
+}
+```
+
+#### Cross-Chain Transfer Test
+
+```bash
+#!/bin/bash
+
+# Start network with X-Chain and C-Chain
+netrunner control start \
+  --number-of-nodes=3 \
+  --node-path ${LUXD_PATH} \
+  --global-node-config '{
+    "index-enabled": true,
+    "api-admin-enabled": true
+  }'
+
+# Wait for bootstrap
+netrunner control health
+
+# Export from X-Chain to C-Chain
+X_CHAIN_URL="http://localhost:9630/ext/bc/X"
+C_CHAIN_URL="http://localhost:9630/ext/bc/C/lux"
+
+# Create export transaction
+EXPORT_TX=$(curl -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "xplatform.exportLUX",
+  "params": {
+    "to": "C",
+    "amount": 1000000000,
+    "from": ["X-test1..."],
+    "changeAddr": "X-test1...",
+    "username": "testuser",
+    "password": "testpass"
+  },
+  "id": 1
+}' -H 'content-type:application/json' ${X_CHAIN_URL})
+
+echo "Export TX: ${EXPORT_TX}"
+
+# Import to C-Chain
+IMPORT_TX=$(curl -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "lux.importLUX",
+  "params": {
+    "to": "0x...",
+    "sourceChain": "X",
+    "username": "testuser",
+    "password": "testpass"
+  },
+  "id": 1
+}' -H 'content-type:application/json' ${C_CHAIN_URL})
+
+echo "Import TX: ${IMPORT_TX}"
+```
+
+### Subnet Testing
+
+#### Subnet Creation and Validation
+
+```go
+func TestSubnetCreation(t *testing.T) {
+    ctx := context.Background()
+
+    // Start network
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 5,
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Create subnet with 3 validators
+    subnetSpec := &netrunner.SubnetSpec{
+        Participants: []string{"node1", "node2", "node3"},
+    }
+
+    subnetID, err := network.CreateSubnet(ctx, subnetSpec)
+    require.NoError(t, err)
+
+    // Verify subnet validators
+    validators, err := network.GetSubnetValidators(ctx, subnetID)
+    require.NoError(t, err)
+    assert.Len(t, validators, 3)
+}
+```
+
+#### Custom VM Deployment
+
+```bash
+#!/bin/bash
+
+# Build custom VM
+cd ${VM_SOURCE}
+go build -o ${PLUGIN_PATH}/vmID ./plugin
+
+# Create genesis
+cat > /tmp/vm.genesis.json <<EOF
+{
+  "timestamp": 0,
+  "config": {
+    "featureEnabled": true
+  }
+}
+EOF
+
+# Start network with custom VM
+netrunner control start \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_PATH} \
+  --plugin-dir ${PLUGIN_PATH} \
+  --blockchain-specs '[{
+    "vm_name": "customvm",
+    "genesis": "/tmp/vm.genesis.json",
+    "subnet_spec": {
+      "participants": ["node1", "node2", "node3"]
+    }
+  }]'
+
+# Get blockchain ID
+STATUS=$(netrunner control status)
+BLOCKCHAIN_ID=$(echo ${STATUS} | jq -r '.blockchains[0].id')
+
+# Test custom VM API
+curl -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "customvm.method",
+  "params": {},
+  "id": 1
+}' -H 'content-type:application/json' \
+  http://localhost:9630/ext/bc/${BLOCKCHAIN_ID}
+```
+
+## Performance Testing
+
+### Throughput Test
+
+```go
+func TestThroughput(t *testing.T) {
+    ctx := context.Background()
+
+    // Start network
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 5,
+        Flags: map[string]interface{}{
+            "snow-optimal-processing": 100,
+            "snow-max-processing": 2048,
+        },
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Generate transactions
+    numTxs := 1000
+    startTime := time.Now()
+
+    for i := 0; i < numTxs; i++ {
+        tx := generateTestTransaction(i)
+        err := submitTransaction(network, tx)
+        require.NoError(t, err)
+    }
+
+    // Wait for finalization
+    waitForFinalization(network, numTxs)
+
+    duration := time.Since(startTime)
+    tps := float64(numTxs) / duration.Seconds()
+
+    t.Logf("Throughput: %.2f TPS", tps)
+    assert.Greater(t, tps, 100.0, "TPS below threshold")
+}
+```
+
+### Latency Test
+
+```bash
+#!/bin/bash
+
+# Start network
+netrunner control start \
+  --number-of-nodes=3 \
+  --node-path ${LUXD_PATH}
+
+# Measure P2P latency
+for i in {1..100}; do
+  START=$(date +%s%N)
+
+  curl -s -X POST --data '{
+    "jsonrpc": "2.0",
+    "method": "info.peers",
+    "params": {},
+    "id": 1
+  }' -H 'content-type:application/json' \
+    http://localhost:9630/ext/info > /dev/null
+
+  END=$(date +%s%N)
+  LATENCY=$((($END - $START) / 1000000))
+  echo "Request $i: ${LATENCY}ms"
+done | awk '{sum+=$3} END {print "Average latency:", sum/NR "ms"}'
+```
+
+### Load Test
+
+```go
+func TestLoadHandling(t *testing.T) {
+    ctx := context.Background()
+
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 5,
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Concurrent load generation
+    numWorkers := 10
+    txPerWorker := 100
+
+    var wg sync.WaitGroup
+    errors := make(chan error, numWorkers)
+
+    for w := 0; w < numWorkers; w++ {
+        wg.Add(1)
+        go func(workerID int) {
+            defer wg.Done()
+
+            for i := 0; i < txPerWorker; i++ {
+                tx := generateTransaction(workerID, i)
+                if err := submitTransaction(network, tx); err != nil {
+                    errors <- err
+                    return
+                }
+            }
+        }(w)
+    }
+
+    wg.Wait()
+    close(errors)
+
+    // Check for errors
+    for err := range errors {
+        t.Errorf("Load test error: %v", err)
+    }
+}
+```
+
+## Chaos Engineering
+
+### Node Failure Simulation
+
+```bash
+#!/bin/bash
+
+# Function to simulate random node failures
+simulate_failures() {
+  while true; do
+    # Random delay between failures
+    sleep $((RANDOM % 30 + 10))
+
+    # Select random node
+    NODE="node$((RANDOM % 5 + 1))"
+
+    echo "Simulating failure of ${NODE}"
+    netrunner control pause-node ${NODE}
+
+    # Keep node down for random duration
+    sleep $((RANDOM % 10 + 5))
+
+    echo "Recovering ${NODE}"
+    netrunner control resume-node ${NODE}
+  done
+}
+
+# Start network
+netrunner control start \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_PATH}
+
+# Start failure simulation in background
+simulate_failures &
+FAILURE_PID=$!
+
+# Run test workload
+for i in {1..100}; do
+  # Submit transaction
+  curl -X POST --data '{
+    "jsonrpc": "2.0",
+    "method": "platform.getHeight",
+    "params": {},
+    "id": 1
+  }' -H 'content-type:application/json' \
+    http://localhost:9630/ext/bc/P
+
+  sleep 1
+done
+
+# Stop failure simulation
+kill ${FAILURE_PID}
+
+# Verify network recovered
+netrunner control health
+```
+
+### Network Partition Test
+
+```go
+func TestNetworkPartition(t *testing.T) {
+    ctx := context.Background()
+
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 6,
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Create network partition
+    partition1 := []string{"node1", "node2", "node3"}
+    partition2 := []string{"node4", "node5", "node6"}
+
+    // Block communication between partitions
+    for _, node1 := range partition1 {
+        for _, node2 := range partition2 {
+            network.BlockConnection(node1, node2)
+        }
+    }
+
+    // Wait for partition to take effect
+    time.Sleep(10 * time.Second)
+
+    // Check that partitions can't reach consensus
+    // (implementation specific)
+
+    // Heal partition
+    for _, node1 := range partition1 {
+        for _, node2 := range partition2 {
+            network.UnblockConnection(node1, node2)
+        }
+    }
+
+    // Wait for recovery
+    time.Sleep(30 * time.Second)
+
+    // Verify network health
+    require.NoError(t, network.Healthy(ctx))
+}
+```
+
+### Byzantine Node Test
+
+```go
+func TestByzantineNode(t *testing.T) {
+    ctx := context.Background()
+
+    // Start network with Byzantine node
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 5,
+        NodeConfigs: []netrunner.NodeConfig{
+            {Name: "node1"},
+            {Name: "node2"},
+            {Name: "node3"},
+            {Name: "node4"},
+            {Name: "byzantine", Byzantine: true},
+        },
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Byzantine node sends conflicting messages
+    byzNode := network.GetNode("byzantine")
+    byzNode.SendConflictingVotes()
+
+    // Verify honest nodes maintain consensus
+    time.Sleep(30 * time.Second)
+
+    honestNodes := []string{"node1", "node2", "node3", "node4"}
+    heights := make(map[string]uint64)
+
+    for _, name := range honestNodes {
+        node := network.GetNode(name)
+        height, err := node.GetHeight(ctx)
+        require.NoError(t, err)
+        heights[name] = height
+    }
+
+    // All honest nodes should agree
+    var consensusHeight uint64
+    for _, height := range heights {
+        if consensusHeight == 0 {
+            consensusHeight = height
+        }
+        assert.Equal(t, consensusHeight, height)
+    }
+}
+```
+
+## Regression Testing
+
+### Snapshot-Based Testing
+
+```bash
+#!/bin/bash
+
+# Load baseline snapshot
+netrunner control load-snapshot baseline-v1.0
+
+# Run regression test suite
+./run_regression_tests.sh
+
+# Save results
+RESULTS=$(netrunner control status)
+
+# Compare with expected results
+DIFF=$(diff expected-results.json <(echo ${RESULTS}))
+
+if [ -n "${DIFF}" ]; then
+  echo "Regression detected:"
+  echo "${DIFF}"
+  exit 1
+fi
+
+echo "All regression tests passed"
+```
+
+### Upgrade Testing
+
+```go
+func TestUpgrade(t *testing.T) {
+    ctx := context.Background()
+
+    // Start with old version
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        BinaryPath: oldBinaryPath,
+        NumNodes:   5,
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Generate some state
+    generateTestState(network)
+
+    // Save snapshot
+    snapshotPath, err := network.SaveSnapshot(ctx, "pre-upgrade")
+    require.NoError(t, err)
+
+    // Stop network
+    network.Stop(ctx)
+
+    // Restart with new version
+    network, err = netrunner.LoadNetwork(ctx, &netrunner.Config{
+        BinaryPath:   newBinaryPath,
+        SnapshotPath: snapshotPath,
+    })
+    require.NoError(t, err)
+
+    // Verify state preserved
+    verifyTestState(network)
+
+    // Test new features
+    testNewFeatures(network)
+}
+```
+
+## Continuous Integration
+
+### GitHub Actions Workflow
+
+```yaml
+name: Network Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test: [consensus, subnet, performance, chaos]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.21
+
+      - name: Install Netrunner
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/install.sh | sh -s
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Build Node
+        run: |
+          cd node
+          ./scripts/build.sh
+
+      - name: Start RPC Server
+        run: |
+          netrunner server &
+          sleep 2
+
+      - name: Run Test
+        run: |
+          netrunner test ${{ matrix.test }}
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-${{ matrix.test }}
+          path: test-results/
+```
+
+### Test Automation Script
+
+```bash
+#!/bin/bash
+
+# test-suite.sh
+
+set -e
+
+# Configuration
+LUXD_PATH="/path/to/luxd"
+PLUGIN_PATH="/path/to/plugins"
+RESULTS_DIR="./test-results"
+
+# Create results directory
+mkdir -p ${RESULTS_DIR}
+
+# Start RPC server
+netrunner server &
+SERVER_PID=$!
+sleep 2
+
+# Function to run test
+run_test() {
+  TEST_NAME=$1
+  echo "Running ${TEST_NAME}..."
+
+  if netrunner test ${TEST_NAME} > ${RESULTS_DIR}/${TEST_NAME}.log 2>&1; then
+    echo "✅ ${TEST_NAME} passed"
+    echo "PASS" > ${RESULTS_DIR}/${TEST_NAME}.result
+  else
+    echo "❌ ${TEST_NAME} failed"
+    echo "FAIL" > ${RESULTS_DIR}/${TEST_NAME}.result
+  fi
+}
+
+# Run all tests
+run_test "consensus"
+run_test "subnet"
+run_test "performance"
+run_test "chaos"
+run_test "upgrade"
+
+# Generate report
+echo "Test Results Summary:"
+echo "====================="
+for result in ${RESULTS_DIR}/*.result; do
+  TEST=$(basename ${result} .result)
+  STATUS=$(cat ${result})
+  echo "${TEST}: ${STATUS}"
+done
+
+# Cleanup
+kill ${SERVER_PID}
+
+# Exit with error if any test failed
+if grep -q "FAIL" ${RESULTS_DIR}/*.result; then
+  exit 1
+fi
+```
+
+## Best Practices
+
+1. **Isolate Tests**: Each test should start with a clean state
+2. **Use Snapshots**: Save and restore known good states
+3. **Parallel Execution**: Run independent tests concurrently
+4. **Resource Cleanup**: Always clean up resources after tests
+5. **Deterministic Tests**: Avoid timing-dependent assertions
+6. **Comprehensive Logging**: Log all test actions for debugging
+7. **Test Coverage**: Cover normal, edge, and failure cases
+8. **Performance Baselines**: Track performance over time
+9. **Automated Regression**: Run tests on every commit
+10. **Documentation**: Document test scenarios and expected outcomes

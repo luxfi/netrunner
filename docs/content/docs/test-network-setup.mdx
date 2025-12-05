@@ -1,0 +1,584 @@
+---
+title: Test Network Setup
+description: Complete guide to setting up test networks with Lux Netrunner
+---
+
+# Test Network Setup
+
+This guide walks through setting up various test network configurations using Lux Netrunner, from simple single-node setups to complex multi-subnet deployments.
+
+## Prerequisites
+
+### Installation
+
+Install Netrunner using the installation script:
+
+```bash
+# Install latest version
+curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/install.sh | sh -s
+
+# Install specific version
+curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/install.sh | sh -s v1.3.1
+
+# Add to PATH
+export PATH=~/bin:$PATH
+```
+
+### Build from Source
+
+For development and testing:
+
+```bash
+# Clone repository
+git clone https://github.com/luxfi/netrunner.git
+cd netrunner
+
+# Build
+./scripts/build.sh
+
+# Add to PATH
+export PATH=$PWD/bin:$PATH
+
+# Run tests
+go test ./...
+```
+
+### Required Components
+
+1. **Lux Node Binary**: Build or download the Lux node
+2. **Plugin Directory**: For custom VMs (optional)
+3. **Genesis Files**: For custom chains (optional)
+
+## Quick Start
+
+### 1. Start the RPC Server
+
+Netrunner uses an RPC server for network management:
+
+```bash
+netrunner server \
+  --log-level debug \
+  --port=":8080" \
+  --grpc-gateway-port=":8081"
+```
+
+Keep this running in a separate terminal.
+
+### 2. Start a Basic Network
+
+Create a 5-node network:
+
+```bash
+# Set the path to your Lux binary
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/node/build/node"
+
+# Start the network
+netrunner control start \
+  --log-level debug \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH}
+```
+
+### 3. Verify Network Health
+
+```bash
+# Check health
+netrunner control health --endpoint="0.0.0.0:8080"
+
+# Get node URLs
+netrunner control uris --endpoint="0.0.0.0:8080"
+
+# Get network status
+netrunner control status --endpoint="0.0.0.0:8080"
+```
+
+## Network Configurations
+
+### Single Node Setup
+
+For simple testing:
+
+```bash
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=1 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --global-node-config '{
+    "http-port": 9630,
+    "staking-port": 9631,
+    "api-admin-enabled": true,
+    "index-enabled": true
+  }'
+```
+
+### Multi-Node Network
+
+Standard 5-node test network:
+
+```bash
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --global-node-config '{
+    "network-peer-list-gossip-frequency": "250ms",
+    "network-max-reconnect-delay": "1s",
+    "health-check-frequency": "2s",
+    "api-admin-enabled": true
+  }'
+```
+
+### Custom Node Configurations
+
+Configure each node individually:
+
+```bash
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --node-path ${LUXD_EXEC_PATH} \
+  --custom-node-configs '{
+    "node1": {"http-port": 9630, "log-level": "debug"},
+    "node2": {"http-port": 9632, "log-level": "info"},
+    "node3": {"http-port": 9634, "log-level": "info"},
+    "node4": {"http-port": 9636, "log-level": "info"},
+    "node5": {"http-port": 9638, "log-level": "warn"}
+  }'
+```
+
+## Subnet Networks
+
+### Create a Permissioned Subnet
+
+```bash
+# Start the network
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH}
+
+# Wait for health
+netrunner control health
+
+# Create subnet with all nodes
+netrunner control create-subnets '[{}]'
+
+# Or create with specific validators
+netrunner control create-subnets \
+  '[{"participants": ["node1", "node2", "node3"]}]'
+```
+
+### Create an Elastic Subnet
+
+Elastic subnets allow dynamic validator sets:
+
+```bash
+# Create elastic subnet configuration
+cat > elastic-subnet.json <<EOF
+{
+  "AssetName": "TestToken",
+  "AssetSymbol": "TEST",
+  "InitialSupply": 1000000000,
+  "MaxSupply": 2000000000,
+  "MinConsumptionRate": 1000,
+  "MaxConsumptionRate": 10000,
+  "MinValidatorStake": 100000,
+  "MaxValidatorStake": 10000000,
+  "MinStakeDuration": 86400,
+  "MaxStakeDuration": 31536000,
+  "MinDelegationFee": 20000,
+  "MinDelegatorStake": 1000,
+  "MaxValidatorWeightFactor": 5,
+  "UptimeRequirement": 800000
+}
+EOF
+
+# Create elastic subnet
+netrunner control create-elastic-subnet elastic-subnet.json
+```
+
+## Custom Blockchain Deployment
+
+### Deploy Subnet-EVM
+
+```bash
+# Generate VM ID
+subnet-cli create VMID subnetevm
+# Output: srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
+
+# Build the plugin
+cd ${HOME}/go/src/github.com/luxfi/subnet-evm
+go build -v \
+  -o ${LUXD_PLUGIN_PATH}/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
+  ./plugin
+
+# Create genesis
+cat > /tmp/subnet-evm.genesis.json <<EOF
+{
+  "config": {
+    "chainId": 99999,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "muirGlacierBlock": 0,
+    "subnetEVMTimestamp": 0,
+    "feeConfig": {
+      "gasLimit": 20000000,
+      "minBaseFee": 1000000000,
+      "targetGas": 100000000,
+      "baseFeeChangeDenominator": 48,
+      "minBlockGasCost": 0,
+      "maxBlockGasCost": 10000000,
+      "targetBlockRate": 2,
+      "blockGasCostStep": 500000
+    }
+  },
+  "alloc": {
+    "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC": {
+      "balance": "0x52B7D2DCC80CD2E4000000"
+    }
+  },
+  "nonce": "0x0",
+  "timestamp": "0x0",
+  "gasLimit": "0x1312D00",
+  "difficulty": "0x0"
+}
+EOF
+
+# Start network with subnet-evm
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --plugin-dir ${LUXD_PLUGIN_PATH} \
+  --blockchain-specs '[{
+    "vm_name": "subnetevm",
+    "genesis": "/tmp/subnet-evm.genesis.json"
+  }]'
+```
+
+### Deploy QuantumVM
+
+```bash
+# Start network with QuantumVM
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --plugin-dir ${LUXD_PLUGIN_PATH} \
+  --blockchain-specs '[{
+    "vm_name": "quantumvm",
+    "genesis": "/path/to/quantum.genesis.json",
+    "chain_config": "/path/to/quantum.config.json",
+    "network_upgrade": "/path/to/quantum.upgrade.json"
+  }]'
+```
+
+## Test Scenarios
+
+### Basic Connectivity Test
+
+```bash
+#!/bin/bash
+
+# Start network
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=3 \
+  --node-path ${LUXD_EXEC_PATH}
+
+# Wait for health
+netrunner control health
+
+# Test P-Chain API
+NODE1_URL=$(netrunner control uris | jq -r '.["node1"]')
+curl -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "platform.getHeight",
+  "params": {},
+  "id": 1
+}' -H 'content-type:application/json' ${NODE1_URL}/ext/bc/P
+
+# Clean up
+netrunner control stop
+```
+
+### Validator Test Network
+
+```bash
+# Create network with validators
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --global-node-config '{
+    "staking-enabled": true,
+    "staking-port": 9651,
+    "api-admin-enabled": true
+  }'
+
+# Wait for bootstrap
+netrunner control health
+
+# Create subnet with validators
+netrunner control create-subnets '[{
+  "participants": ["node1", "node2", "node3"]
+}]'
+
+# Get subnet info
+netrunner control status
+```
+
+### Multi-Chain Test Network
+
+```bash
+# Prepare multiple blockchain specs
+cat > blockchains.json <<EOF
+[
+  {
+    "vm_name": "subnetevm",
+    "genesis": "/path/to/subnetevm.genesis.json",
+    "subnet_spec": {
+      "participants": ["node1", "node2", "node3"]
+    }
+  },
+  {
+    "vm_name": "quantumvm",
+    "genesis": "/path/to/quantumvm.genesis.json",
+    "subnet_spec": {
+      "participants": ["node3", "node4", "node5"]
+    }
+  }
+]
+EOF
+
+# Start network with multiple chains
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --plugin-dir ${LUXD_PLUGIN_PATH} \
+  --blockchain-specs-file blockchains.json
+```
+
+## Advanced Testing
+
+### Network Fault Injection
+
+Test network resilience:
+
+```bash
+# Start network
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH}
+
+# Pause node (simulate failure)
+netrunner control pause-node node2
+
+# Verify network still healthy
+netrunner control health
+
+# Resume node
+netrunner control resume-node node2
+
+# Add new node
+netrunner control add-node \
+  --node-path ${LUXD_EXEC_PATH} \
+  node6
+
+# Remove node
+netrunner control remove-node node1
+```
+
+### Performance Testing
+
+```bash
+# Start network with performance monitoring
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=10 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --global-node-config '{
+    "api-metrics-enabled": true,
+    "metrics-enabled": true,
+    "metrics-expensive-enabled": true
+  }'
+
+# Stream status for monitoring
+netrunner control stream-status \
+  --push-interval=1s \
+  --endpoint="0.0.0.0:8080"
+```
+
+### Snapshot Testing
+
+```bash
+# Start and configure network
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH}
+
+# Create subnets and blockchains
+netrunner control create-subnets '[{"participants": ["node1", "node2"]}]'
+
+# Save snapshot
+netrunner control save-snapshot baseline-v1
+
+# Make changes
+netrunner control add-node node6
+
+# Restore to baseline
+netrunner control load-snapshot baseline-v1
+```
+
+## Automation Scripts
+
+### Complete Test Suite
+
+```bash
+#!/bin/bash
+
+set -e
+
+# Configuration
+LUXD_PATH="/path/to/luxd"
+PLUGIN_PATH="/path/to/plugins"
+ENDPOINT="0.0.0.0:8080"
+
+# Start server
+echo "Starting RPC server..."
+netrunner server --port=":8080" --grpc-gateway-port=":8081" &
+SERVER_PID=$!
+sleep 2
+
+# Function to clean up
+cleanup() {
+  echo "Cleaning up..."
+  netrunner control stop --endpoint=${ENDPOINT} || true
+  kill ${SERVER_PID} || true
+}
+trap cleanup EXIT
+
+# Test 1: Basic network
+echo "Test 1: Basic 5-node network"
+netrunner control start \
+  --endpoint=${ENDPOINT} \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_PATH}
+
+netrunner control health --endpoint=${ENDPOINT}
+netrunner control save-snapshot test1-complete
+netrunner control stop --endpoint=${ENDPOINT}
+
+# Test 2: Subnet network
+echo "Test 2: Subnet deployment"
+netrunner control load-snapshot test1-complete \
+  --endpoint=${ENDPOINT}
+
+netrunner control create-subnets '[{"participants": ["node1", "node2", "node3"]}]' \
+  --endpoint=${ENDPOINT}
+
+netrunner control health --endpoint=${ENDPOINT}
+netrunner control stop --endpoint=${ENDPOINT}
+
+echo "All tests passed!"
+```
+
+### CI/CD Integration
+
+```yaml
+# .github/workflows/test-network.yml
+name: Test Network
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Netrunner
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/install.sh | sh -s
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Build Lux Node
+        run: |
+          git clone https://github.com/luxfi/node.git
+          cd node && ./scripts/build.sh
+
+      - name: Run Network Tests
+        run: |
+          netrunner server &
+          sleep 2
+          netrunner control start \
+            --number-of-nodes=3 \
+            --node-path ./node/build/node
+          netrunner control health
+          netrunner control stop
+```
+
+## Troubleshooting
+
+### Port Conflicts
+
+If you encounter port conflicts:
+
+```bash
+# Use custom ports
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --custom-node-configs '{
+    "node1": {"http-port": 19630, "staking-port": 19631},
+    "node2": {"http-port": 19632, "staking-port": 19633},
+    "node3": {"http-port": 19634, "staking-port": 19635},
+    "node4": {"http-port": 19636, "staking-port": 19637},
+    "node5": {"http-port": 19638, "staking-port": 19639}
+  }'
+```
+
+### Node Startup Issues
+
+Debug node startup:
+
+```bash
+# Enable debug logging
+netrunner control start \
+  --log-level debug \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=1 \
+  --node-path ${LUXD_EXEC_PATH} \
+  --global-node-config '{
+    "log-level": "debug",
+    "log-display-level": "trace"
+  }'
+
+# Check logs
+netrunner control logs node1
+```
+
+### Network Health Issues
+
+```bash
+# Get detailed status
+netrunner control status --endpoint="0.0.0.0:8080"
+
+# Check individual node
+curl -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "info.isBootstrapped",
+  "params": {"chain": "P"},
+  "id": 1
+}' -H 'content-type:application/json' http://localhost:9630/ext/info
+```
