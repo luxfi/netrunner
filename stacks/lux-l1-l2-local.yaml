@@ -12,8 +12,7 @@ engines:
     wait_healthy: true
     extra:
       staking-enabled: false
-      dev-mode: true
-      poa-single-node-mode: true
+      sybil-protection-enabled: false
       
   - name: lux-l2-op
     type: op
