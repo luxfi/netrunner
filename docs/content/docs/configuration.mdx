@@ -1,0 +1,827 @@
+---
+title: Configuration
+description: Complete configuration reference for Lux Netrunner
+---
+
+# Configuration
+
+This guide provides a comprehensive reference for configuring Lux Netrunner, including network configuration, node configuration, and blockchain specifications.
+
+## Configuration Hierarchy
+
+Netrunner uses a hierarchical configuration system with the following precedence (highest to lowest):
+
+1. **Node-specific flags** - Individual node configurations
+2. **Network-wide flags** - Global network configurations
+3. **Configuration files** - JSON config files
+4. **Default values** - Built-in defaults
+
+## Network Configuration
+
+### Network Config Structure
+
+```go
+type Config struct {
+    // Required: Genesis configuration
+    Genesis string `json:"genesis"`
+
+    // Node configurations
+    NodeConfigs []node.Config `json:"nodeConfigs"`
+
+    // Global flags applied to all nodes
+    Flags map[string]interface{} `json:"flags"`
+
+    // Default binary path for nodes
+    BinaryPath string `json:"binaryPath"`
+
+    // Chain configuration files
+    ChainConfigFiles map[string]string `json:"chainConfigFiles"`
+
+    // Upgrade configuration files
+    UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
+
+    // Subnet configuration files
+    SubnetConfigFiles map[string]string `json:"subnetConfigFiles"`
+}
+```
+
+### Example Network Configuration
+
+```json
+{
+  "genesis": "/path/to/genesis.json",
+  "binaryPath": "/path/to/luxd",
+  "flags": {
+    "network-peer-list-gossip-frequency": "250ms",
+    "network-max-reconnect-delay": "1s",
+    "public-ip": "127.0.0.1",
+    "health-check-frequency": "2s",
+    "api-admin-enabled": true,
+    "index-enabled": true
+  },
+  "nodeConfigs": [
+    {
+      "name": "node1",
+      "isBeacon": true,
+      "flags": {
+        "http-port": 9630,
+        "staking-port": 9631
+      }
+    },
+    {
+      "name": "node2",
+      "flags": {
+        "http-port": 9632,
+        "staking-port": 9633
+      }
+    }
+  ]
+}
+```
+
+## Node Configuration
+
+### Node Config Structure
+
+```go
+type Config struct {
+    // Unique node name
+    Name string `json:"name"`
+
+    // Bootstrap beacon node
+    IsBeacon bool `json:"isBeacon"`
+
+    // Staking credentials
+    StakingKey        string `json:"stakingKey"`
+    StakingCert       string `json:"stakingCert"`
+    StakingSigningKey string `json:"stakingSigningKey"`
+
+    // Configuration files
+    ConfigFile         string            `json:"configFile"`
+    ChainConfigFiles   map[string]string `json:"chainConfigFiles"`
+    UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
+    SubnetConfigFiles  map[string]string `json:"subnetConfigFiles"`
+
+    // Node-specific flags
+    Flags map[string]interface{} `json:"flags"`
+
+    // Binary path
+    BinaryPath string `json:"binaryPath"`
+
+    // Output redirection
+    RedirectStdout bool `json:"redirectStdout"`
+    RedirectStderr bool `json:"redirectStderr"`
+}
+```
+
+### Common Node Flags
+
+```json
+{
+  // API Configuration
+  "api-admin-enabled": true,
+  "api-ipcs-enabled": true,
+  "api-keystore-enabled": true,
+  "api-metrics-enabled": true,
+  "http-host": "0.0.0.0",
+  "http-port": 9630,
+  "http-tls-enabled": false,
+
+  // Network Configuration
+  "public-ip": "127.0.0.1",
+  "staking-port": 9631,
+  "staking-enabled": true,
+  "staking-ephemeral-cert-enabled": false,
+  "network-peer-list-gossip-frequency": "250ms",
+  "network-max-reconnect-delay": "1s",
+  "network-initial-reconnect-delay": "250ms",
+  "network-peer-read-buffer-size": 8192,
+  "network-peer-write-buffer-size": 8192,
+
+  // Database Configuration
+  "db-dir": "/path/to/db",
+  "db-type": "leveldb",
+
+  // Logging Configuration
+  "log-level": "info",
+  "log-dir": "/path/to/logs",
+  "log-format": "json",
+  "log-display-level": "info",
+
+  // Chain Configuration
+  "index-enabled": true,
+  "index-allow-incomplete": false,
+
+  // Health Check
+  "health-check-frequency": "2s",
+  "health-check-averager-halflife": "10s",
+
+  // Bootstrap Configuration
+  "bootstrap-ips": "127.0.0.1:9631",
+  "bootstrap-ids": "NodeID-xxx",
+
+  // Performance Tuning
+  "snow-sample-size": 20,
+  "snow-quorum-size": 15,
+  "snow-concurrent-repolls": 4,
+  "snow-optimal-processing": 50,
+  "snow-max-processing": 1024,
+  "snow-max-time-processing": "2m",
+
+  // VM Configuration
+  "vm-aliases": {
+    "custom": "vmID"
+  }
+}
+```
+
+## Blockchain Configuration
+
+### Blockchain Spec Structure
+
+```go
+type BlockchainSpec struct {
+    // VM name or ID
+    VMName string `json:"vm_name"`
+
+    // Genesis data (file path or JSON string)
+    Genesis []byte `json:"genesis"`
+
+    // Subnet ID (optional)
+    SubnetID *string `json:"subnet_id"`
+
+    // Subnet specification
+    SubnetSpec *SubnetSpec `json:"subnet_spec"`
+
+    // Chain configuration
+    ChainConfig []byte `json:"chain_config"`
+
+    // Network upgrade configuration
+    NetworkUpgrade []byte `json:"network_upgrade"`
+
+    // Blockchain alias
+    BlockchainAlias string `json:"blockchain_alias"`
+
+    // Per-node chain configuration
+    PerNodeChainConfig map[string][]byte `json:"per_node_chain_config"`
+}
+```
+
+### Subnet-EVM Configuration
+
+```json
+{
+  "vm_name": "subnetevm",
+  "genesis": {
+    "config": {
+      "chainId": 99999,
+      "homesteadBlock": 0,
+      "eip150Block": 0,
+      "eip155Block": 0,
+      "eip158Block": 0,
+      "byzantiumBlock": 0,
+      "constantinopleBlock": 0,
+      "petersburgBlock": 0,
+      "istanbulBlock": 0,
+      "muirGlacierBlock": 0,
+      "subnetEVMTimestamp": 0,
+      "feeConfig": {
+        "gasLimit": 20000000,
+        "minBaseFee": 1000000000,
+        "targetGas": 100000000,
+        "baseFeeChangeDenominator": 48,
+        "minBlockGasCost": 0,
+        "maxBlockGasCost": 10000000,
+        "targetBlockRate": 2,
+        "blockGasCostStep": 500000
+      },
+      "allowFeeRecipients": false
+    },
+    "alloc": {
+      "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC": {
+        "balance": "0x52B7D2DCC80CD2E4000000"
+      }
+    },
+    "nonce": "0x0",
+    "timestamp": "0x0",
+    "gasLimit": "0x1312D00",
+    "difficulty": "0x0"
+  },
+  "chain_config": {
+    "priority-regossip-frequency": "1m",
+    "priority-regossip-max-txs": 16,
+    "priority-regossip-addresses": ["0x..."],
+    "local-txs-enabled": true,
+    "api-max-duration": "30s",
+    "ws-cpu-refill-rate": 100000,
+    "ws-cpu-max-stored": 5000000,
+    "api-max-blocks-per-request": 30,
+    "continuous-profiler-frequency": "1h",
+    "rpc-tx-fee-cap": 100
+  },
+  "network_upgrade": {
+    "subnetEVMTimestamp": 0,
+    "durango": 0
+  },
+  "subnet_config": {
+    "proposer-min-block-delay": 0,
+    "proposer-num-historical-blocks": 512
+  }
+}
+```
+
+### QuantumVM Configuration
+
+```json
+{
+  "vm_name": "quantumvm",
+  "genesis": {
+    "config": {
+      "quantumEnabled": true,
+      "ringtailEnabled": true,
+      "quantumAlgorithmVersion": 1,
+      "ringtailKeySize": 1024,
+      "quantumStampWindow": 30,
+      "parallelBatchSize": 10,
+      "quantumSigCacheSize": 10000
+    },
+    "validators": [
+      {
+        "nodeID": "NodeID-xxx",
+        "weight": 1000000
+      }
+    ],
+    "timestamp": 0
+  },
+  "chain_config": {
+    "tx-fee": 1000,
+    "create-asset-tx-fee": 10000,
+    "quantum-verification-fee": 500,
+    "max-parallel-txs": 100,
+    "quantum-time": "2025-01-01T00:00:00Z",
+    "min-quantum-confirmations": 1
+  }
+}
+```
+
+## Subnet Configuration
+
+### Subnet Spec Structure
+
+```go
+type SubnetSpec struct {
+    // Validator participants
+    Participants []string `json:"participants"`
+
+    // Subnet configuration
+    SubnetConfig []byte `json:"subnet_config"`
+}
+```
+
+### Elastic Subnet Configuration
+
+```go
+type ElasticSubnetSpec struct {
+    SubnetID                 *string       `json:"subnet_id"`
+    AssetName                string        `json:"asset_name"`
+    AssetSymbol              string        `json:"asset_symbol"`
+    InitialSupply            uint64        `json:"initial_supply"`
+    MaxSupply                uint64        `json:"max_supply"`
+    MinConsumptionRate       uint64        `json:"min_consumption_rate"`
+    MaxConsumptionRate       uint64        `json:"max_consumption_rate"`
+    MinValidatorStake        uint64        `json:"min_validator_stake"`
+    MaxValidatorStake        uint64        `json:"max_validator_stake"`
+    MinStakeDuration         time.Duration `json:"min_stake_duration"`
+    MaxStakeDuration         time.Duration `json:"max_stake_duration"`
+    MinDelegationFee         uint32        `json:"min_delegation_fee"`
+    MinDelegatorStake        uint64        `json:"min_delegator_stake"`
+    MaxValidatorWeightFactor byte          `json:"max_validator_weight_factor"`
+    UptimeRequirement        uint32        `json:"uptime_requirement"`
+}
+```
+
+## Genesis Configuration
+
+### Creating Custom Genesis
+
+```go
+func NewLuxGenesis(
+    log logging.Logger,
+    networkID uint32,
+    xChainBalances []AddrAndBalance,
+    cChainBalances []AddrAndBalance,
+    genesisVdrs []ids.ShortID,
+) ([]byte, error)
+```
+
+### Example Genesis Generation
+
+```go
+// Generate genesis with custom validators
+genesisBytes, err := network.NewLuxGenesis(
+    logger,
+    12345, // network ID
+    []network.AddrAndBalance{
+        {
+            Addr:    xChainAddr1,
+            Balance: big.NewInt(1000000000000),
+        },
+    },
+    []network.AddrAndBalance{
+        {
+            Addr:    cChainAddr1,
+            Balance: big.NewInt(1000000000000),
+        },
+    },
+    []ids.ShortID{validator1, validator2, validator3},
+)
+```
+
+## Configuration Files
+
+### Network Config File
+
+Save as `network-config.json`:
+
+```json
+{
+  "genesis": "./genesis.json",
+  "binaryPath": "/path/to/luxd",
+  "flags": {
+    "network-peer-list-gossip-frequency": "250ms",
+    "api-admin-enabled": true
+  },
+  "nodeConfigs": [
+    {
+      "name": "node1",
+      "isBeacon": true,
+      "configFile": "./node1-config.json"
+    },
+    {
+      "name": "node2",
+      "configFile": "./node2-config.json"
+    }
+  ]
+}
+```
+
+### Node Config File
+
+Save as `node-config.json`:
+
+```json
+{
+  "http-port": 9630,
+  "staking-port": 9631,
+  "db-type": "leveldb",
+  "log-level": "info",
+  "api-admin-enabled": true,
+  "index-enabled": true,
+  "network-peer-list-gossip-frequency": "250ms"
+}
+```
+
+### Using Config Files
+
+```bash
+# Start network with config file
+netrunner control start \
+  --config-file network-config.json
+
+# Start with node config override
+netrunner control start \
+  --config-file network-config.json \
+  --node-config-file node-override.json
+```
+
+## Environment Variables
+
+### Supported Environment Variables
+
+```bash
+# Network configuration
+export NETRUNNER_NETWORK_ID=12345
+export NETRUNNER_BINARY_PATH="/path/to/luxd"
+export NETRUNNER_PLUGIN_DIR="/path/to/plugins"
+
+# Server configuration
+export NETRUNNER_SERVER_PORT=":8080"
+export NETRUNNER_GRPC_GATEWAY_PORT=":8081"
+export NETRUNNER_LOG_LEVEL="debug"
+
+# Default node configuration
+export NETRUNNER_DEFAULT_NODE_CONFIG='{
+  "api-admin-enabled": true,
+  "index-enabled": true
+}'
+
+# Snapshot directory
+export NETRUNNER_SNAPSHOT_DIR="/path/to/snapshots"
+```
+
+## Advanced Configuration
+
+### Multi-Region Setup
+
+Configure nodes across regions:
+
+```json
+{
+  "nodeConfigs": [
+    {
+      "name": "us-east-1",
+      "flags": {
+        "public-ip": "1.2.3.4",
+        "http-host": "0.0.0.0"
+      }
+    },
+    {
+      "name": "eu-west-1",
+      "flags": {
+        "public-ip": "5.6.7.8",
+        "http-host": "0.0.0.0"
+      }
+    },
+    {
+      "name": "ap-southeast-1",
+      "flags": {
+        "public-ip": "9.10.11.12",
+        "http-host": "0.0.0.0"
+      }
+    }
+  ]
+}
+```
+
+### Performance Tuning
+
+```json
+{
+  "flags": {
+    "snow-sample-size": 20,
+    "snow-quorum-size": 15,
+    "snow-concurrent-repolls": 4,
+    "snow-optimal-processing": 100,
+    "snow-max-processing": 2048,
+    "consensus-app-concurrency": 4,
+    "network-peer-read-buffer-size": 16384,
+    "network-peer-write-buffer-size": 16384,
+    "db-cache-size": 768,
+    "plugin-mode-enabled": false
+  }
+}
+```
+
+### Security Configuration
+
+```json
+{
+  "flags": {
+    "api-auth-required": true,
+    "api-auth-password": "secure-password",
+    "http-tls-enabled": true,
+    "http-tls-cert-file": "/path/to/cert.pem",
+    "http-tls-key-file": "/path/to/key.pem",
+    "staking-tls-cert-file": "/path/to/staking-cert.pem",
+    "staking-tls-key-file": "/path/to/staking-key.pem",
+    "api-ipcs-enabled": false,
+    "api-keystore-enabled": false,
+    "api-admin-enabled": false
+  }
+}
+```
+
+## Configuration Validation
+
+### Pre-flight Checks
+
+Netrunner validates configurations before starting:
+
+1. **Genesis validation** - Ensures genesis is valid
+2. **Port availability** - Checks for port conflicts
+3. **Binary validation** - Verifies binary exists and is executable
+4. **Plugin validation** - Checks required plugins are available
+5. **Network ID consistency** - Ensures all nodes use same network ID
+
+### Validation Example
+
+```go
+func (c *Config) Validate() error {
+    // Check genesis
+    if len(c.Genesis) == 0 {
+        return errors.New("no genesis given")
+    }
+
+    // Get network ID
+    networkID, err := utils.NetworkIDFromGenesis([]byte(c.Genesis))
+    if err != nil {
+        return fmt.Errorf("couldn't get network ID: %w", err)
+    }
+
+    // Validate each node
+    for i, nodeConfig := range c.NodeConfigs {
+        if err := nodeConfig.Validate(networkID); err != nil {
+            return fmt.Errorf("node %d config invalid: %w", i, err)
+        }
+    }
+
+    return nil
+}
+```
+
+## Dynamic Configuration
+
+### Runtime Configuration Updates
+
+```go
+// Update node configuration at runtime
+func UpdateNodeConfig(network network.Network, nodeName string, newConfig map[string]interface{}) error {
+    node, err := network.GetNode(nodeName)
+    if err != nil {
+        return err
+    }
+
+    // Apply new configuration
+    return node.UpdateConfig(newConfig)
+}
+
+// Example: Enable profiling on a running node
+UpdateNodeConfig(network, "node1", map[string]interface{}{
+    "profile-continuous-enabled": true,
+    "profile-continuous-freq": "1m",
+})
+```
+
+### Hot-Reload Configuration
+
+```bash
+# Enable configuration hot-reload
+netrunner control start \
+  --enable-hot-reload \
+  --config-watch-interval=10s \
+  --config-file=/path/to/config.json
+
+# Trigger reload manually
+netrunner control reload-config --node=node1
+```
+
+## Configuration Templates
+
+### Template Variables
+
+```yaml
+# config-template.yaml
+network:
+  id: {{ .NetworkID }}
+  nodes:
+    {{- range $i, $node := .Nodes }}
+    - name: node{{ $i }}
+      http_port: {{ add 9630 (mul $i 2) }}
+      staking_port: {{ add 9631 (mul $i 2) }}
+      {{- if lt $i 3 }}
+      is_beacon: true
+      {{- end }}
+    {{- end }}
+```
+
+### Using Templates
+
+```bash
+# Generate configuration from template
+netrunner config generate \
+  --template=config-template.yaml \
+  --vars='{"NetworkID": 12345, "Nodes": 5}' \
+  --output=network-config.json
+```
+
+## Multi-Engine Configuration
+
+### Engine-Specific Settings
+
+```json
+{
+  "engines": {
+    "lux": {
+      "binary_path": "/path/to/luxd",
+      "default_flags": {
+        "snow-sample-size": 20,
+        "api-admin-enabled": true
+      }
+    },
+    "geth": {
+      "binary_path": "/path/to/geth",
+      "default_flags": {
+        "syncmode": "full",
+        "cache": 1024
+      }
+    },
+    "opstack": {
+      "binary_path": "/path/to/op-node",
+      "default_flags": {
+        "l1.rpc-endpoint": "http://localhost:8545"
+      }
+    }
+  }
+}
+```
+
+## Monitoring and Metrics Configuration
+
+### Prometheus Integration
+
+```json
+{
+  "monitoring": {
+    "enabled": true,
+    "prometheus": {
+      "endpoint": ":9090",
+      "namespace": "netrunner",
+      "subsystem": "network",
+      "push_gateway": "http://localhost:9091"
+    },
+    "metrics": {
+      "collection_interval": "10s",
+      "retention_period": "24h",
+      "aggregation_rules": {
+        "tps": "avg",
+        "latency": "p95",
+        "memory": "max"
+      }
+    }
+  }
+}
+```
+
+### Custom Metrics
+
+```go
+// Define custom metrics
+type MetricConfig struct {
+    Name        string `json:"name"`
+    Type        string `json:"type"` // counter, gauge, histogram
+    Help        string `json:"help"`
+    Labels      []string `json:"labels"`
+    Buckets     []float64 `json:"buckets,omitempty"`
+}
+
+// Register custom metrics
+customMetrics := []MetricConfig{
+    {
+        Name: "custom_tx_processing_time",
+        Type: "histogram",
+        Help: "Transaction processing time in seconds",
+        Labels: ["chain", "vm_type"],
+        Buckets: []float64{0.01, 0.05, 0.1, 0.5, 1, 5},
+    },
+}
+```
+
+## State Management Configuration
+
+### Snapshot Configuration
+
+```json
+{
+  "snapshots": {
+    "enabled": true,
+    "directory": "/path/to/snapshots",
+    "auto_snapshot": {
+      "enabled": true,
+      "interval": "1h",
+      "max_snapshots": 24,
+      "compression": "zstd",
+      "compression_level": 3
+    },
+    "restore": {
+      "verify_checksums": true,
+      "parallel_restore": true,
+      "max_workers": 4
+    }
+  }
+}
+```
+
+## Network Simulation Configuration
+
+### Chaos Engineering Settings
+
+```json
+{
+  "chaos": {
+    "enabled": true,
+    "scenarios": [
+      {
+        "name": "random_node_failures",
+        "probability": 0.1,
+        "mtbf": "10m",
+        "mttr": "2m",
+        "affected_nodes": ["node1", "node2", "node3"]
+      },
+      {
+        "name": "network_partition",
+        "schedule": "*/30 * * * *",
+        "duration": "5m",
+        "partitions": [
+          ["node1", "node2"],
+          ["node3", "node4", "node5"]
+        ]
+      },
+      {
+        "name": "latency_injection",
+        "continuous": true,
+        "base_latency": "50ms",
+        "jitter": "10ms",
+        "packet_loss": 0.02
+      }
+    ]
+  }
+}
+```
+
+### Load Testing Configuration
+
+```json
+{
+  "load_testing": {
+    "enabled": true,
+    "scenarios": [
+      {
+        "name": "sustained_load",
+        "tps": 1000,
+        "duration": "10m",
+        "ramp_up": "1m"
+      },
+      {
+        "name": "burst_load",
+        "peak_tps": 5000,
+        "burst_duration": "30s",
+        "rest_duration": "2m",
+        "cycles": 10
+      }
+    ],
+    "transaction_mix": {
+      "transfer": 0.6,
+      "contract_call": 0.3,
+      "contract_deploy": 0.1
+    }
+  }
+}
+```
+
+## Best Practices
+
+1. **Use configuration files** for complex setups
+2. **Version control** your configurations
+3. **Separate concerns** between network and node configs
+4. **Use environment variables** for sensitive data
+5. **Validate configurations** before deployment
+6. **Document custom configurations**
+7. **Use consistent naming** for nodes
+8. **Monitor configuration drift**
+9. **Backup configurations** before changes
+10. **Test configurations** in isolation first
+11. **Use templates** for repeatable deployments
+12. **Enable monitoring** from the start
+13. **Plan for failures** with chaos configuration
+14. **Automate snapshots** for recovery
+15. **Profile performance** settings before production
