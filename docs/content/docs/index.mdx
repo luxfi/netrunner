@@ -1,0 +1,264 @@
+---
+title: Introduction
+description: Lux Netrunner - Network orchestration and testing framework for Lux blockchain
+---
+
+# Lux Netrunner
+
+Lux Netrunner is a powerful network orchestration and testing framework designed for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, subnets, and complex network topologies.
+
+## Overview
+
+Netrunner simplifies blockchain network testing by providing:
+- **Dynamic network management** - Create, modify, and control networks on the fly
+- **Multi-chain support** - Deploy and test multiple blockchains simultaneously
+- **Subnet orchestration** - Easily create and manage subnets with custom validators
+- **Testing automation** - Built-in support for various testing scenarios
+- **Network snapshots** - Save and restore complete network states
+- **Chaos engineering** - Simulate failures and network partitions
+
+## Key Features
+
+### 🚀 High Performance
+- Optimized for speed and efficiency
+- Parallel node management
+- Fast network bootstrapping
+- Efficient resource utilization
+
+### 🔧 Production Ready
+- Battle-tested in production environments
+- Comprehensive error handling
+- Robust state management
+- Enterprise-grade reliability
+
+### 🧪 Comprehensive Testing
+- Unit testing support
+- Integration testing framework
+- Performance benchmarking
+- Chaos engineering capabilities
+
+### 🛠 Flexible Configuration
+- Hierarchical configuration system
+- Per-node customization
+- Network-wide settings
+- Environment variable support
+
+### 📡 Rich API
+- gRPC server for remote control
+- RESTful API via gRPC gateway
+- Command-line interface
+- Go library integration
+
+## Architecture
+
+Netrunner uses a client-server architecture:
+
+```
+┌─────────────┐     gRPC      ┌─────────────┐
+│   Client    │ ◄────────────► │   Server    │
+│   (CLI)     │                │   (RPC)     │
+└─────────────┘                └─────────────┘
+                                      │
+                               ┌──────┴──────┐
+                               │             │
+                         ┌─────▼───┐   ┌─────▼───┐
+                         │  Node   │   │  Node   │
+                         │Manager  │   │Manager  │
+                         └─────────┘   └─────────┘
+                               │             │
+                         ┌─────▼───┐   ┌─────▼───┐
+                         │  Lux    │   │  Lux    │
+                         │  Node   │   │  Node   │
+                         └─────────┘   └─────────┘
+```
+
+## Quick Start
+
+### Installation
+
+```bash
+# Install latest version
+curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/install.sh | sh -s
+
+# Add to PATH
+export PATH=~/bin:$PATH
+```
+
+### Start Your First Network
+
+```bash
+# Start the RPC server
+netrunner server \
+  --log-level debug \
+  --port=":8080" \
+  --grpc-gateway-port=":8081"
+
+# In another terminal, start a 5-node network
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path /path/to/luxd
+
+# Check network health
+netrunner control health --endpoint="0.0.0.0:8080"
+
+# Get node endpoints
+netrunner control uris --endpoint="0.0.0.0:8080"
+```
+
+### Deploy a Subnet
+
+```bash
+# Create subnet with specific validators
+netrunner control create-subnets \
+  '[{"participants": ["node1", "node2", "node3"]}]'
+
+# Deploy a blockchain on the subnet
+netrunner control create-blockchains \
+  '[{
+    "vm_name": "subnetevm",
+    "genesis": "/path/to/genesis.json"
+  }]' \
+  --plugin-dir /path/to/plugins
+```
+
+## Use Cases
+
+### Development Testing
+- Rapid prototyping of blockchain applications
+- Testing smart contracts and DApps
+- Debugging consensus mechanisms
+- Validating network upgrades
+
+### Integration Testing
+- Multi-chain interaction testing
+- Cross-subnet communication
+- API endpoint validation
+- Transaction throughput testing
+
+### Performance Testing
+- Benchmarking transaction throughput
+- Measuring network latency
+- Load testing under stress
+- Resource utilization analysis
+
+### Chaos Engineering
+- Node failure simulation
+- Network partition testing
+- Byzantine behavior testing
+- Recovery mechanism validation
+
+## Supported Engines
+
+Netrunner supports multiple blockchain engines:
+
+- **Lux** - Native Lux blockchain nodes
+- **Geth** - Ethereum nodes
+- **Optimism** - Layer 2 scaling solution
+- **Eth2** - Ethereum 2.0 beacon chain
+
+## Documentation Sections
+
+<Cards>
+  <Card title="Network Orchestration" href="/docs/network-orchestration">
+    Learn about network management, topologies, and dynamic node control
+  </Card>
+
+  <Card title="Test Network Setup" href="/docs/test-network-setup">
+    Complete guide to setting up various test network configurations
+  </Card>
+
+  <Card title="Configuration" href="/docs/configuration">
+    Comprehensive configuration reference for networks and nodes
+  </Card>
+
+  <Card title="Testing Scenarios" href="/docs/testing-scenarios">
+    Common testing patterns including unit, integration, and chaos tests
+  </Card>
+</Cards>
+
+## API Examples
+
+### Create Network
+
+```bash
+curl -X POST -k http://localhost:8081/v1/control/start -d '{
+  "execPath": "/path/to/luxd",
+  "numNodes": 5,
+  "logLevel": "INFO"
+}'
+```
+
+### Add Node
+
+```bash
+curl -X POST -k http://localhost:8081/v1/control/addnode -d '{
+  "name": "node99",
+  "execPath": "/path/to/luxd",
+  "logLevel": "INFO"
+}'
+```
+
+### Save Snapshot
+
+```bash
+curl -X POST -k http://localhost:8081/v1/control/savesnapshot -d '{
+  "snapshot_name": "test-state-v1"
+}'
+```
+
+## Command Reference
+
+### Server Commands
+- `netrunner server` - Start the RPC server
+- `netrunner ping` - Ping the server
+
+### Control Commands
+- `netrunner control start` - Start a network
+- `netrunner control stop` - Stop the network
+- `netrunner control health` - Check network health
+- `netrunner control status` - Get network status
+- `netrunner control uris` - Get node endpoints
+
+### Node Commands
+- `netrunner control add-node` - Add a node
+- `netrunner control remove-node` - Remove a node
+- `netrunner control pause-node` - Pause a node
+- `netrunner control resume-node` - Resume a node
+- `netrunner control restart-node` - Restart a node
+
+### Subnet Commands
+- `netrunner control create-subnets` - Create subnets
+- `netrunner control create-blockchains` - Deploy blockchains
+
+### Snapshot Commands
+- `netrunner control save-snapshot` - Save network state
+- `netrunner control load-snapshot` - Load network state
+- `netrunner control get-snapshot-names` - List snapshots
+- `netrunner control remove-snapshot` - Delete snapshot
+
+## Contributing
+
+We welcome contributions! Please see our [GitHub repository](https://github.com/luxfi/netrunner) for:
+- Issue tracking
+- Pull requests
+- Development guidelines
+- Community discussions
+
+## Support
+
+- **Documentation**: This site
+- **GitHub Issues**: [Report bugs and request features](https://github.com/luxfi/netrunner/issues)
+- **Discord**: Join our community for discussions
+- **Email**: support@lux.network
+
+## License
+
+Lux Netrunner is licensed under the BSD 3-Clause License. See the [LICENSE](https://github.com/luxfi/netrunner/blob/main/LICENSE) file for details.
+
+## Next Steps
+
+- [Set up your first test network](/docs/test-network-setup)
+- [Explore configuration options](/docs/configuration)
+- [Learn about network orchestration](/docs/network-orchestration)
+- [Run testing scenarios](/docs/testing-scenarios)

@@ -1,0 +1,418 @@
+---
+title: Network Orchestration
+description: Understanding Lux Netrunner's network orchestration capabilities
+---
+
+# Network Orchestration
+
+Lux Netrunner provides powerful network orchestration capabilities for managing multi-node blockchain networks. This guide covers the core concepts and features for orchestrating complex test networks.
+
+## Overview
+
+Network orchestration in Netrunner allows you to:
+- Dynamically create and manage multi-node networks
+- Configure node topologies and relationships
+- Manage node lifecycle (start, stop, pause, resume)
+- Coordinate subnet and blockchain deployments
+- Simulate network conditions and failures
+
+## Core Components
+
+### Network Interface
+
+The `Network` interface provides the primary abstraction for network management:
+
+```go
+type Network interface {
+    // Health check for all nodes
+    Healthy(context.Context) error
+
+    // Lifecycle management
+    Stop(context.Context) error
+    AddNode(node.Config) (node.Node, error)
+    RemoveNode(ctx context.Context, name string) error
+    PauseNode(ctx context.Context, name string) error
+    ResumeNode(ctx context.Context, name string) error
+
+    // Node access
+    GetNode(name string) (node.Node, error)
+    GetAllNodes() (map[string]node.Node, error)
+    GetNodeNames() ([]string, error)
+
+    // Snapshots
+    SaveSnapshot(context.Context, string) (string, error)
+    RemoveSnapshot(string) error
+    GetSnapshotNames() ([]string, error)
+}
+```
+
+### Node Configuration
+
+Each node in the network can be configured independently:
+
+```go
+type Config struct {
+    Name               string            `json:"name"`
+    IsBeacon          bool              `json:"isBeacon"`
+    StakingKey        string            `json:"stakingKey"`
+    StakingCert       string            `json:"stakingCert"`
+    StakingSigningKey string            `json:"stakingSigningKey"`
+    ConfigFile        string            `json:"configFile"`
+    ChainConfigFiles  map[string]string `json:"chainConfigFiles"`
+    Flags             map[string]interface{} `json:"flags"`
+    BinaryPath        string            `json:"binaryPath"`
+}
+```
+
+## Network Topologies
+
+### Linear Topology
+
+A simple chain of nodes where each node connects to the next:
+
+```bash
+netrunner control start \
+  --number-of-nodes=5 \
+  --node-path /path/to/luxd \
+  --topology linear
+```
+
+### Full Mesh Topology
+
+Every node connects to every other node:
+
+```bash
+netrunner control start \
+  --number-of-nodes=5 \
+  --node-path /path/to/luxd \
+  --topology mesh
+```
+
+### Star Topology
+
+All nodes connect to a central bootstrap node:
+
+```bash
+netrunner control start \
+  --number-of-nodes=5 \
+  --node-path /path/to/luxd \
+  --topology star
+```
+
+### Custom Topology
+
+Define custom node relationships:
+
+```json
+{
+  "nodes": {
+    "node1": {"peers": ["node2", "node3"]},
+    "node2": {"peers": ["node1", "node4"]},
+    "node3": {"peers": ["node1", "node5"]},
+    "node4": {"peers": ["node2", "node5"]},
+    "node5": {"peers": ["node3", "node4"]}
+  }
+}
+```
+
+## Dynamic Node Management
+
+### Adding Nodes
+
+Add nodes to a running network:
+
+```bash
+# Add a new node
+netrunner control add-node \
+  --endpoint="0.0.0.0:8080" \
+  --node-path /path/to/luxd \
+  node99
+
+# Configure the new node
+netrunner control add-node \
+  --node-config '{"index-enabled":true, "api-admin-enabled":true}' \
+  node100
+```
+
+### Removing Nodes
+
+Remove nodes from the network:
+
+```bash
+netrunner control remove-node node99
+```
+
+### Pausing and Resuming Nodes
+
+Simulate node failures and recovery:
+
+```bash
+# Pause a node (simulate failure)
+netrunner control pause-node node1
+
+# Resume the node
+netrunner control resume-node node1
+```
+
+## Subnet Orchestration
+
+### Creating Subnets
+
+Create subnets with specific validators:
+
+```bash
+# Create subnet with all nodes as validators
+netrunner control create-subnets '[{}]'
+
+# Create subnet with specific validators
+netrunner control create-subnets \
+  '[{"participants": ["node1", "node2", "node3"]}]'
+
+# Create multiple subnets
+netrunner control create-subnets \
+  '[
+    {"participants": ["node1", "node2"]},
+    {"participants": ["node3", "node4"]}
+  ]'
+```
+
+### Elastic Subnets
+
+Configure elastic subnets with custom parameters:
+
+```go
+type ElasticSubnetSpec struct {
+    SubnetID                 *string
+    AssetName                string
+    AssetSymbol              string
+    InitialSupply            uint64
+    MaxSupply                uint64
+    MinConsumptionRate       uint64
+    MaxConsumptionRate       uint64
+    MinValidatorStake        uint64
+    MaxValidatorStake        uint64
+    MinStakeDuration         time.Duration
+    MaxStakeDuration         time.Duration
+    MinDelegationFee         uint32
+    MinDelegatorStake        uint64
+    MaxValidatorWeightFactor byte
+    UptimeRequirement        uint32
+}
+```
+
+## Blockchain Deployment
+
+### Deploying Custom VMs
+
+Deploy custom virtual machines on subnets:
+
+```bash
+# Deploy a single blockchain
+netrunner control create-blockchains \
+  '[{
+    "vm_name": "subnetevm",
+    "genesis": "/path/to/genesis.json",
+    "subnet_id": "2S4rNkYf..."
+  }]' \
+  --plugin-dir /path/to/plugins
+
+# Deploy with chain configuration
+netrunner control create-blockchains \
+  '[{
+    "vm_name": "quantumvm",
+    "genesis": "/path/to/genesis.json",
+    "chain_config": "/path/to/chain.json",
+    "network_upgrade": "/path/to/upgrade.json"
+  }]' \
+  --plugin-dir /path/to/plugins
+```
+
+### Per-Node Configuration
+
+Configure blockchains differently on each node:
+
+```json
+{
+  "node1": {"rpc-tx-fee-cap": 101},
+  "node2": {"rpc-tx-fee-cap": 102},
+  "node3": {"rpc-tx-fee-cap": 103}
+}
+```
+
+## Network Snapshots
+
+### Saving Network State
+
+Save the complete network state for later restoration:
+
+```bash
+# Save current network state
+netrunner control save-snapshot my-test-state
+
+# List available snapshots
+netrunner control get-snapshot-names
+```
+
+### Restoring Network State
+
+Restore a network from a saved snapshot:
+
+```bash
+# Load a snapshot
+netrunner control load-snapshot my-test-state
+
+# Load with different binary
+netrunner control load-snapshot my-test-state \
+  --node-path /path/to/new/luxd \
+  --plugin-dir /path/to/new/plugins
+```
+
+## Advanced Orchestration
+
+### Multi-Engine Support
+
+Netrunner supports orchestrating multiple blockchain engines:
+
+```go
+// Engine types supported
+type EngineType string
+
+const (
+    LuxEngine  EngineType = "lux"   // Lux node
+    GethEngine EngineType = "geth"  // Ethereum Geth
+    OpEngine   EngineType = "op"    // Optimism
+    Eth2Engine EngineType = "eth2"  // Ethereum 2.0
+)
+```
+
+### Test Peer Attachment
+
+Attach test peers for message injection:
+
+```bash
+# Attach a test peer
+netrunner control attach-peer --node-name node1
+
+# Send messages through test peer
+netrunner control send-outbound-message \
+  --node-name node1 \
+  --peer-id "7Xhw2mDxuDS..." \
+  --message-op=16 \
+  --message-bytes-b64="EAA..."
+```
+
+### Health Monitoring
+
+Monitor network and node health:
+
+```bash
+# Check network health
+netrunner control health
+
+# Stream status updates
+netrunner control stream-status \
+  --push-interval=5s
+```
+
+## Best Practices
+
+### 1. Resource Management
+
+- Clean up test networks after use
+- Use snapshots for reproducible tests
+- Monitor resource consumption
+
+### 2. Configuration Management
+
+- Use configuration files for complex setups
+- Version control your test configurations
+- Document custom topologies
+
+### 3. Testing Strategies
+
+- Start with simple topologies
+- Gradually increase complexity
+- Use snapshots for regression testing
+- Automate common test scenarios
+
+### 4. Debugging
+
+- Enable debug logging for troubleshooting
+- Use node-specific configurations for isolation
+- Monitor individual node health
+- Check network connectivity
+
+## Example: Complete Network Setup
+
+Here's a complete example of setting up a test network:
+
+```bash
+#!/bin/bash
+
+# Start the RPC server
+netrunner server \
+  --log-level debug \
+  --port=":8080" \
+  --grpc-gateway-port=":8081" &
+
+# Wait for server
+sleep 2
+
+# Start a 5-node network
+netrunner control start \
+  --endpoint="0.0.0.0:8080" \
+  --number-of-nodes=5 \
+  --node-path /path/to/luxd \
+  --global-node-config '{
+    "network-peer-list-gossip-frequency": "250ms",
+    "api-admin-enabled": true
+  }'
+
+# Wait for network health
+netrunner control health --endpoint="0.0.0.0:8080"
+
+# Create a subnet
+netrunner control create-subnets \
+  '[{"participants": ["node1", "node2", "node3"]}]'
+
+# Deploy a blockchain
+netrunner control create-blockchains \
+  '[{
+    "vm_name": "quantumvm",
+    "genesis": "/path/to/genesis.json"
+  }]' \
+  --plugin-dir /path/to/plugins
+
+# Save the network state
+netrunner control save-snapshot test-network-v1
+
+# Run tests...
+
+# Clean up
+netrunner control stop --endpoint="0.0.0.0:8080"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Nodes fail to start**: Check binary path and permissions
+2. **Network unhealthy**: Verify port availability and firewall rules
+3. **Subnet creation fails**: Ensure sufficient validators
+4. **Snapshot restore fails**: Check disk space and file permissions
+
+### Debug Commands
+
+```bash
+# Get detailed status
+netrunner control status
+
+# Check specific node
+netrunner control get-node node1
+
+# View node logs
+netrunner control logs node1
+
+# Check RPC connectivity
+curl -X POST http://localhost:8081/v1/ping
+```
