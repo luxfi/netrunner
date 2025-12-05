@@ -1,0 +1,685 @@
+---
+title: Network Simulation Capabilities
+description: Advanced network simulation features and scenarios with Lux Netrunner
+---
+
+# Network Simulation Capabilities
+
+Lux Netrunner provides powerful simulation capabilities for testing blockchain networks under various conditions, from ideal scenarios to extreme failure cases.
+
+## Simulation Overview
+
+### Core Simulation Features
+
+- **Dynamic Network Topologies**: Create complex network structures
+- **Failure Injection**: Simulate node crashes, network partitions
+- **Latency Simulation**: Add realistic network delays
+- **Byzantine Behavior**: Test consensus under adversarial conditions
+- **Resource Constraints**: Simulate limited CPU, memory, bandwidth
+- **Time Manipulation**: Fast-forward or slow down network time
+- **State Snapshots**: Save and restore network states
+
+## Network Topology Simulation
+
+### Star Topology
+
+```go
+func CreateStarTopology(ctx context.Context) (*network.Network, error) {
+    // Central node with all others connected to it
+    config := &netrunner.NetworkConfig{
+        Topology: "star",
+        CentralNode: "node1",
+        SatelliteNodes: []string{"node2", "node3", "node4", "node5"},
+        NodeConfigs: []netrunner.NodeConfig{
+            {
+                Name: "node1",
+                IsBeacon: true,
+                Resources: netrunner.HighResources(),
+            },
+            // Satellite nodes with limited resources
+            {Name: "node2", Resources: netrunner.LowResources()},
+            {Name: "node3", Resources: netrunner.LowResources()},
+            {Name: "node4", Resources: netrunner.LowResources()},
+            {Name: "node5", Resources: netrunner.LowResources()},
+        },
+    }
+
+    network, err := netrunner.CreateNetwork(ctx, config)
+    if err != nil {
+        return nil, err
+    }
+
+    // Configure network links
+    for _, satellite := range config.SatelliteNodes {
+        network.SetLinkProperties(config.CentralNode, satellite, &LinkProps{
+            Bandwidth: "100Mbps",
+            Latency: "5ms",
+            PacketLoss: 0.01,
+        })
+    }
+
+    return network, nil
+}
+```
+
+### Mesh Topology
+
+```go
+func CreateMeshTopology(ctx context.Context, partial bool) (*network.Network, error) {
+    nodes := []string{"node1", "node2", "node3", "node4", "node5"}
+
+    config := &netrunner.NetworkConfig{
+        Topology: "mesh",
+        PartialMesh: partial,
+        Nodes: nodes,
+    }
+
+    network, err := netrunner.CreateNetwork(ctx, config)
+    if err != nil {
+        return nil, err
+    }
+
+    // Create connections between all pairs (full mesh)
+    // or subset of pairs (partial mesh)
+    connections := generateMeshConnections(nodes, partial)
+
+    for _, conn := range connections {
+        network.Connect(conn.From, conn.To, &LinkProps{
+            Bandwidth: "1Gbps",
+            Latency: randomLatency(1, 50), // 1-50ms
+            Jitter: "2ms",
+        })
+    }
+
+    return network, nil
+}
+```
+
+### Hierarchical Topology
+
+```bash
+#!/bin/bash
+
+# Create hierarchical network structure
+create_hierarchical_network() {
+    # Layer 1: Core validators
+    netrunner control start \
+        --node-names "core1,core2,core3" \
+        --node-config '{
+            "stake-amount": 2000000000000,
+            "delegator-fee": 10000
+        }'
+
+    # Layer 2: Regional validators
+    for region in us eu asia; do
+        netrunner control add-node \
+            --name "regional-${region}" \
+            --bootstrap-nodes "core1,core2,core3" \
+            --node-config '{
+                "stake-amount": 1000000000000,
+                "max-connections": 50
+            }'
+    done
+
+    # Layer 3: Edge nodes
+    for i in {1..10}; do
+        REGION=$((i % 3))
+        case $REGION in
+            0) BOOTSTRAP="regional-us" ;;
+            1) BOOTSTRAP="regional-eu" ;;
+            2) BOOTSTRAP="regional-asia" ;;
+        esac
+
+        netrunner control add-node \
+            --name "edge-${i}" \
+            --bootstrap-nodes "${BOOTSTRAP}" \
+            --node-config '{
+                "stake-amount": 0,
+                "pruning-enabled": true
+            }'
+    done
+}
+```
+
+## Failure Simulation
+
+### Node Failure Scenarios
+
+```go
+type FailureSimulator struct {
+    network network.Network
+    random  *rand.Rand
+}
+
+func (fs *FailureSimulator) SimulateRandomFailures(
+    failureRate float64,
+    mtbf time.Duration,
+    mttr time.Duration,
+) {
+    nodes, _ := fs.network.GetAllNodes()
+
+    for {
+        // Wait for mean time between failures
+        time.Sleep(fs.exponentialDuration(mtbf))
+
+        // Select random node to fail
+        nodeList := maps.Keys(nodes)
+        failNode := nodeList[fs.random.Intn(len(nodeList))]
+
+        // Simulate failure
+        log.Printf("Simulating failure of node: %s", failNode)
+        fs.network.PauseNode(failNode)
+
+        // Recovery after mean time to repair
+        go func(node string) {
+            time.Sleep(fs.exponentialDuration(mttr))
+            log.Printf("Recovering node: %s", node)
+            fs.network.ResumeNode(node)
+        }(failNode)
+    }
+}
+
+func (fs *FailureSimulator) SimulateCascadingFailure() {
+    // Start with single node failure
+    initialFailure := "node1"
+    fs.network.PauseNode(initialFailure)
+
+    // Cascade to dependent nodes
+    dependencies := map[string][]string{
+        "node1": {"node2", "node3"},
+        "node2": {"node4"},
+        "node3": {"node5"},
+    }
+
+    queue := []string{initialFailure}
+    failed := make(map[string]bool)
+
+    for len(queue) > 0 {
+        current := queue[0]
+        queue = queue[1:]
+
+        if failed[current] {
+            continue
+        }
+
+        failed[current] = true
+        time.Sleep(500 * time.Millisecond) // Cascade delay
+
+        for _, dep := range dependencies[current] {
+            if !failed[dep] {
+                log.Printf("Cascade failure: %s -> %s", current, dep)
+                fs.network.PauseNode(dep)
+                queue = append(queue, dep)
+            }
+        }
+    }
+}
+```
+
+### Network Partition Simulation
+
+```go
+func SimulateNetworkPartition(network network.Network) error {
+    // Create two network partitions
+    partition1 := []string{"node1", "node2", "node3"}
+    partition2 := []string{"node4", "node5", "node6"}
+
+    log.Println("Creating network partition...")
+
+    // Block all communication between partitions
+    for _, n1 := range partition1 {
+        for _, n2 := range partition2 {
+            if err := network.BlockConnection(n1, n2); err != nil {
+                return err
+            }
+            if err := network.BlockConnection(n2, n1); err != nil {
+                return err
+            }
+        }
+    }
+
+    // Simulate partition for specified duration
+    partitionDuration := 30 * time.Second
+    time.Sleep(partitionDuration)
+
+    log.Println("Healing network partition...")
+
+    // Restore connections
+    for _, n1 := range partition1 {
+        for _, n2 := range partition2 {
+            network.UnblockConnection(n1, n2)
+            network.UnblockConnection(n2, n1)
+        }
+    }
+
+    return nil
+}
+```
+
+### Byzantine Node Simulation
+
+```go
+type ByzantineNode struct {
+    node     node.Node
+    behavior ByzantineBehavior
+}
+
+type ByzantineBehavior int
+
+const (
+    DoubleSigning ByzantineBehavior = iota
+    ConflictingVotes
+    SelectiveBroadcast
+    MessageDelaying
+    DataCorruption
+)
+
+func (bn *ByzantineNode) SimulateByzantineBehavior(ctx context.Context) {
+    switch bn.behavior {
+    case DoubleSigning:
+        bn.simulateDoubleSigning(ctx)
+    case ConflictingVotes:
+        bn.simulateConflictingVotes(ctx)
+    case SelectiveBroadcast:
+        bn.simulateSelectiveBroadcast(ctx)
+    case MessageDelaying:
+        bn.simulateMessageDelaying(ctx)
+    case DataCorruption:
+        bn.simulateDataCorruption(ctx)
+    }
+}
+
+func (bn *ByzantineNode) simulateConflictingVotes(ctx context.Context) {
+    // Send different votes to different peers
+    peers := bn.node.GetPeers()
+
+    for i, peer := range peers {
+        vote := &Vote{
+            BlockID: fmt.Sprintf("block_%d", i), // Different block for each peer
+            Height: 100,
+            Round: 1,
+        }
+
+        bn.node.SendToPeer(peer, vote)
+    }
+}
+```
+
+## Network Condition Simulation
+
+### Latency and Bandwidth Simulation
+
+```bash
+#!/bin/bash
+
+# Simulate various network conditions using tc (traffic control)
+simulate_network_conditions() {
+    NODE=$1
+    CONDITION=$2
+
+    case $CONDITION in
+        "slow")
+            # Simulate slow network (2G/3G mobile)
+            tc qdisc add dev eth0 root netem delay 300ms 50ms \
+                loss 2% duplicate 1% corrupt 0.1%
+            tc qdisc add dev eth0 root tbf rate 256kbit burst 32kbit latency 400ms
+            ;;
+
+        "congested")
+            # Simulate network congestion
+            tc qdisc add dev eth0 root netem delay 100ms 20ms \
+                loss 5% duplicate 2%
+            tc qdisc add dev eth0 root tbf rate 1mbit burst 32kbit latency 200ms
+            ;;
+
+        "satellite")
+            # Simulate satellite link
+            tc qdisc add dev eth0 root netem delay 600ms 100ms \
+                loss 0.5%
+            tc qdisc add dev eth0 root tbf rate 10mbit burst 64kbit latency 700ms
+            ;;
+
+        "datacenter")
+            # Simulate datacenter network
+            tc qdisc add dev eth0 root netem delay 0.5ms 0.1ms
+            tc qdisc add dev eth0 root tbf rate 10gbit burst 1mbit latency 1ms
+            ;;
+    esac
+}
+
+# Apply different conditions to different nodes
+for i in {1..5}; do
+    CONDITIONS=("slow" "congested" "satellite" "datacenter" "normal")
+    CONDITION=${CONDITIONS[$((i-1))]}
+    simulate_network_conditions "node${i}" "${CONDITION}"
+done
+```
+
+### Packet Loss and Jitter
+
+```go
+func SimulateUnreliableNetwork(network network.Network) {
+    nodes, _ := network.GetAllNodes()
+
+    for name := range nodes {
+        // Configure different network conditions per node
+        conditions := &NetworkConditions{
+            PacketLoss: rand.Float64() * 0.1,    // 0-10% loss
+            Jitter:     time.Duration(rand.Intn(50)) * time.Millisecond,
+            Reordering: rand.Float64() * 0.05,   // 0-5% reordering
+            Duplication: rand.Float64() * 0.02,  // 0-2% duplication
+            Corruption: rand.Float64() * 0.001,  // 0-0.1% corruption
+        }
+
+        network.SetNodeNetworkConditions(name, conditions)
+    }
+}
+```
+
+## Resource Constraint Simulation
+
+### CPU and Memory Limits
+
+```go
+func SimulateResourceConstraints(network network.Network) error {
+    constraints := []ResourceConstraint{
+        {Node: "node1", CPULimit: "0.5", MemoryLimit: "512M"},
+        {Node: "node2", CPULimit: "1.0", MemoryLimit: "1G"},
+        {Node: "node3", CPULimit: "2.0", MemoryLimit: "2G"},
+        {Node: "node4", CPULimit: "0.25", MemoryLimit: "256M"},
+        {Node: "node5", CPULimit: "4.0", MemoryLimit: "4G"},
+    }
+
+    for _, c := range constraints {
+        if err := network.SetResourceLimits(c.Node, c.CPULimit, c.MemoryLimit); err != nil {
+            return err
+        }
+    }
+
+    // Monitor resource usage under constraints
+    go monitorResourceUsage(network)
+
+    return nil
+}
+```
+
+### Disk I/O Throttling
+
+```bash
+#!/bin/bash
+
+# Throttle disk I/O for specific nodes
+throttle_disk_io() {
+    NODE=$1
+    READ_BPS=$2
+    WRITE_BPS=$3
+
+    # Get node's data directory
+    DATA_DIR=$(netrunner control get-node-info ${NODE} | jq -r '.dataDir')
+
+    # Apply I/O limits using cgroups
+    cgcreate -g blkio:/netrunner/${NODE}
+    echo "8:0 ${READ_BPS}" > /sys/fs/cgroup/blkio/netrunner/${NODE}/blkio.throttle.read_bps_device
+    echo "8:0 ${WRITE_BPS}" > /sys/fs/cgroup/blkio/netrunner/${NODE}/blkio.throttle.write_bps_device
+
+    # Move node process to cgroup
+    PID=$(netrunner control get-node-info ${NODE} | jq -r '.pid')
+    echo ${PID} > /sys/fs/cgroup/blkio/netrunner/${NODE}/cgroup.procs
+}
+
+# Apply different I/O limits
+throttle_disk_io "node1" "10485760" "10485760"  # 10 MB/s
+throttle_disk_io "node2" "5242880" "5242880"    # 5 MB/s
+throttle_disk_io "node3" "1048576" "1048576"    # 1 MB/s
+```
+
+## Time Manipulation
+
+### Fast-Forward Time
+
+```go
+func SimulateTimeFastForward(network network.Network, speedup float64) {
+    // Configure network to run at accelerated time
+    network.SetTimeAcceleration(speedup)
+
+    // Example: 10x speedup means 1 real second = 10 simulated seconds
+    log.Printf("Time acceleration set to %.1fx", speedup)
+
+    // Monitor block production at accelerated rate
+    go func() {
+        ticker := time.NewTicker(1 * time.Second)
+        for range ticker.C {
+            height, _ := network.GetBlockHeight()
+            simTime := network.GetSimulatedTime()
+            log.Printf("Real time: %v, Sim time: %v, Height: %d",
+                time.Now(), simTime, height)
+        }
+    }()
+}
+```
+
+## Complex Simulation Scenarios
+
+### Multi-Region Deployment
+
+```go
+func SimulateMultiRegionDeployment() (*network.Network, error) {
+    regions := []Region{
+        {Name: "us-east", Latency: 10, Nodes: 3},
+        {Name: "eu-west", Latency: 50, Nodes: 3},
+        {Name: "asia-pacific", Latency: 100, Nodes: 3},
+    }
+
+    network, err := netrunner.CreateNetwork(&NetworkConfig{
+        Regions: regions,
+    })
+
+    if err != nil {
+        return nil, err
+    }
+
+    // Configure inter-region latencies
+    network.SetRegionLatency("us-east", "eu-west", 80*time.Millisecond)
+    network.SetRegionLatency("us-east", "asia-pacific", 150*time.Millisecond)
+    network.SetRegionLatency("eu-west", "asia-pacific", 120*time.Millisecond)
+
+    return network, nil
+}
+```
+
+### DDoS Attack Simulation
+
+```go
+func SimulateDDoSAttack(target string, intensity int) {
+    // Create attacker nodes
+    attackers := make([]*AttackerNode, intensity)
+    for i := 0; i < intensity; i++ {
+        attackers[i] = &AttackerNode{
+            ID: fmt.Sprintf("attacker-%d", i),
+            Target: target,
+            RequestsPerSecond: 1000,
+        }
+    }
+
+    // Start attack
+    var wg sync.WaitGroup
+    for _, attacker := range attackers {
+        wg.Add(1)
+        go func(a *AttackerNode) {
+            defer wg.Done()
+            a.Attack()
+        }(attacker)
+    }
+
+    // Monitor target node health during attack
+    go monitorNodeHealth(target)
+
+    // Stop attack after duration
+    time.Sleep(60 * time.Second)
+    for _, attacker := range attackers {
+        attacker.Stop()
+    }
+
+    wg.Wait()
+}
+```
+
+## Simulation Orchestration
+
+### Scenario Runner
+
+```yaml
+# simulation-scenario.yaml
+name: "Complex Network Simulation"
+duration: "1h"
+steps:
+  - name: "Initial Setup"
+    action: "start_network"
+    params:
+      nodes: 10
+      topology: "mesh"
+
+  - name: "Warmup Phase"
+    action: "wait"
+    duration: "5m"
+
+  - name: "Inject Failures"
+    action: "node_failures"
+    params:
+      failure_rate: 0.1
+      mtbf: "10m"
+      mttr: "2m"
+
+  - name: "Network Partition"
+    action: "partition"
+    at: "15m"
+    params:
+      groups: [["node1", "node2", "node3"], ["node4", "node5", "node6"]]
+      duration: "5m"
+
+  - name: "Byzantine Behavior"
+    action: "byzantine"
+    at: "25m"
+    params:
+      nodes: ["node7"]
+      behavior: "double_signing"
+
+  - name: "Load Test"
+    action: "load"
+    at: "30m"
+    params:
+      tps: 1000
+      duration: "15m"
+
+  - name: "Recovery"
+    action: "heal_all"
+    at: "45m"
+
+  - name: "Final Verification"
+    action: "verify_consensus"
+    at: "50m"
+```
+
+### Automated Simulation Runner
+
+```go
+func RunSimulationScenario(scenarioFile string) error {
+    scenario, err := LoadScenario(scenarioFile)
+    if err != nil {
+        return err
+    }
+
+    network, err := netrunner.StartNetwork(scenario.NetworkConfig)
+    if err != nil {
+        return err
+    }
+    defer network.Stop()
+
+    // Execute scenario steps
+    for _, step := range scenario.Steps {
+        log.Printf("Executing step: %s", step.Name)
+
+        if step.At != "" {
+            waitUntil(scenario.StartTime, step.At)
+        }
+
+        switch step.Action {
+        case "node_failures":
+            go simulateNodeFailures(network, step.Params)
+        case "partition":
+            go simulatePartition(network, step.Params)
+        case "byzantine":
+            go simulateByzantine(network, step.Params)
+        case "load":
+            go simulateLoad(network, step.Params)
+        case "heal_all":
+            healNetwork(network)
+        case "verify_consensus":
+            verifyConsensus(network)
+        }
+    }
+
+    // Wait for scenario completion
+    time.Sleep(scenario.Duration)
+
+    // Generate report
+    return generateSimulationReport(scenario, network)
+}
+```
+
+## Monitoring and Analysis
+
+### Real-time Simulation Dashboard
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Simulation Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="network-topology"></div>
+    <div id="node-health"></div>
+    <div id="consensus-metrics"></div>
+    <div id="performance-charts"></div>
+
+    <script>
+        // WebSocket connection to simulation
+        const ws = new WebSocket('ws://localhost:8080/simulation');
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateDashboard(data);
+        };
+
+        function updateDashboard(data) {
+            // Update network topology visualization
+            updateTopology(data.topology);
+
+            // Update node health indicators
+            updateNodeHealth(data.nodes);
+
+            // Update consensus metrics
+            updateConsensusMetrics(data.consensus);
+
+            // Update performance charts
+            updatePerformanceCharts(data.performance);
+        }
+    </script>
+</body>
+</html>
+```
+
+## Best Practices
+
+1. **Start Simple**: Begin with basic scenarios and increase complexity
+2. **Reproducibility**: Use seeds for random generators
+3. **Isolation**: Run simulations in isolated environments
+4. **Monitoring**: Collect comprehensive metrics during simulation
+5. **Gradual Changes**: Introduce failures and conditions gradually
+6. **Recovery Testing**: Always test recovery mechanisms
+7. **Documentation**: Document simulation parameters and results
+8. **Automation**: Automate common simulation scenarios
+9. **Validation**: Verify expected behavior after each simulation
+10. **Resource Management**: Clean up resources after simulations
