@@ -7,8 +7,6 @@
   "index-enabled":true,
   "log-display-level":"ERROR",
   "log-level": "DEBUG",
-  "dev-mode": true,
-  "poa-single-node-mode": true,
-  "network-health-min-conn-peers": 0,
-  "skip-bootstrap": true
+  "sybil-protection-enabled": false,
+  "network-health-min-conn-peers": 0
 }
