@@ -1,0 +1,682 @@
+---
+title: Performance Testing Guide
+description: Comprehensive guide to performance testing and benchmarking with Lux Netrunner
+---
+
+# Performance Testing Guide
+
+This guide provides detailed instructions for conducting performance tests, benchmarking network capacity, and analyzing blockchain metrics using Lux Netrunner.
+
+## Overview
+
+Performance testing with Netrunner enables you to:
+- Measure transaction throughput (TPS)
+- Analyze block propagation latency
+- Test network scalability limits
+- Benchmark consensus performance
+- Evaluate resource utilization
+- Stress test under various conditions
+
+## Performance Metrics
+
+### Key Performance Indicators (KPIs)
+
+```yaml
+Throughput Metrics:
+  - Transactions Per Second (TPS)
+  - Blocks Per Second (BPS)
+  - Messages Per Second
+  - Cross-chain Transfer Rate
+
+Latency Metrics:
+  - Block Finality Time
+  - Transaction Confirmation Time
+  - P2P Message Latency
+  - API Response Time
+
+Resource Metrics:
+  - CPU Utilization per Node
+  - Memory Consumption
+  - Disk I/O Operations
+  - Network Bandwidth Usage
+
+Consensus Metrics:
+  - Time to Consensus
+  - Validator Agreement Rate
+  - Fork Resolution Time
+  - Byzantine Fault Recovery
+```
+
+## Basic Performance Testing
+
+### Transaction Throughput Test
+
+```go
+package performance
+
+import (
+    "context"
+    "sync"
+    "sync/atomic"
+    "time"
+    "testing"
+
+    "github.com/luxfi/netrunner"
+    "github.com/stretchr/testify/require"
+)
+
+func TestTransactionThroughput(t *testing.T) {
+    ctx := context.Background()
+
+    // Start optimized network
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 5,
+        BinaryPath: luxdPath,
+        Flags: map[string]interface{}{
+            "snow-sample-size": 2,
+            "snow-quorum-size": 2,
+            "snow-optimal-processing": 100,
+            "snow-max-processing": 2048,
+            "db-type": "memdb", // Use in-memory DB for max speed
+        },
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Wait for network to be healthy
+    require.NoError(t, network.Healthy(ctx))
+
+    // Prepare wallets
+    wallets := prepareWallets(network, 10)
+
+    // Metrics collection
+    var totalTxs atomic.Uint64
+    var successfulTxs atomic.Uint64
+    var failedTxs atomic.Uint64
+
+    // Start metrics collector
+    go collectMetrics(network, &totalTxs, &successfulTxs, &failedTxs)
+
+    // Run load test
+    startTime := time.Now()
+    duration := 60 * time.Second
+
+    var wg sync.WaitGroup
+    for i := 0; i < len(wallets); i++ {
+        wg.Add(1)
+        go func(wallet Wallet) {
+            defer wg.Done()
+
+            for time.Since(startTime) < duration {
+                tx := createTransaction(wallet)
+                if err := submitTransaction(network, tx); err != nil {
+                    failedTxs.Add(1)
+                } else {
+                    successfulTxs.Add(1)
+                }
+                totalTxs.Add(1)
+            }
+        }(wallets[i])
+    }
+
+    wg.Wait()
+    elapsed := time.Since(startTime)
+
+    // Calculate metrics
+    tps := float64(successfulTxs.Load()) / elapsed.Seconds()
+    successRate := float64(successfulTxs.Load()) / float64(totalTxs.Load()) * 100
+
+    // Report results
+    t.Logf("Performance Test Results:")
+    t.Logf("  Duration: %v", elapsed)
+    t.Logf("  Total Transactions: %d", totalTxs.Load())
+    t.Logf("  Successful: %d", successfulTxs.Load())
+    t.Logf("  Failed: %d", failedTxs.Load())
+    t.Logf("  TPS: %.2f", tps)
+    t.Logf("  Success Rate: %.2f%%", successRate)
+
+    // Assert minimum performance
+    require.Greater(t, tps, 100.0, "TPS below minimum threshold")
+    require.Greater(t, successRate, 95.0, "Success rate below threshold")
+}
+```
+
+### Block Production Rate Test
+
+```bash
+#!/bin/bash
+
+# Start network with fast block production
+netrunner control start \
+  --number-of-nodes=5 \
+  --node-path ${LUXD_PATH} \
+  --global-node-config '{
+    "proposervm-use-current-height": true,
+    "proposervm-max-block-delay": 100000000,
+    "consensus-on-accept-gossip-validator-size": 0,
+    "consensus-on-accept-gossip-peer-size": 10
+  }'
+
+# Wait for network health
+netrunner control health
+
+# Monitor block production for 1 minute
+START_HEIGHT=$(curl -s -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "platform.getHeight",
+  "params": {},
+  "id": 1
+}' -H 'content-type:application/json' \
+  http://localhost:9630/ext/bc/P | jq -r '.result.height')
+
+sleep 60
+
+END_HEIGHT=$(curl -s -X POST --data '{
+  "jsonrpc": "2.0",
+  "method": "platform.getHeight",
+  "params": {},
+  "id": 1
+}' -H 'content-type:application/json' \
+  http://localhost:9630/ext/bc/P | jq -r '.result.height')
+
+BLOCKS_PRODUCED=$((END_HEIGHT - START_HEIGHT))
+echo "Blocks produced in 60 seconds: ${BLOCKS_PRODUCED}"
+echo "Block production rate: $(echo "scale=2; ${BLOCKS_PRODUCED} / 60" | bc) blocks/second"
+```
+
+## Advanced Performance Testing
+
+### Network Scalability Test
+
+```go
+func TestNetworkScalability(t *testing.T) {
+    ctx := context.Background()
+
+    nodeCounts := []int{5, 10, 20, 50}
+    results := make(map[int]PerformanceResult)
+
+    for _, nodeCount := range nodeCounts {
+        t.Run(fmt.Sprintf("%d_nodes", nodeCount), func(t *testing.T) {
+            // Start network with specified node count
+            network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+                NumNodes: nodeCount,
+                BinaryPath: luxdPath,
+            })
+            require.NoError(t, err)
+            defer network.Stop(ctx)
+
+            // Run performance test
+            result := runPerformanceTest(network, 30*time.Second)
+            results[nodeCount] = result
+
+            // Log results
+            t.Logf("Nodes: %d, TPS: %.2f, Latency: %.2fms",
+                nodeCount, result.TPS, result.AvgLatency)
+        })
+    }
+
+    // Analyze scaling efficiency
+    baselineTPS := results[5].TPS
+    for nodes, result := range results {
+        efficiency := (result.TPS / baselineTPS) / float64(nodes/5) * 100
+        t.Logf("Scaling efficiency at %d nodes: %.2f%%", nodes, efficiency)
+    }
+}
+```
+
+### Consensus Performance Under Load
+
+```go
+func TestConsensusPerformance(t *testing.T) {
+    ctx := context.Background()
+
+    // Start network with consensus monitoring
+    network, err := netrunner.StartNetwork(ctx, &netrunner.Config{
+        NumNodes: 7,
+        BinaryPath: luxdPath,
+        Flags: map[string]interface{}{
+            "consensus-gossip-frequency": "100ms",
+            "consensus-shutdown-timeout": "1s",
+        },
+    })
+    require.NoError(t, err)
+    defer network.Stop(ctx)
+
+    // Monitor consensus metrics
+    consensusMetrics := make(chan ConsensusMetric, 1000)
+    go monitorConsensus(network, consensusMetrics)
+
+    // Generate load
+    loadGen := NewLoadGenerator(network)
+    loadGen.Start(1000) // 1000 TPS target
+    defer loadGen.Stop()
+
+    // Collect metrics for 2 minutes
+    time.Sleep(2 * time.Minute)
+
+    // Analyze consensus performance
+    var metrics []ConsensusMetric
+    close(consensusMetrics)
+    for m := range consensusMetrics {
+        metrics = append(metrics, m)
+    }
+
+    // Calculate statistics
+    avgConsensusTime := calculateAverage(metrics, func(m ConsensusMetric) float64 {
+        return m.ConsensusTime.Seconds()
+    })
+
+    avgValidatorAgreement := calculateAverage(metrics, func(m ConsensusMetric) float64 {
+        return float64(m.ValidatorAgreement)
+    })
+
+    t.Logf("Consensus Performance Under Load:")
+    t.Logf("  Average Consensus Time: %.3fs", avgConsensusTime)
+    t.Logf("  Validator Agreement: %.2f%%", avgValidatorAgreement)
+    t.Logf("  Total Rounds: %d", len(metrics))
+
+    // Assert performance requirements
+    require.Less(t, avgConsensusTime, 2.0, "Consensus taking too long")
+    require.Greater(t, avgValidatorAgreement, 95.0, "Low validator agreement")
+}
+```
+
+## Load Generation Tools
+
+### Custom Load Generator
+
+```go
+type LoadGenerator struct {
+    network    network.Network
+    targetTPS  int
+    stopCh     chan struct{}
+    wg         sync.WaitGroup
+    metrics    *LoadMetrics
+}
+
+func (lg *LoadGenerator) Start(targetTPS int) {
+    lg.targetTPS = targetTPS
+    lg.stopCh = make(chan struct{})
+
+    // Calculate transactions per worker
+    numWorkers := 10
+    txPerWorkerPerSecond := targetTPS / numWorkers
+    interval := time.Second / time.Duration(txPerWorkerPerSecond)
+
+    for i := 0; i < numWorkers; i++ {
+        lg.wg.Add(1)
+        go lg.worker(i, interval)
+    }
+}
+
+func (lg *LoadGenerator) worker(id int, interval time.Duration) {
+    defer lg.wg.Done()
+
+    ticker := time.NewTicker(interval)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-lg.stopCh:
+            return
+        case <-ticker.C:
+            tx := lg.generateTransaction(id)
+            start := time.Now()
+
+            if err := lg.submitTransaction(tx); err != nil {
+                lg.metrics.recordError(err)
+            } else {
+                lg.metrics.recordSuccess(time.Since(start))
+            }
+        }
+    }
+}
+```
+
+### Batch Transaction Submission
+
+```bash
+#!/bin/bash
+
+# Function to submit batch of transactions
+submit_batch() {
+    local BATCH_SIZE=$1
+    local BATCH_ID=$2
+
+    echo "Submitting batch ${BATCH_ID} with ${BATCH_SIZE} transactions..."
+
+    for i in $(seq 1 ${BATCH_SIZE}); do
+        # Create transaction in background
+        {
+            curl -s -X POST --data "{
+                \"jsonrpc\": \"2.0\",
+                \"method\": \"platform.issueTx\",
+                \"params\": {
+                    \"tx\": \"${TRANSACTION_DATA}\"
+                },
+                \"id\": ${i}
+            }" -H 'content-type:application/json' \
+            http://localhost:9630/ext/bc/P > /dev/null
+        } &
+    done
+
+    # Wait for batch to complete
+    wait
+    echo "Batch ${BATCH_ID} completed"
+}
+
+# Submit multiple batches
+for batch in {1..10}; do
+    submit_batch 100 ${batch}
+    sleep 1
+done
+```
+
+## Resource Monitoring
+
+### System Resource Monitoring
+
+```go
+func monitorResources(network network.Network) *ResourceMetrics {
+    metrics := &ResourceMetrics{
+        Nodes: make(map[string]*NodeResources),
+    }
+
+    nodes, _ := network.GetAllNodes()
+
+    for name, node := range nodes {
+        pid := node.GetProcessID()
+
+        // Get process stats
+        proc, _ := process.NewProcess(pid)
+        cpuPercent, _ := proc.CPUPercent()
+        memInfo, _ := proc.MemoryInfo()
+        ioCounters, _ := proc.IOCounters()
+
+        metrics.Nodes[name] = &NodeResources{
+            CPUPercent:  cpuPercent,
+            MemoryRSS:   memInfo.RSS,
+            MemoryVMS:   memInfo.VMS,
+            DiskReadOps: ioCounters.ReadCount,
+            DiskWriteOps: ioCounters.WriteCount,
+            DiskReadBytes: ioCounters.ReadBytes,
+            DiskWriteBytes: ioCounters.WriteBytes,
+        }
+    }
+
+    return metrics
+}
+```
+
+### Network Bandwidth Monitoring
+
+```bash
+#!/bin/bash
+
+# Monitor network bandwidth for all nodes
+monitor_bandwidth() {
+    echo "Monitoring network bandwidth..."
+
+    # Get initial stats
+    declare -A INITIAL_RX INITIAL_TX
+
+    for i in {1..5}; do
+        PORT=$((9651 + (i-1)*2))
+        STATS=$(ss -i "sport = :${PORT}" | grep -oP 'bytes_\K[0-9]+')
+        INITIAL_RX[node${i}]=$(echo ${STATS} | cut -d' ' -f1)
+        INITIAL_TX[node${i}]=$(echo ${STATS} | cut -d' ' -f2)
+    done
+
+    sleep 10
+
+    # Get final stats and calculate bandwidth
+    for i in {1..5}; do
+        PORT=$((9651 + (i-1)*2))
+        STATS=$(ss -i "sport = :${PORT}" | grep -oP 'bytes_\K[0-9]+')
+        FINAL_RX=$(echo ${STATS} | cut -d' ' -f1)
+        FINAL_TX=$(echo ${STATS} | cut -d' ' -f2)
+
+        RX_BW=$((($FINAL_RX - ${INITIAL_RX[node${i}]}) / 10))
+        TX_BW=$((($FINAL_TX - ${INITIAL_TX[node${i}]}) / 10))
+
+        echo "node${i}: RX: ${RX_BW} bytes/sec, TX: ${TX_BW} bytes/sec"
+    done
+}
+
+monitor_bandwidth
+```
+
+## Performance Optimization
+
+### Network Configuration for Performance
+
+```json
+{
+  "snow-sample-size": 2,
+  "snow-quorum-size": 2,
+  "snow-virtuous-commit-threshold": 5,
+  "snow-rogue-commit-threshold": 10,
+  "snow-optimal-processing": 50,
+  "snow-max-processing": 2048,
+  "snow-max-time-processing": "2s",
+  "consensus-gossip-frequency": "250ms",
+  "consensus-shutdown-timeout": "5s",
+  "proposervm-use-current-height": true,
+  "api-max-duration": "0s",
+  "api-max-blocks-per-request": 0,
+  "continuous-profiler-frequency": "15m",
+  "db-type": "leveldb",
+  "network-compression-type": "zstd",
+  "network-max-reconnect-delay": "1s",
+  "network-health-max-send-fail-rate": 0.9,
+  "state-sync-enabled": true
+}
+```
+
+### Database Optimization
+
+```go
+func optimizeDatabaseForPerformance(network network.Network) {
+    nodes, _ := network.GetAllNodes()
+
+    for _, node := range nodes {
+        // Configure LevelDB for performance
+        node.SetConfig(map[string]interface{}{
+            "db-type": "leveldb",
+            "leveldb-compression": "snappy",
+            "leveldb-filter-bits": 12,
+            "leveldb-cache-size": 536870912, // 512MB
+            "leveldb-write-buffer-size": 134217728, // 128MB
+            "leveldb-max-open-files": 1024,
+        })
+    }
+}
+```
+
+## Performance Reports
+
+### Generating HTML Performance Report
+
+```go
+func generatePerformanceReport(results *TestResults) {
+    html := `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Netrunner Performance Report</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    </head>
+    <body>
+        <h1>Performance Test Results</h1>
+        <div id="tps-chart"></div>
+        <div id="latency-chart"></div>
+        <div id="resource-chart"></div>
+        <script>
+            // TPS over time
+            var tpsData = [{
+                x: %s,
+                y: %s,
+                type: 'scatter',
+                name: 'TPS'
+            }];
+            Plotly.newPlot('tps-chart', tpsData);
+
+            // Latency distribution
+            var latencyData = [{
+                x: %s,
+                type: 'histogram',
+                name: 'Latency (ms)'
+            }];
+            Plotly.newPlot('latency-chart', latencyData);
+
+            // Resource usage
+            var resourceData = [{
+                x: ['CPU', 'Memory', 'Disk I/O'],
+                y: %s,
+                type: 'bar'
+            }];
+            Plotly.newPlot('resource-chart', resourceData);
+        </script>
+    </body>
+    </html>
+    `
+
+    // Format data and write report
+    formattedHTML := fmt.Sprintf(html,
+        results.TimePoints,
+        results.TPSValues,
+        results.LatencyValues,
+        results.ResourceValues,
+    )
+
+    os.WriteFile("performance-report.html", []byte(formattedHTML), 0644)
+}
+```
+
+### CSV Export for Analysis
+
+```bash
+#!/bin/bash
+
+# Export performance metrics to CSV
+export_metrics() {
+    echo "timestamp,node,tps,latency_ms,cpu_percent,memory_mb" > metrics.csv
+
+    while true; do
+        TIMESTAMP=$(date +%s)
+
+        for i in {1..5}; do
+            # Get metrics from node
+            METRICS=$(curl -s http://localhost:$((9630 + (i-1)*2))/ext/metrics)
+
+            TPS=$(echo ${METRICS} | jq -r '.tps')
+            LATENCY=$(echo ${METRICS} | jq -r '.avgLatency')
+            CPU=$(ps aux | grep "node${i}" | awk '{print $3}')
+            MEM=$(ps aux | grep "node${i}" | awk '{print $6}')
+
+            echo "${TIMESTAMP},node${i},${TPS},${LATENCY},${CPU},${MEM}" >> metrics.csv
+        done
+
+        sleep 5
+    done
+}
+
+export_metrics
+```
+
+## Continuous Performance Testing
+
+### GitHub Actions Performance Workflow
+
+```yaml
+name: Performance Tests
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily
+  workflow_dispatch:
+
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Environment
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/install.sh | sh -s
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run Performance Tests
+        run: |
+          netrunner server &
+          sleep 2
+
+          # Run performance suite
+          ./scripts/performance-test.sh
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: |
+            performance-report.html
+            metrics.csv
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const metrics = JSON.parse(fs.readFileSync('metrics.json'));
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Performance Test Results\n
+                     - TPS: ${metrics.tps}\n
+                     - Latency: ${metrics.latency}ms\n
+                     - Success Rate: ${metrics.successRate}%`
+            });
+```
+
+## Best Practices
+
+1. **Warm-up Period**: Allow 30 seconds warm-up before measuring
+2. **Multiple Runs**: Average results from multiple test runs
+3. **Baseline Comparison**: Compare against established baselines
+4. **Resource Isolation**: Run tests on dedicated hardware
+5. **Network Conditions**: Test under various network conditions
+6. **Data Variety**: Use realistic transaction patterns
+7. **Monitor Everything**: Collect all available metrics
+8. **Incremental Load**: Gradually increase load to find limits
+9. **Document Context**: Record test environment details
+10. **Automated Analysis**: Use scripts to analyze results
+
+## Troubleshooting Performance Issues
+
+### Common Bottlenecks
+
+- **CPU Saturation**: Check for high CPU usage patterns
+- **Memory Leaks**: Monitor memory growth over time
+- **Disk I/O**: Look for excessive disk operations
+- **Network Congestion**: Check for packet loss or high latency
+- **Lock Contention**: Profile for mutex bottlenecks
+- **Database Performance**: Analyze database query patterns
+
+### Performance Profiling
+
+```bash
+# Enable CPU profiling
+netrunner control start \
+  --node-path ${LUXD_PATH} \
+  --global-node-config '{
+    "profile-continuous-enabled": true,
+    "profile-continuous-freq": "1m",
+    "profile-continuous-max-files": 10
+  }'
+
+# Analyze profile data
+go tool pprof -http=:8080 cpu.prof
+```
