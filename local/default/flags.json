@@ -7,11 +7,8 @@
   "index-enabled":true,
   "log-display-level":"ERROR",
   "log-level": "DEBUG",
-  "consensus-sample-size": 1,
-  "consensus-quorum-size": 1,
-  "consensus-commit-threshold": 1,
-  "sybil-protection-enabled": false,
+  "dev-mode": true,
+  "poa-single-node-mode": true,
   "network-health-min-conn-peers": 0,
-  "skip-bootstrap": true,
-  "poa-single-node-mode": true
+  "skip-bootstrap": true
 }

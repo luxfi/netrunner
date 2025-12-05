@@ -12,9 +12,8 @@ engines:
     wait_healthy: true
     extra:
       staking-enabled: false
-      sybil-protection-enabled: false
-      consensus-sample-size: 1
-      consensus-quorum-size: 1
+      dev-mode: true
+      poa-single-node-mode: true
       
   - name: lux-l2-op
     type: op
