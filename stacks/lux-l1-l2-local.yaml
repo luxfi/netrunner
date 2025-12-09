@@ -11,8 +11,8 @@ engines:
     log_level: info
     wait_healthy: true
     extra:
-      staking-enabled: false
-      sybil-protection-enabled: false
+      dev-mode: true
+      sybil-protection-disabled-weight: 100
       
   - name: lux-l2-op
     type: op

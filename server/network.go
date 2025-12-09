@@ -192,6 +192,20 @@ func (lc *localNetwork) createConfig() error {
 
 		cfg.NodeConfigs[i].Name = nodeName
 
+		// Initialize maps if nil to avoid panic when assigning
+		if cfg.NodeConfigs[i].Flags == nil {
+			cfg.NodeConfigs[i].Flags = map[string]interface{}{}
+		}
+		if cfg.NodeConfigs[i].ChainConfigFiles == nil {
+			cfg.NodeConfigs[i].ChainConfigFiles = map[string]string{}
+		}
+		if cfg.NodeConfigs[i].UpgradeConfigFiles == nil {
+			cfg.NodeConfigs[i].UpgradeConfigFiles = map[string]string{}
+		}
+		if cfg.NodeConfigs[i].SubnetConfigFiles == nil {
+			cfg.NodeConfigs[i].SubnetConfigFiles = map[string]string{}
+		}
+
 		for k, v := range lc.options.chainConfigs {
 			cfg.NodeConfigs[i].ChainConfigFiles[k] = v
 		}
@@ -200,10 +214,6 @@ func (lc *localNetwork) createConfig() error {
 		}
 		for k, v := range lc.options.subnetConfigs {
 			cfg.NodeConfigs[i].SubnetConfigFiles[k] = v
-		}
-
-		if cfg.NodeConfigs[i].Flags == nil {
-			cfg.NodeConfigs[i].Flags = map[string]interface{}{}
 		}
 
 		if lc.options.dynamicPorts {
