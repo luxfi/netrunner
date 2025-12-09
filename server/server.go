@@ -507,7 +507,8 @@ func (s *server) CreateBlockchains(
 	defer cancel()
 	chainIDs, err := s.network.CreateChains(ctx, chainSpecs)
 	if err != nil {
-		s.log.Error("failed to create blockchains", zap.Error(err))
+		s.log.Error("failed to create blockchains", zap.Error(err), zap.String("errorDetail", err.Error()))
+		fmt.Printf("ERROR: failed to create blockchains: %v\n", err)
 		s.stopAndRemoveNetwork(err)
 		return nil, err
 	} else {
