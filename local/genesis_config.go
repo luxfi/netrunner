@@ -186,51 +186,39 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		return network.Config{}, fmt.Errorf("couldn't format stake address: %w", err)
 	}
 
-	// Update allocations to include staked funds if not present
-	allocations, ok := genesis["allocations"].([]interface{})
-	if !ok {
-		allocations = []interface{}{}
-	}
-
-	// Add stake allocation for validators
-	now := time.Now().Unix()
-	stakeAllocation := map[string]interface{}{
-		"ethAddr":       "0x0000000000000000000000000000000000000000",
-		"luxAddr":       stakeAddr,
-		"initialAmount": 0,
-		"unlockSchedule": []map[string]interface{}{
-			{
-				"amount":   uint64(numNodes) * 1000000000000, // 1M LUX per validator
-				"locktime": uint64(now + 7*24*3600),          // 1 week lockup
-			},
-		},
-	}
-	allocations = append(allocations, stakeAllocation)
-
-	// Add ewoq allocation with immediately available funds for P-chain operations (subnet creation, etc.)
-	// Ewoq ShortID: 3cb7d3842e8cee6a0ebd09f1fe884f6861e1b29c
-	var ewoqShortID ids.ShortID
-	ewoqBytes, _ := hex.DecodeString("3cb7d3842e8cee6a0ebd09f1fe884f6861e1b29c")
-	copy(ewoqShortID[:], ewoqBytes)
-	ewoqAddr, err := address.Format("X", hrp, ewoqShortID[:])
+	// Load validator keys from ~/.lux/keys/ (generates new ones if missing)
+	// Each key gets 1B LUX with 1% vesting per year since Jan 1, 2020
+	validatorKeys, err := LoadOrGenerateKeys("", 5)
 	if err != nil {
-		return network.Config{}, fmt.Errorf("couldn't format ewoq address: %w", err)
+		return network.Config{}, fmt.Errorf("failed to load validator keys: %w", err)
 	}
 
-	// Allocation with unlockSchedule locktime=0 makes funds available on P-chain immediately
-	ewoqAllocation := map[string]interface{}{
-		"ethAddr":       "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC", // C-chain address for ewoq
-		"luxAddr":       ewoqAddr,
-		"initialAmount": uint64(100000000000000000), // 100M LUX on X-chain
-		"unlockSchedule": []map[string]interface{}{
-			{
-				"amount":   uint64(100000000000000000), // 100M LUX available immediately on P-chain
-				"locktime": 0,                          // Immediately available (no lock)
-			},
-		},
+	// Generate allocations from loaded keys with proper vesting schedule
+	keyAllocations, err := GenerateAllocationsFromKeys(validatorKeys, hrp)
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to generate allocations: %w", err)
 	}
-	allocations = append(allocations, ewoqAllocation)
+
+	// Convert to []interface{} for JSON marshaling
+	allocations := make([]interface{}, len(keyAllocations))
+	for i, alloc := range keyAllocations {
+		allocations[i] = alloc
+	}
 	genesis["allocations"] = allocations
+
+	// Update C-chain genesis with proper allocations
+	now := time.Now().Unix()
+	if cChainGenesisStr, ok := genesis["cChainGenesis"].(string); ok {
+		var cChainGenesis map[string]interface{}
+		if err := json.Unmarshal([]byte(cChainGenesisStr), &cChainGenesis); err == nil {
+			// Update the alloc field with our validator keys
+			cChainGenesis["alloc"] = GenerateCChainAllocFromKeys(validatorKeys)
+			// Re-serialize C-chain genesis
+			if updatedCChain, err := json.Marshal(cChainGenesis); err == nil {
+				genesis["cChainGenesis"] = string(updatedCChain)
+			}
+		}
+	}
 
 	// Set initial staked funds
 	genesis["initialStakedFunds"] = []string{stakeAddr}

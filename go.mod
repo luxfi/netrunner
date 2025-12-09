@@ -10,13 +10,13 @@ require (
 	github.com/luxfi/consensus v1.22.2
 	github.com/luxfi/crypto v1.17.7
 	github.com/luxfi/evm v0.8.1
-	github.com/luxfi/genesis v1.2.5
+	github.com/luxfi/genesis v1.2.7
 	github.com/luxfi/geth v1.16.40
 	github.com/luxfi/ids v1.1.2
 	github.com/luxfi/log v1.1.24
 	github.com/luxfi/math v0.1.5
 	github.com/luxfi/metric v1.4.5
-	github.com/luxfi/node v1.21.5
+	github.com/luxfi/node v1.21.6
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
 	github.com/otiai10/copy v1.14.1

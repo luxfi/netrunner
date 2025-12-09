@@ -6,6 +6,7 @@ package local
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/node/vms/platformvm/reward"
 
 	"github.com/luxfi/node/vms/components/lux"
@@ -25,7 +27,7 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/api/admin"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/genesis/pkg/genesis"
+	"github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/utils/constants"
 	"github.com/luxfi/math/set"
@@ -671,12 +673,35 @@ type wallet struct {
 	luxAssetID ids.ID
 }
 
+// getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
+// Keys are loaded from disk, never hardcoded in source.
+func getDefaultKey() (*secp256k1.PrivateKey, error) {
+	keys, err := LoadOrGenerateKeys("", 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load keys from ~/.lux/keys: %w", err)
+	}
+	if len(keys) == 0 {
+		return nil, errors.New("no keys found in ~/.lux/keys")
+	}
+	// Convert hex to private key
+	privKeyBytes, err := hex.DecodeString(keys[0].PrivKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid key format: %w", err)
+	}
+	return secp256k1.ToPrivateKey(privKeyBytes)
+}
+
 func newWallet(
 	ctx context.Context,
 	uri string,
 	preloadTXs []ids.ID,
 ) (*wallet, error) {
-	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
+	// Load key from ~/.lux/keys - no hardcoded keys
+	privKey, err := getDefaultKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet key: %w", err)
+	}
+	kc := secp256k1fx.NewKeychain(privKey)
 	// Use dedicated timeout context for FetchState to avoid parent context cancellation propagation
 	fetchCtx, fetchCancel := createDefaultCtx(ctx)
 	luxState, err := primary.FetchState(fetchCtx, uri, kc.Addrs)
@@ -704,7 +729,7 @@ func newWallet(
 	xChainID := luxState.XCTX.BlockchainID
  	xUTXOs := common.NewChainUTXOs(xChainID, luxState.UTXOs)
 	var w wallet
-	w.addr = genesis.EWOQKey.PublicKey().Address()
+	w.addr = privKey.PublicKey().Address()
 	// TODO: Create owners map instead of pTXs
 	w.pBackend = pwallet.NewBackend(luxState.PCTX, pUTXOs, pTXs)
 	w.pBuilder = pbuilder.New(kc.Addrs, luxState.PCTX, w.pBackend)
