@@ -6,7 +6,8 @@
   "api-admin-enabled":true,
   "index-enabled":true,
   "log-display-level":"ERROR",
-  "log-level": "DEBUG",
+  "log-level": "INFO",
   "sybil-protection-enabled": false,
+  "sybil-protection-disabled-weight": 100,
   "network-health-min-conn-peers": 0
 }

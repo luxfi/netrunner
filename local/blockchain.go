@@ -212,6 +212,12 @@ func (ln *localNetwork) installCustomChains(
 	fmt.Println()
 	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("create and install custom chains")))
 
+	// Ensure nodes are healthy before proceeding (nodes may have been restarted by a prior
+	// CreateSubnets call which restarts nodes to track subnets)
+	if err := ln.healthy(ctx); err != nil {
+		return nil, fmt.Errorf("network not healthy at start of installCustomChains: %w", err)
+	}
+
 	clientURI, err := ln.getClientURI()
 	if err != nil {
 		return nil, err
@@ -443,6 +449,12 @@ func (ln *localNetwork) installSubnets(
 		return nil, err
 	}
 
+	// Wait for nodes to be healthy after restart before querying P-Chain
+	ln.log.Info("waiting for nodes to be healthy after restart...")
+	if err := ln.healthy(ctx); err != nil {
+		return nil, fmt.Errorf("nodes not healthy after restart: %w", err)
+	}
+
 	if err = ln.waitSubnetValidators(ctx, platformCli, subnetIDs, subnetSpecs); err != nil {
 		return nil, err
 	}
@@ -636,7 +648,13 @@ func (ln *localNetwork) restartNodes(
 			return err
 		}
 	}
-	if err := ln.healthy(ctx); err != nil {
+	// Use a fresh context for health check during planned restarts to avoid
+	// context cancellation from onStopCh which is triggered during node restarts.
+	// The parent context (ctx) can be canceled by the stop channel during restartNode,
+	// but we still need to wait for nodes to become healthy after restart.
+	healthCtx, healthCancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer healthCancel()
+	if err := ln.healthy(healthCtx); err != nil {
 		return err
 	}
 	return nil
@@ -659,16 +677,22 @@ func newWallet(
 	preloadTXs []ids.ID,
 ) (*wallet, error) {
 	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
-	luxState, err := primary.FetchState(ctx, uri, kc.Addrs)
+	// Use dedicated timeout context for FetchState to avoid parent context cancellation propagation
+	fetchCtx, fetchCancel := createDefaultCtx(ctx)
+	luxState, err := primary.FetchState(fetchCtx, uri, kc.Addrs)
+	fetchCancel()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch state from %s: %w", uri, err)
 	}
 	pClient := platformvm.NewClient(uri)
 	pTXs := make(map[ids.ID]*txs.Tx)
 	for _, id := range preloadTXs {
-		txBytes, err := pClient.GetTx(ctx, id)
+		// Use dedicated timeout context for GetTx to avoid parent context cancellation propagation
+		getTxCtx, getTxCancel := createDefaultCtx(ctx)
+		txBytes, err := pClient.GetTx(getTxCtx, id)
+		getTxCancel()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get tx %s: %w", id, err)
 		}
 		tx, err := txs.Parse(txs.Codec, txBytes)
 		if err != nil {
@@ -772,6 +796,7 @@ func (ln *localNetwork) addPrimaryValidators(
 			},
 			10*10000, // 10% fee percent, times 10000 to make it as shares
 			common.WithContext(ctx),
+			defaultPoll,
 		)
 		cancel()
 		if err != nil {
@@ -804,6 +829,7 @@ func getXChainAssetID(ctx context.Context, w *wallet, tokenName string, tokenSym
 			},
 		},
 		common.WithContext(ctx),
+		defaultPoll,
 	)
 	if err != nil {
 		return ids.Empty, err
@@ -827,6 +853,7 @@ func exportXChainToPChain(ctx context.Context, w *wallet, owner *secp256k1fx.Out
 				},
 			},
 		},
+		common.WithContext(ctx),
 		defaultPoll,
 	)
 	return err
@@ -839,6 +866,7 @@ func importPChainFromXChain(ctx context.Context, w *wallet, owner *secp256k1fx.O
 	_, err := pWallet.IssueImportTx(
 		xChainID,
 		owner,
+		common.WithContext(ctx),
 		defaultPoll,
 	)
 	return err
@@ -894,11 +922,12 @@ func (ln *localNetwork) removeSubnetValidators(
 			if isValidator := subnetValidators.Contains(nodeID); !isValidator {
 				return fmt.Errorf("node %s is currently not a subnet validator of subnet %s", nodeName, subnetID.String())
 			}
-			_, cancel := createDefaultCtx(ctx)
+			ctx, cancel := createDefaultCtx(ctx)
 			tx, err := w.pWallet.IssueRemoveNetValidatorTx(
 				nodeID,
 				subnetID,
-						defaultPoll,
+				common.WithContext(ctx),
+				defaultPoll,
 			)
 			cancel()
 			if err != nil {
@@ -982,7 +1011,7 @@ func (ln *localNetwork) addPermissionlessValidators(
 
 	for _, validatorSpec := range validatorSpecs {
 		ln.log.Info(luxlog.Green.Wrap("adding permissionless validator"), "node ", validatorSpec.NodeName)
-		_, cancel := createDefaultCtx(ctx)
+		ctx, cancel := createDefaultCtx(ctx)
 		validatorNodeID := ln.nodes[validatorSpec.NodeName].nodeID
 		subnetID, err := ids.FromString(validatorSpec.SubnetID)
 		if err != nil {
@@ -1020,7 +1049,8 @@ func (ln *localNetwork) addPermissionlessValidators(
 			owner,
 			&secp256k1fx.OutputOwners{},
 			reward.PercentDenominator,
-				defaultPoll,
+			common.WithContext(ctx),
+			defaultPoll,
 		)
 		cancel()
 		if err != nil {
@@ -1089,13 +1119,14 @@ func (ln *localNetwork) transformToElasticSubnets(
 		if err != nil {
 			return nil, nil, err
 		}
-		_, cancel := createDefaultCtx(ctx)
+		ctx, cancel := createDefaultCtx(ctx)
 		transformSubnetTx, err := w.pWallet.IssueTransformNetTx(subnetID, subnetAssetID,
 			elasticSubnetSpec.InitialSupply, elasticSubnetSpec.MaxSupply, elasticSubnetSpec.MinConsumptionRate,
 			elasticSubnetSpec.MaxConsumptionRate, elasticSubnetSpec.MinValidatorStake, elasticSubnetSpec.MaxValidatorStake,
 			elasticSubnetSpec.MinStakeDuration, elasticSubnetSpec.MaxStakeDuration, elasticSubnetSpec.MinDelegationFee,
 			elasticSubnetSpec.MinDelegatorStake, elasticSubnetSpec.MaxValidatorWeightFactor, elasticSubnetSpec.UptimeRequirement,
-				defaultPoll,
+			common.WithContext(ctx),
+			defaultPoll,
 		)
 		cancel()
 		if err != nil {
@@ -1127,13 +1158,14 @@ func createSubnets(
 	subnetIDs := make([]ids.ID, numSubnets)
 	for i := uint32(0); i < numSubnets; i++ {
 		log.Info("creating subnet tx")
-		_, cancel := createDefaultCtx(ctx)
+		ctx, cancel := createDefaultCtx(ctx)
 		tx, err := w.pWallet.IssueCreateNetTx(
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,
 				Addrs:     []ids.ShortID{w.addr},
 			},
-				defaultPoll,
+			common.WithContext(ctx),
+			defaultPoll,
 		)
 		cancel()
 		if err != nil {
@@ -1159,22 +1191,28 @@ func (ln *localNetwork) addSubnetValidators(
 ) error {
 	ln.log.Info(luxlog.Green.Wrap("adding the nodes as subnet validators"))
 	for i, subnetID := range subnetIDs {
+		ln.log.Info("getting primary validators for subnet", "index", i, "subnet-ID", subnetID.String())
 		ctx, cancel := createDefaultCtx(ctx)
 		vs, err := platformCli.GetCurrentValidators(ctx, constants.PrimaryNetworkID, nil)
 		cancel()
 		if err != nil {
-			return err
+			ln.log.Error("failed to get primary validators", "error", err.Error())
+			return fmt.Errorf("failed to get primary validators: %w", err)
 		}
+		ln.log.Info("got primary validators", "count", len(vs))
 		primaryValidatorsEndtime := make(map[ids.NodeID]time.Time)
 		for _, v := range vs {
 			primaryValidatorsEndtime[v.NodeID] = time.Unix(int64(v.EndTime), 0)
 		}
+		ln.log.Info("getting current validators for subnet", "subnet-ID", subnetID.String())
 		ctx, cancel = createDefaultCtx(ctx)
 		vs, err = platformCli.GetCurrentValidators(ctx, subnetID, nil)
 		cancel()
 		if err != nil {
-			return err
+			ln.log.Error("failed to get current validators for subnet", "subnet-ID", subnetID.String(), "error", err.Error())
+			return fmt.Errorf("failed to get current validators for subnet %s: %w", subnetID.String(), err)
 		}
+		ln.log.Info("got current validators for subnet", "subnet-ID", subnetID.String(), "count", len(vs))
 		subnetValidators := set.Set[ids.NodeID]{}
 		for _, v := range vs {
 			subnetValidators.Add(v.NodeID)
@@ -1189,7 +1227,7 @@ func (ln *localNetwork) addSubnetValidators(
 			if isValidator := subnetValidators.Contains(nodeID); isValidator {
 				continue
 			}
-			_, cancel := createDefaultCtx(ctx)
+			ctx, cancel := createDefaultCtx(ctx)
 			tx, err := w.pWallet.IssueAddNetValidatorTx(
 				&txs.NetValidator{
 					Validator: txs.Validator{
@@ -1201,7 +1239,8 @@ func (ln *localNetwork) addSubnetValidators(
 					},
 					Net: subnetID,
 				},
-						defaultPoll,
+				common.WithContext(ctx),
+				defaultPoll,
 			)
 			cancel()
 			if err != nil {
@@ -1361,6 +1400,7 @@ func createBlockchainTxs(
 			nil,
 			vmName,
 			common.WithContext(ctx),
+			defaultPoll,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failure creating blockchain tx: %w", err)
@@ -1454,7 +1494,7 @@ func (ln *localNetwork) setSubnetConfigFiles(
 	return nil
 }
 
-func (*localNetwork) createBlockchains(
+func (ln *localNetwork) createBlockchains(
 	ctx context.Context,
 	chainSpecs []network.BlockchainSpec,
 	blockchainTxs []*txs.Tx,
@@ -1463,29 +1503,52 @@ func (*localNetwork) createBlockchains(
 ) error {
 	fmt.Println()
 	log.Info(luxlog.Green.Wrap("creating each custom chain"))
+
+	// Get platform client to check tx status
+	clientURI, err := ln.getClientURI()
+	if err != nil {
+		return err
+	}
+	pClient := platformvm.NewClient(clientURI)
+
 	for i, chainSpec := range chainSpecs {
 		vmName := chainSpec.VMName
 		vmID, err := utils.VMID(vmName)
 		if err != nil {
 			return err
 		}
+		blockchainID := blockchainTxs[i].ID()
+
 		log.Info("creating blockchain",
 			"vm-name", vmName,
 			"vm-ID", vmID.String(),
+			"blockchain-ID", blockchainID.String(),
 		)
 
-		ctx, cancel := createDefaultCtx(ctx)
-		defer cancel()
+		// Check if the transaction was already committed (from createBlockchainTxs)
+		// This can happen when nodes are restarted between tx creation and this call
+		checkCtx, checkCancel := createDefaultCtx(ctx)
+		txStatus, err := pClient.GetTxStatus(checkCtx, blockchainID)
+		checkCancel()
+		if err == nil && txStatus.Status.String() == "Committed" {
+			log.Info("blockchain tx already committed, skipping re-issue",
+				"vm-name", vmName,
+				"blockchain-ID", blockchainID.String(),
+			)
+			continue
+		}
+
+		issueCtx, issueCancel := createDefaultCtx(ctx)
+		defer issueCancel()
 
 		err = w.pWallet.IssueTx(
 			blockchainTxs[i],
-			common.WithContext(ctx),
+			common.WithContext(issueCtx),
 			defaultPoll,
 		)
 		if err != nil {
-			return fmt.Errorf("P-Wallet Tx Error %s %w, blockchainID %s", "IssueCreateBlockchainTx", err, blockchainTxs[i].ID().String())
+			return fmt.Errorf("P-Wallet Tx Error %s %w, blockchainID %s", "IssueCreateBlockchainTx", err, blockchainID.String())
 		}
-		blockchainID := blockchainTxs[i].ID()
 
 		log.Info("created a new blockchain",
 			"vm-name", vmName,
@@ -1497,9 +1560,11 @@ func (*localNetwork) createBlockchains(
 	return nil
 }
 
-func createDefaultCtx(ctx context.Context) (context.Context, context.CancelFunc) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return context.WithTimeout(ctx, defaultTimeout)
+// createDefaultCtx creates a fresh timeout context for P-Chain API operations.
+// It intentionally uses context.Background() instead of deriving from the parent context
+// to avoid context cancellation propagation during planned node restarts (e.g., during
+// subnet creation). The parent context may be canceled by the server's stopCh goroutine
+// during restartNodes, but P-Chain API calls should continue to work after nodes restart.
+func createDefaultCtx(_ context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), defaultTimeout)
 }
