@@ -813,7 +813,15 @@ func (ln *localNetwork) removeNode(ctx context.Context, nodeName string) error {
 	if !paused {
 		// Note: CChainEthAPI returns an empty interface, so no Close() method available
 		// The websocket connection cleanup is handled internally
-		if exitCode := node.process.Stop(ctx); exitCode != 0 {
+		exitCode := node.process.Stop(ctx)
+		// Accept graceful shutdown exit codes:
+		// - 0: normal exit
+		// - -1: process was killed before it could be waited on (signal handling)
+		// - 2: luxd uses this for graceful shutdown via signal
+		// - 130 (128+2): SIGINT (Ctrl+C)
+		// - 143 (128+15): SIGTERM
+		// Only treat other non-zero exit codes as errors
+		if exitCode != 0 && exitCode != -1 && exitCode != 2 && exitCode != 130 && exitCode != 143 {
 			return fmt.Errorf("node %q exited with exit code: %d", nodeName, exitCode)
 		}
 	}
@@ -842,7 +850,9 @@ func (ln *localNetwork) pauseNode(ctx context.Context, nodeName string) error {
 	}
 	// Note: CChainEthAPI returns an empty interface, so no Close() method available
 	// The websocket connection cleanup is handled internally
-	if exitCode := node.process.Stop(ctx); exitCode != 0 {
+	exitCode := node.process.Stop(ctx)
+	// Accept graceful shutdown exit codes (see removeNode for details)
+	if exitCode != 0 && exitCode != -1 && exitCode != 2 && exitCode != 130 && exitCode != 143 {
 		return fmt.Errorf("node %q exited with exit code: %d", nodeName, exitCode)
 	}
 	syscall.Sync()

@@ -152,7 +152,14 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 
 	// Create initial stakers for genesis
 	hrp := constants.GetHRP(networkID)
-	rewardAddr, err := address.Format("X", hrp, ids.GenerateTestShortID().Bytes())
+
+	// Treasury address short ID (derived from 0x9011E888251AB053B7bD1cdB598Db4f9DEd94714)
+	// P-Chain Address: P-lux1c7wevm4667l4umtzh93r25wpxlpsadkhka6gv6
+	// X-Chain Address: X-lux1c7wevm4667l4umtzh93r25wpxlpsadkhka6gv6
+	var treasuryShortID ids.ShortID
+	treasuryBytes, _ := hex.DecodeString("c79d966ebad7bf5e6d62b9623551c137c30eb6d7")
+	copy(treasuryShortID[:], treasuryBytes)
+	rewardAddr, err := address.Format("X", hrp, treasuryShortID[:])
 	if err != nil {
 		return network.Config{}, fmt.Errorf("couldn't format reward address: %w", err)
 	}
@@ -173,8 +180,8 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 	// Update genesis with initial stakers
 	genesis["initialStakers"] = initialStakers
 
-	// Ensure there's a staked funds entry
-	stakeAddr, err := address.Format("X", hrp, ids.GenerateTestShortID().Bytes())
+	// Ensure there's a staked funds entry - use treasury address
+	stakeAddr, err := address.Format("X", hrp, treasuryShortID[:])
 	if err != nil {
 		return network.Config{}, fmt.Errorf("couldn't format stake address: %w", err)
 	}
@@ -199,6 +206,30 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		},
 	}
 	allocations = append(allocations, stakeAllocation)
+
+	// Add ewoq allocation with immediately available funds for P-chain operations (subnet creation, etc.)
+	// Ewoq ShortID: 3cb7d3842e8cee6a0ebd09f1fe884f6861e1b29c
+	var ewoqShortID ids.ShortID
+	ewoqBytes, _ := hex.DecodeString("3cb7d3842e8cee6a0ebd09f1fe884f6861e1b29c")
+	copy(ewoqShortID[:], ewoqBytes)
+	ewoqAddr, err := address.Format("X", hrp, ewoqShortID[:])
+	if err != nil {
+		return network.Config{}, fmt.Errorf("couldn't format ewoq address: %w", err)
+	}
+
+	// Allocation with unlockSchedule locktime=0 makes funds available on P-chain immediately
+	ewoqAllocation := map[string]interface{}{
+		"ethAddr":       "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC", // C-chain address for ewoq
+		"luxAddr":       ewoqAddr,
+		"initialAmount": uint64(100000000000000000), // 100M LUX on X-chain
+		"unlockSchedule": []map[string]interface{}{
+			{
+				"amount":   uint64(100000000000000000), // 100M LUX available immediately on P-chain
+				"locktime": 0,                          // Immediately available (no lock)
+			},
+		},
+	}
+	allocations = append(allocations, ewoqAllocation)
 	genesis["allocations"] = allocations
 
 	// Set initial staked funds

@@ -29,9 +29,9 @@ func TestMultiEngineOrchestration(t *testing.T) {
 			StakingPort: 19631,
 			LogLevel:    "info",
 			Extra: map[string]interface{}{
-				"staking-enabled":          false,
-				"sybil-protection-enabled": false,
-				"health-check-frequency":   "2s",
+				"dev-mode":                         true,
+				"sybil-protection-disabled-weight": 100,
+				"health-check-frequency":           "2s",
 			},
 		}
 
