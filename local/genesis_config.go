@@ -180,12 +180,6 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 	// Update genesis with initial stakers
 	genesis["initialStakers"] = initialStakers
 
-	// Ensure there's a staked funds entry - use treasury address
-	stakeAddr, err := address.Format("X", hrp, treasuryShortID[:])
-	if err != nil {
-		return network.Config{}, fmt.Errorf("couldn't format stake address: %w", err)
-	}
-
 	// Load validator keys from ~/.lux/keys/ (generates new ones if missing)
 	// Each key gets 1B LUX with 1% vesting per year since Jan 1, 2020
 	validatorKeys, err := LoadOrGenerateKeys("", 5)
@@ -220,8 +214,14 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		}
 	}
 
-	// Set initial staked funds
-	genesis["initialStakedFunds"] = []string{stakeAddr}
+	// Set initialStakedFunds to the first validator key address
+	// This address must exist in allocations with proper unlock schedule
+	// The genesis package uses this to split staked funds among validators
+	firstValidatorAddr, err := FormatAddress("X", hrp, validatorKeys[0].ShortID)
+	if err != nil {
+		return network.Config{}, fmt.Errorf("couldn't format first validator address: %w", err)
+	}
+	genesis["initialStakedFunds"] = []string{firstValidatorAddr}
 
 	// Update start time to now
 	genesis["startTime"] = uint64(now)
