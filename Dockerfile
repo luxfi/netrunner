@@ -1,7 +1,9 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.23-bookworm AS builder
 
-RUN apk add --no-cache git make gcc musl-dev linux-headers bash
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git make gcc libc6-dev bash \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
@@ -12,19 +14,21 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build netrunner
-RUN go build -o bin/netrunner .
+# Build netrunner with static linking for portability
+RUN CGO_ENABLED=0 go build -o bin/netrunner .
 
-# Runtime stage
-FROM alpine:latest
+# Runtime stage - use debian-slim for better QEMU compatibility
+FROM debian:12-slim
 
-RUN apk add --no-cache ca-certificates curl bash
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy the binary
 COPY --from=builder /build/bin/netrunner /usr/local/bin/netrunner
 
 # Create netrunner user
-RUN adduser -D -h /var/lib/netrunner netrunner
+RUN useradd -r -m -d /var/lib/netrunner netrunner
 
 # Create directories
 RUN mkdir -p /var/lib/netrunner && chown -R netrunner:netrunner /var/lib/netrunner
