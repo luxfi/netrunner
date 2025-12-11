@@ -12,7 +12,7 @@ require (
 	github.com/luxfi/evm v0.8.1
 	github.com/luxfi/genesis v1.2.7
 	github.com/luxfi/geth v1.16.40
-	github.com/luxfi/ids v1.1.2
+	github.com/luxfi/ids v1.2.0
 	github.com/luxfi/log v1.1.24
 	github.com/luxfi/math v0.1.5
 	github.com/luxfi/metric v1.4.5
