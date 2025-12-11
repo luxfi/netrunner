@@ -15,7 +15,7 @@ require (
 	github.com/luxfi/ids v1.2.2
 	github.com/luxfi/log v1.1.24
 	github.com/luxfi/math v0.1.5
-	github.com/luxfi/metric v1.4.5
+	github.com/luxfi/metric v1.4.6
 	github.com/luxfi/node v1.21.6
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
