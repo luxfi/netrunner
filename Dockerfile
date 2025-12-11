@@ -19,7 +19,7 @@ COPY --from=go-installer /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git make gcc libc6-dev \
+    git make gcc libc6-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
