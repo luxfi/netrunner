@@ -1,6 +1,6 @@
 module github.com/luxfi/netrunner
 
-go 1.23.4
+go 1.25.5
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
