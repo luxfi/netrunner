@@ -155,11 +155,10 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 
 	// Treasury address short ID (derived from 0x9011E888251AB053B7bD1cdB598Db4f9DEd94714)
 	// P-Chain Address: P-lux1c7wevm4667l4umtzh93r25wpxlpsadkhka6gv6
-	// X-Chain Address: X-lux1c7wevm4667l4umtzh93r25wpxlpsadkhka6gv6
 	var treasuryShortID ids.ShortID
 	treasuryBytes, _ := hex.DecodeString("c79d966ebad7bf5e6d62b9623551c137c30eb6d7")
 	copy(treasuryShortID[:], treasuryBytes)
-	rewardAddr, err := address.Format("X", hrp, treasuryShortID[:])
+	rewardAddr, err := address.Format("P", hrp, treasuryShortID[:])
 	if err != nil {
 		return network.Config{}, fmt.Errorf("couldn't format reward address: %w", err)
 	}
@@ -217,7 +216,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 	// Set initialStakedFunds to the first validator key address
 	// This address must exist in allocations with proper unlock schedule
 	// The genesis package uses this to split staked funds among validators
-	firstValidatorAddr, err := FormatAddress("X", hrp, validatorKeys[0].ShortID)
+	firstValidatorAddr, err := FormatAddress("P", hrp, validatorKeys[0].ShortID)
 	if err != nil {
 		return network.Config{}, fmt.Errorf("couldn't format first validator address: %w", err)
 	}
