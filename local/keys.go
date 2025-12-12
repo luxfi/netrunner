@@ -150,14 +150,14 @@ func GenerateAllocationsFromKeys(keys []KeyInfo, hrp string) ([]map[string]inter
 	allocations := make([]map[string]interface{}, len(keys))
 
 	for i, key := range keys {
-		luxAddr, err := FormatAddress("X", hrp, key.ShortID)
+		luxAddr, err := FormatAddress("P", hrp, key.ShortID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to format address for key %d: %w", i, err)
 		}
 		allocations[i] = map[string]interface{}{
 			"ethAddr":        key.EthAddr,
 			"luxAddr":        luxAddr,
-			"initialAmount":  OneBillionLUX, // 1B LUX on X-chain
+			"initialAmount":  OneBillionLUX, // 1B LUX on P-chain
 			"unlockSchedule": vestingSchedule,
 		}
 	}
