@@ -13,7 +13,6 @@ import (
 	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/node/utils/units"
 	"golang.org/x/exp/maps"
 )
@@ -133,17 +132,13 @@ func NewLuxGenesis(
 	}
 
 	// Address that controls stake doesn't matter -- generate it randomly
-	genesisVdrStakeAddr, _ := address.Format(
-		"X",
-		constants.GetHRP(networkID),
-		ids.GenerateTestShortID().Bytes(),
-	)
+	genesisVdrStakeShortID := ids.GenerateTestShortID()
 	config := genesis.UnparsedConfig{
 		NetworkID: networkID,
 		Allocations: []genesis.UnparsedAllocation{
 			{
-				ETHAddr:       "0x0000000000000000000000000000000000000000",
-				LUXAddr:      genesisVdrStakeAddr, // Owner doesn't matter
+				ETHAddr:       ids.ShortID{}, // Zero address
+				LUXAddr:       genesisVdrStakeShortID,
 				InitialAmount: 0,
 				UnlockSchedule: []genesis.LockedAmount{ // Provides stake to validators
 					{
@@ -153,19 +148,18 @@ func NewLuxGenesis(
 			},
 		},
 		StartTime:                  uint64(time.Now().Unix()),
-		InitialStakedFunds:         []string{genesisVdrStakeAddr},
+		InitialStakedFunds:         []ids.ShortID{genesisVdrStakeShortID},
 		InitialStakeDuration:       31_536_000, // 1 year
 		InitialStakeDurationOffset: 5_400,      // 90 minutes
 		Message:                    "hello world",
 	}
 
 	for _, xChainBal := range xChainBalances {
-		xChainAddr, _ := address.Format("X", constants.GetHRP(networkID), xChainBal.Addr[:])
 		config.Allocations = append(
 			config.Allocations,
 			genesis.UnparsedAllocation{
-				ETHAddr:       "0x0000000000000000000000000000000000000000",
-				LUXAddr:      xChainAddr,
+				ETHAddr:       ids.ShortID{}, // Zero address
+				LUXAddr:       xChainBal.Addr,
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
 					{
@@ -198,13 +192,13 @@ func NewLuxGenesis(
 
 	// Set initial validators.
 	// Give staking rewards to random address.
-	rewardAddr, _ := address.Format("X", constants.GetHRP(networkID), ids.GenerateTestShortID().Bytes())
+	rewardShortID := ids.GenerateTestShortID()
 	for _, genesisVdr := range genesisVdrs {
 		config.InitialStakers = append(
 			config.InitialStakers,
 			genesis.UnparsedStaker{
 				NodeID:        genesisVdr,
-				RewardAddress: rewardAddr,
+				RewardAddress: rewardShortID,
 				DelegationFee: 10_000,
 			},
 		)
