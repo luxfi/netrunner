@@ -16,7 +16,7 @@ require (
 	github.com/luxfi/log v1.1.24
 	github.com/luxfi/math v1.0.0
 	github.com/luxfi/metric v1.4.5
-	github.com/luxfi/node v1.22.10
+	github.com/luxfi/node v1.22.2
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
 	github.com/otiai10/copy v1.14.1
@@ -96,10 +96,9 @@ require (
 	github.com/luxfi/database v1.2.9 // indirect
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
-	github.com/luxfi/p2p v1.4.4 // indirect
 	github.com/luxfi/trace v0.1.2 // indirect
 	github.com/luxfi/utils v1.0.0 // indirect
-	github.com/luxfi/warp v1.16.35 // indirect
+	github.com/luxfi/warp v1.16.26 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
