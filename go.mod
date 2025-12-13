@@ -8,12 +8,12 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/consensus v1.22.26
-	github.com/luxfi/constants v1.2.2
+	github.com/luxfi/constants v1.2.3
 	github.com/luxfi/crypto v1.17.22
 	github.com/luxfi/evm v0.8.1
-	github.com/luxfi/genesis v1.4.7
+	github.com/luxfi/genesis v1.5.0
 	github.com/luxfi/geth v1.16.52
-	github.com/luxfi/ids v1.2.3
+	github.com/luxfi/ids v1.2.4
 	github.com/luxfi/log v1.1.26
 	github.com/luxfi/math v1.0.1
 	github.com/luxfi/metric v1.4.8
@@ -39,13 +39,14 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
+	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
+	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251211224604-2e727cd2e6fe // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
-	github.com/btcsuite/btcutil v1.0.2 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -95,7 +96,10 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/luxfi/cache v1.0.0 // indirect
 	github.com/luxfi/database v1.2.11 // indirect
+	github.com/luxfi/go-bip32 v1.0.1 // indirect
+	github.com/luxfi/go-bip39 v1.1.2 // indirect
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
 	github.com/luxfi/p2p v1.4.6 // indirect
