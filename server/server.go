@@ -29,7 +29,7 @@ import (
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/consensus/core"
-	"github.com/luxfi/consensus/networking/router"
+	"github.com/luxfi/node/network/router"
 	"github.com/luxfi/ids"
 	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
