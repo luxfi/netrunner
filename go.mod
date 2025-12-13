@@ -11,7 +11,7 @@ require (
 	github.com/luxfi/constants v1.2.3
 	github.com/luxfi/crypto v1.17.22
 	github.com/luxfi/evm v0.8.1
-	github.com/luxfi/genesis v1.5.0
+	github.com/luxfi/genesis v1.5.1
 	github.com/luxfi/geth v1.16.52
 	github.com/luxfi/ids v1.2.4
 	github.com/luxfi/log v1.1.26
