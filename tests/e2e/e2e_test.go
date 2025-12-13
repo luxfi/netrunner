@@ -16,7 +16,7 @@ import (
 
 	"github.com/luxfi/node/api/admin"
 	"github.com/luxfi/node/message"
-	luxd_constants "github.com/luxfi/node/utils/constants"
+	luxd_constants "github.com/luxfi/constants"
 	"github.com/luxfi/node/vms/platformvm"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/exp/maps"

@@ -25,7 +25,7 @@ import (
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
-	"github.com/luxfi/consensus/networking/router"
+	"github.com/luxfi/node/network/router"
 	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/rpc"
 	"github.com/stretchr/testify/mock"
