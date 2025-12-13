@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
-	"github.com/luxfi/geth/crypto"
+	ethcrypto "github.com/luxfi/crypto"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/utils/formatting/address"
 )
@@ -83,11 +83,11 @@ func ComputeKeyInfo(privKeyHex string) (KeyInfo, error) {
 	}
 
 	// Get ETH address
-	ethPrivKey, err := crypto.ToECDSA(privKeyBytes)
+	ethPrivKey, err := ethcrypto.ToECDSA(privKeyBytes)
 	if err != nil {
 		return KeyInfo{}, fmt.Errorf("invalid ECDSA key: %w", err)
 	}
-	ethAddr := crypto.PubkeyToAddress(ethPrivKey.PublicKey)
+	ethAddr := ethcrypto.PubkeyToAddress(ethPrivKey.PublicKey)
 
 	// Get Lux ShortID (for X/P chain addresses)
 	luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)

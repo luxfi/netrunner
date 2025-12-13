@@ -21,7 +21,7 @@ import (
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
-	luxd_constants "github.com/luxfi/node/utils/constants"
+	luxd_constants "github.com/luxfi/constants"
 	luxlog "github.com/luxfi/log"
 	"golang.org/x/exp/maps"
 )
@@ -175,6 +175,15 @@ func (lc *localNetwork) createConfig() error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// Ensure required staking flags are set for non-local networks
+	// stake-minting-period must be >= max-stake-duration (1 year = 8760h)
+	if _, ok := cfg.Flags["stake-minting-period"]; !ok {
+		cfg.Flags["stake-minting-period"] = "8760h" // 1 year
+	}
+	if _, ok := cfg.Flags["max-stake-duration"]; !ok {
+		cfg.Flags["max-stake-duration"] = "8760h" // 1 year
 	}
 
 	// set flags applied to all nodes

@@ -13,7 +13,7 @@ import (
 
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/utils/constants"
+	"github.com/luxfi/constants"
 	luxlog "github.com/luxfi/log"
 	"go.uber.org/zap"
 )

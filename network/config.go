@@ -12,8 +12,8 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/utils/units"
+	"github.com/luxfi/constants"
+	"github.com/luxfi/units"
 	"golang.org/x/exp/maps"
 )
 
