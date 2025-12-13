@@ -11,7 +11,7 @@ import (
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/consensus/networking/router"
+	"github.com/luxfi/node/network/router"
 )
 
 // Node represents an Lux node

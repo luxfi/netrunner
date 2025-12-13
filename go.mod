@@ -7,16 +7,18 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/consensus v1.22.5
-	github.com/luxfi/crypto v1.17.18
+	github.com/luxfi/consensus v1.22.26
+	github.com/luxfi/constants v1.2.2
+	github.com/luxfi/crypto v1.17.22
 	github.com/luxfi/evm v0.8.1
-	github.com/luxfi/genesis v1.4.4
-	github.com/luxfi/geth v1.16.46
-	github.com/luxfi/ids v1.2.2
-	github.com/luxfi/log v1.1.24
-	github.com/luxfi/math v1.0.0
-	github.com/luxfi/metric v1.4.5
-	github.com/luxfi/node v1.22.2
+	github.com/luxfi/genesis v1.4.7
+	github.com/luxfi/geth v1.16.52
+	github.com/luxfi/ids v1.2.3
+	github.com/luxfi/log v1.1.26
+	github.com/luxfi/math v1.0.1
+	github.com/luxfi/metric v1.4.8
+	github.com/luxfi/node v1.22.13
+	github.com/luxfi/units v1.0.0
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
 	github.com/otiai10/copy v1.14.1
@@ -27,8 +29,8 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
-	golang.org/x/mod v0.28.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/mod v0.30.0
+	golang.org/x/sync v0.19.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.11
@@ -39,10 +41,11 @@ require (
 	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251001021608-1fe7b43fc4d6 // indirect
+	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251211224604-2e727cd2e6fe // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.24.3 // indirect
+	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
+	github.com/btcsuite/btcutil v1.0.2 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -92,13 +95,14 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/constants v1.0.0 // indirect
-	github.com/luxfi/database v1.2.9 // indirect
+	github.com/luxfi/cache v1.0.0 // indirect
+	github.com/luxfi/database v1.2.11 // indirect
 	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
-	github.com/luxfi/trace v0.1.2 // indirect
+	github.com/luxfi/p2p v1.4.6 // indirect
+	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/utils v1.0.0 // indirect
-	github.com/luxfi/warp v1.16.26 // indirect
+	github.com/luxfi/warp v1.16.36 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
@@ -120,7 +124,7 @@ require (
 	github.com/spf13/viper v1.20.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/supranational/blst v0.3.16-0.20250831170142-f48500c1fdbe // indirect
+	github.com/supranational/blst v0.3.16 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
@@ -138,12 +142,12 @@ require (
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect

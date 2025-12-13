@@ -17,7 +17,7 @@ import (
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils/constants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/node/utils/ips"
 	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/wrappers"

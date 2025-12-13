@@ -16,7 +16,7 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/node/utils/constants"
+	"github.com/luxfi/constants"
 	luxlog "github.com/luxfi/log"
 	dircopy "github.com/otiai10/copy"
 	"golang.org/x/exp/maps"

@@ -17,11 +17,11 @@ import (
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/network/throttling"
 	"github.com/luxfi/node/network/tracker"
-	"github.com/luxfi/consensus/networking/router"
+	"github.com/luxfi/node/network/router"
 	"github.com/luxfi/consensus/validator" // package name is validators
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
-	"github.com/luxfi/node/utils/constants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
