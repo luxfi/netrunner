@@ -10,7 +10,7 @@ require (
 	github.com/luxfi/consensus v1.22.26
 	github.com/luxfi/constants v1.2.3
 	github.com/luxfi/crypto v1.17.22
-	github.com/luxfi/evm v0.8.1
+	github.com/luxfi/evm v1.16.20
 	github.com/luxfi/genesis v1.5.5
 	github.com/luxfi/geth v1.16.52
 	github.com/luxfi/ids v1.2.4
