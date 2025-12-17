@@ -595,7 +595,8 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 
 	subnetIDList := []string{}
 	for _, subnet := range subnets {
-		if subnet.ID != luxd_constants.PlatformChainID {
+		// Skip both PlatformChainID and PrimaryNetworkID (which is ids.Empty)
+		if subnet.ID != luxd_constants.PlatformChainID && subnet.ID != luxd_constants.PrimaryNetworkID {
 			subnetIDList = append(subnetIDList, subnet.ID.String())
 		}
 	}
