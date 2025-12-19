@@ -1,14 +1,19 @@
+//go:build integration
+// +build integration
+
 // Copyright (C) 2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package orchestrator_test
 
 import (
 	"context"
+	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/luxfi/netrunner/engines"
+	_ "github.com/luxfi/netrunner/engines/lux" // Register lux engine
 	"github.com/luxfi/netrunner/orchestrator"
 	"github.com/stretchr/testify/require"
 )
@@ -17,13 +22,17 @@ func TestMultiEngineOrchestration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
+	// Skip if luxd binary is not available
+	if _, err := exec.LookPath("luxd"); err != nil {
+		t.Skip("luxd binary not found, skipping integration test")
+	}
 
 	ctx := context.Background()
 	host := orchestrator.NewHost()
 
 	// Test starting Lux engine
 	t.Run("StartLuxEngine", func(t *testing.T) {
-		config := &engines.NodeConfig{
+		options := &orchestrator.EngineOptions{
 			NetworkID:   96369,
 			HTTPPort:    19630,
 			StakingPort: 19631,
@@ -35,7 +44,7 @@ func TestMultiEngineOrchestration(t *testing.T) {
 			},
 		}
 
-		err := host.StartEngine(ctx, "test-lux", engines.EngineLux, config)
+		err := host.StartEngine(ctx, "test-lux", string(engines.EngineLux), options)
 		require.NoError(t, err)
 
 		// Wait for health
@@ -55,23 +64,23 @@ func TestMultiEngineOrchestration(t *testing.T) {
 	// Test starting multiple engines
 	t.Run("MultipleEngines", func(t *testing.T) {
 		// Start Lux
-		luxConfig := &engines.NodeConfig{
+		luxOptions := &orchestrator.EngineOptions{
 			NetworkID:   96369,
 			HTTPPort:    19640,
 			StakingPort: 19641,
 			LogLevel:    "info",
 		}
-		err := host.StartEngine(ctx, "lux-1", engines.EngineLux, luxConfig)
+		err := host.StartEngine(ctx, "lux-1", string(engines.EngineLux), luxOptions)
 		require.NoError(t, err)
 
 		// Start Lux
-		avaConfig := &engines.NodeConfig{
+		avaOptions := &orchestrator.EngineOptions{
 			NetworkID:   43114,
 			HTTPPort:    19650,
 			StakingPort: 19651,
 			LogLevel:    "info",
 		}
-		err = host.StartEngine(ctx, "ava-1", engines.EngineLux, avaConfig)
+		err = host.StartEngine(ctx, "ava-1", string(engines.EngineLux), avaOptions)
 		require.NoError(t, err)
 
 		// Check both are running

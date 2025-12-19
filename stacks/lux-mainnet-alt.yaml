@@ -1,0 +1,60 @@
+name: lux-mainnet-alt
+version: 1.0.0
+description: 5-node Lux Mainnet on alternate ports (9640+) for parallel network operation
+
+engines:
+  - name: mainnet-alt-node-1
+    type: lux
+    network_id: 96369
+    http_port: 9640
+    staking_port: 9641
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-alt/node1
+
+  - name: mainnet-alt-node-2
+    type: lux
+    network_id: 96369
+    http_port: 9642
+    staking_port: 9643
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-alt/node2
+
+  - name: mainnet-alt-node-3
+    type: lux
+    network_id: 96369
+    http_port: 9644
+    staking_port: 9645
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-alt/node3
+
+  - name: mainnet-alt-node-4
+    type: lux
+    network_id: 96369
+    http_port: 9646
+    staking_port: 9647
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-alt/node4
+
+  - name: mainnet-alt-node-5
+    type: lux
+    network_id: 96369
+    http_port: 9648
+    staking_port: 9649
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-alt/node5
+
+networks:
+  - name: lux-mainnet-alt
+    type: l1
+    chain_id: 96369
+    endpoints:
+      - http://localhost:9640
+      - http://localhost:9642
+      - http://localhost:9644
+      - http://localhost:9646
+      - http://localhost:9648

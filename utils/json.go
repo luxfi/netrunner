@@ -1,12 +1,12 @@
 // Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package utils
 
 import "encoding/json"
 
 // Set k=v in JSON string
-// e.g., "track-subnets" is the key and value is "a,b,c".
+// e.g., "track-chains" is the key and value is "a,b,c".
 func SetJSONKey(jsonBody string, k string, v string) (string, error) {
 	var config map[string]interface{}
 
