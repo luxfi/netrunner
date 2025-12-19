@@ -278,7 +278,7 @@ func (lc *localNetwork) Start(ctx context.Context) error {
 		return err
 	}
 
-	ux.Print(lc.log, luxlog.Blue.Wrap(luxlog.Bold.Wrap("create and run local network")))
+	ux.Print(lc.log, "%s", luxlog.Blue.Wrap(luxlog.Bold.Wrap("create and run local network")))
 	nw, err := local.NewNetwork(lc.log, lc.cfg, lc.options.rootDataDir, lc.options.snapshotsDir, lc.options.reassignPortsIfUsed)
 	if err != nil {
 		return err
@@ -344,7 +344,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 	defer lc.lock.Unlock()
 
 	if len(validatorSpecs) == 0 {
-		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no validator specs provided...")))
+		ux.Print(lc.log, "%s", luxlog.Orange.Wrap(luxlog.Bold.Wrap("no validator specs provided...")))
 		return nil
 	}
 
@@ -374,7 +374,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 		return err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished adding permissionless validators")))
+	ux.Print(lc.log, "%s", luxlog.Green.Wrap(luxlog.Bold.Wrap("finished adding permissionless validators")))
 	return nil
 }
 
@@ -383,7 +383,7 @@ func (lc *localNetwork) RemoveChainValidator(ctx context.Context, validatorSpecs
 	defer lc.lock.Unlock()
 
 	if len(validatorSpecs) == 0 {
-		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no validator specs provided...")))
+		ux.Print(lc.log, "%s", luxlog.Orange.Wrap(luxlog.Bold.Wrap("no validator specs provided...")))
 		return nil
 	}
 
@@ -413,7 +413,7 @@ func (lc *localNetwork) RemoveChainValidator(ctx context.Context, validatorSpecs
 		return err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished removing chain validators")))
+	ux.Print(lc.log, "%s", luxlog.Green.Wrap(luxlog.Bold.Wrap("finished removing chain validators")))
 	return nil
 }
 
@@ -422,7 +422,7 @@ func (lc *localNetwork) TransformChains(ctx context.Context, elasticChainSpecs [
 	defer lc.lock.Unlock()
 
 	if len(elasticChainSpecs) == 0 {
-		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no chains specified...")))
+		ux.Print(lc.log, "%s", luxlog.Orange.Wrap(luxlog.Bold.Wrap("no chains specified...")))
 		return nil, nil, nil
 	}
 
@@ -452,7 +452,7 @@ func (lc *localNetwork) TransformChains(ctx context.Context, elasticChainSpecs [
 		return nil, nil, err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished transforming chains")))
+	ux.Print(lc.log, "%s", luxlog.Green.Wrap(luxlog.Bold.Wrap("finished transforming chains")))
 	return chainIDs, assetIDs, nil
 }
 
@@ -463,7 +463,7 @@ func (lc *localNetwork) CreateParticipantGroups(ctx context.Context, participant
 	defer lc.lock.Unlock()
 
 	if len(participantsSpecs) == 0 {
-		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no chains specified...")))
+		ux.Print(lc.log, "%s", luxlog.Orange.Wrap(luxlog.Bold.Wrap("no chains specified...")))
 		return nil, nil
 	}
 
@@ -493,7 +493,7 @@ func (lc *localNetwork) CreateParticipantGroups(ctx context.Context, participant
 		return nil, err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished adding chains")))
+	ux.Print(lc.log, "%s", luxlog.Green.Wrap(luxlog.Bold.Wrap("finished adding chains")))
 	return chainIDs, nil
 }
 
@@ -503,7 +503,7 @@ func (lc *localNetwork) LoadSnapshot(snapshotName string) error {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
-	ux.Print(lc.log, luxlog.Blue.Wrap(luxlog.Bold.Wrap("create and run local network from snapshot")))
+	ux.Print(lc.log, "%s", luxlog.Blue.Wrap(luxlog.Bold.Wrap("create and run local network from snapshot")))
 
 	var globalNodeConfig map[string]interface{}
 	if lc.options.globalNodeConfig != "" {
@@ -679,7 +679,7 @@ func (lc *localNetwork) AwaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 // Updates node and chain info.
 // Assumes [lc.lock] is held.
 func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) error {
-	ux.Print(lc.log, luxlog.Blue.Wrap(luxlog.Bold.Wrap("waiting for all nodes to report healthy...")))
+	ux.Print(lc.log, "%s", luxlog.Blue.Wrap(luxlog.Bold.Wrap("waiting for all nodes to report healthy...")))
 
 	if err := lc.nw.Healthy(ctx); err != nil {
 		return err
@@ -788,7 +788,7 @@ func (lc *localNetwork) Stop(ctx context.Context) {
 			if err != nil {
 				msg += fmt.Sprintf(" (error %v)", err)
 			}
-			ux.Print(lc.log, luxlog.Red.Wrap(msg))
+			ux.Print(lc.log, "%s", luxlog.Red.Wrap(msg))
 		}
 	})
 }
