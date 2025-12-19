@@ -1,5 +1,5 @@
 // Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package control
 
@@ -35,7 +35,7 @@ const clientRootDirPrefix = "client"
 var (
 	logLevel       string
 	logDir         string
-	trackSubnets   string
+	trackChains   string
 	endpoint       string
 	dialTimeout    time.Duration
 	requestTimeout time.Duration
@@ -59,11 +59,11 @@ func NewCommand() *cobra.Command {
 	cmd.AddCommand(
 		newRPCVersionCommand(),
 		newStartCommand(),
-		newCreateBlockchainsCommand(),
-		newCreateSubnetsCommand(),
-		newTransformElasticSubnetsCommand(),
+		newCreateChainsCommand(),
+		newCreateParticipantGroupsCommand(),
+		newTransformElasticChainsCommand(),
 		newAddPermissionlessValidatorCommand(),
-		newRemoveSubnetValidatorCommand(),
+		newRemoveChainValidatorCommand(),
 		newHealthCommand(),
 		newWaitForHealthyCommand(),
 		newURIsCommand(),
@@ -92,12 +92,12 @@ var (
 	pluginDir           string
 	globalNodeConfig    string
 	addNodeConfig       string
-	blockchainSpecsStr  string
+	chainSpecsStr  string
 	customNodeConfigs   string
 	rootDataDir         string
 	chainConfigs        string
 	upgradeConfigs      string
-	subnetConfigs       string
+	pChainConfigs       string
 	reassignPortsIfUsed bool
 	dynamicPorts        bool
 )
@@ -191,7 +191,7 @@ func newStartCommand() *cobra.Command {
 		"[optional] root data directory to store logs and configurations",
 	)
 	cmd.PersistentFlags().StringVar(
-		&blockchainSpecsStr,
+		&chainSpecsStr,
 		"blockchain-specs",
 		"",
 		"[optional] JSON string of array of [(VM name, genesis file path)]",
@@ -209,10 +209,10 @@ func newStartCommand() *cobra.Command {
 		"[optional] custom node configs as JSON string of map, for each node individually. Common entries override `global-node-config`, but can be combined. Invalidates `number-of-nodes` (provide all node configs if used).",
 	)
 	cmd.PersistentFlags().StringVar(
-		&trackSubnets,
-		"whitelisted-subnets",
+		&trackChains,
+		"whitelisted-chains",
 		"",
-		"[optional] whitelisted subnets (comma-separated)",
+		"[optional] whitelisted chains (comma-separated)",
 	)
 	cmd.PersistentFlags().StringVar(
 		&chainConfigs,
@@ -227,10 +227,10 @@ func newStartCommand() *cobra.Command {
 		"[optional] JSON string of map from chain id to its upgrade file contents",
 	)
 	cmd.PersistentFlags().StringVar(
-		&subnetConfigs,
-		"subnet-configs",
+		&chainConfigs,
+		"chain-configs",
 		"",
-		"[optional] JSON string of map from subnet id to its config file contents",
+		"[optional] JSON string of map from chain id to its config file contents",
 	)
 	cmd.PersistentFlags().BoolVar(
 		&reassignPortsIfUsed,
@@ -260,7 +260,7 @@ func startFunc(*cobra.Command, []string) error {
 	opts := []client.OpOption{
 		client.WithNumNodes(numNodes),
 		client.WithPluginDir(pluginDir),
-		client.WithTrackSubnets(trackSubnets),
+		client.WithTrackChains(trackChains),
 		client.WithRootDataDir(rootDataDir),
 		client.WithReassignPortsIfUsed(reassignPortsIfUsed),
 		client.WithDynamicPorts(dynamicPorts),
@@ -284,12 +284,12 @@ func startFunc(*cobra.Command, []string) error {
 		opts = append(opts, client.WithCustomNodeConfigs(nodeConfigs))
 	}
 
-	if blockchainSpecsStr != "" {
-		blockchainSpecs := []*rpcpb.BlockchainSpec{}
-		if err := json.Unmarshal([]byte(blockchainSpecsStr), &blockchainSpecs); err != nil {
+	if chainSpecsStr != "" {
+		chainSpecs := []*rpcpb.BlockchainSpec{}
+		if err := json.Unmarshal([]byte(chainSpecsStr), &chainSpecs); err != nil {
 			return err
 		}
-		opts = append(opts, client.WithBlockchainSpecs(blockchainSpecs))
+		opts = append(opts, client.WithChainSpecs(chainSpecs))
 	}
 
 	if chainConfigs != "" {
@@ -306,12 +306,12 @@ func startFunc(*cobra.Command, []string) error {
 		}
 		opts = append(opts, client.WithUpgradeConfigs(upgradeConfigsMap))
 	}
-	if subnetConfigs != "" {
-		subnetConfigsMap := make(map[string]string)
-		if err := json.Unmarshal([]byte(subnetConfigs), &subnetConfigsMap); err != nil {
+	if chainConfigs != "" {
+		chainConfigsMap := make(map[string]string)
+		if err := json.Unmarshal([]byte(chainConfigs), &chainConfigsMap); err != nil {
 			return err
 		}
-		opts = append(opts, client.WithSubnetConfigs(subnetConfigsMap))
+		opts = append(opts, client.WithChainConfigFiles(chainConfigsMap))
 	}
 
 	ctx := getAsyncContext()
@@ -329,35 +329,35 @@ func startFunc(*cobra.Command, []string) error {
 	return nil
 }
 
-func newCreateBlockchainsCommand() *cobra.Command {
+func newCreateChainsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create-blockchains blockchain-specs [options]",
 		Short: "Create blockchains.",
-		RunE:  createBlockchainsFunc,
+		RunE:  createChainsFunc,
 		Args:  cobra.ExactArgs(1),
 	}
 	return cmd
 }
 
-func createBlockchainsFunc(_ *cobra.Command, args []string) error {
+func createChainsFunc(_ *cobra.Command, args []string) error {
 	cli, err := newClient()
 	if err != nil {
 		return err
 	}
 	defer cli.Close()
 
-	blockchainSpecsStr := args[0]
+	chainSpecsStr := args[0]
 
-	blockchainSpecs := []*rpcpb.BlockchainSpec{}
-	if err := json.Unmarshal([]byte(blockchainSpecsStr), &blockchainSpecs); err != nil {
+	chainSpecs := []*rpcpb.BlockchainSpec{}
+	if err := json.Unmarshal([]byte(chainSpecsStr), &chainSpecs); err != nil {
 		return err
 	}
 
 	ctx := getAsyncContext()
 
-	info, err := cli.CreateBlockchains(
+	info, err := cli.CreateChains(
 		ctx,
-		blockchainSpecs,
+		chainSpecs,
 	)
 	if err != nil {
 		return err
@@ -367,49 +367,49 @@ func createBlockchainsFunc(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func newCreateSubnetsCommand() *cobra.Command {
+func newCreateParticipantGroupsCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create-subnets [options]",
-		Short: "Create subnets.",
-		RunE:  createSubnetsFunc,
+		Use:   "create-participant-groups [options]",
+		Short: "Create participant groups.",
+		RunE:  createParticipantGroupsFunc,
 		Args:  cobra.ExactArgs(1),
 	}
 	return cmd
 }
 
-func createSubnetsFunc(_ *cobra.Command, args []string) error {
+func createParticipantGroupsFunc(_ *cobra.Command, args []string) error {
 	cli, err := newClient()
 	if err != nil {
 		return err
 	}
 	defer cli.Close()
 
-	subnetSpecsStr := args[0]
+	participantsSpecsStr := args[0]
 
-	subnetSpecs := []*rpcpb.SubnetSpec{}
-	if err := json.Unmarshal([]byte(subnetSpecsStr), &subnetSpecs); err != nil {
+	participantsSpecs := []*rpcpb.ChainSpec{}
+	if err := json.Unmarshal([]byte(participantsSpecsStr), &participantsSpecs); err != nil {
 		return err
 	}
 
 	ctx := getAsyncContext()
 
-	info, err := cli.CreateSubnets(
+	info, err := cli.CreateParticipantGroups(
 		ctx,
-		subnetSpecs,
+		participantsSpecs,
 	)
 	if err != nil {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("create-subnets response: %+v"), info)
+	ux.Print(log, luxlog.Green.Wrap("create-chains response: %+v"), info)
 	return nil
 }
 
-func newTransformElasticSubnetsCommand() *cobra.Command {
+func newTransformElasticChainsCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "elastic-subnets elastic_subnets_specs [options]",
-		Short: "Transform subnets to elastic subnets.",
-		RunE:  transformElasticSubnetsFunc,
+		Use:   "elastic-chains elastic_chains_specs [options]",
+		Short: "Transform chains to elastic chains.",
+		RunE:  transformElasticChainsFunc,
 		Args:  cobra.ExactArgs(1),
 	}
 	return cmd
@@ -418,48 +418,48 @@ func newTransformElasticSubnetsCommand() *cobra.Command {
 func newAddPermissionlessValidatorCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add-permissionless-validator permissionlessValidatorSpecs [options]",
-		Short: "Add permissionless validator to elastic subnets.",
+		Short: "Add permissionless validator to elastic chains.",
 		RunE:  addPermissionlessValidatorFunc,
 		Args:  cobra.ExactArgs(1),
 	}
 	return cmd
 }
 
-func newRemoveSubnetValidatorCommand() *cobra.Command {
+func newRemoveChainValidatorCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "remove-subnet-validator removeValidatorSpec [options]",
-		Short: "Remove subnet validator",
-		RunE:  removeSubnetValidatorFunc,
+		Use:   "remove-chain-validator removeValidatorSpec [options]",
+		Short: "Remove chain validator",
+		RunE:  removeChainValidatorFunc,
 		Args:  cobra.ExactArgs(1),
 	}
 	return cmd
 }
 
-func transformElasticSubnetsFunc(_ *cobra.Command, args []string) error {
+func transformElasticChainsFunc(_ *cobra.Command, args []string) error {
 	cli, err := newClient()
 	if err != nil {
 		return err
 	}
 	defer cli.Close()
 
-	elasticSubnetSpecsStr := args[0]
+	elasticParticipantsSpecsStr := args[0]
 
-	elasticSubnetSpecs := []*rpcpb.ElasticSubnetSpec{}
-	if err := json.Unmarshal([]byte(elasticSubnetSpecsStr), &elasticSubnetSpecs); err != nil {
+	elasticParticipantsSpecs := []*rpcpb.ElasticChainSpec{}
+	if err := json.Unmarshal([]byte(elasticParticipantsSpecsStr), &elasticParticipantsSpecs); err != nil {
 		return err
 	}
 
 	ctx := getAsyncContext()
 
-	info, err := cli.TransformElasticSubnets(
+	info, err := cli.TransformElasticChains(
 		ctx,
-		elasticSubnetSpecs,
+		elasticParticipantsSpecs,
 	)
 	if err != nil {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("elastic-subnets response: %+v"), info)
+	ux.Print(log, luxlog.Green.Wrap("elastic-chains response: %+v"), info)
 	return nil
 }
 
@@ -491,7 +491,7 @@ func addPermissionlessValidatorFunc(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func removeSubnetValidatorFunc(_ *cobra.Command, args []string) error {
+func removeChainValidatorFunc(_ *cobra.Command, args []string) error {
 	cli, err := newClient()
 	if err != nil {
 		return err
@@ -500,14 +500,14 @@ func removeSubnetValidatorFunc(_ *cobra.Command, args []string) error {
 
 	validatorSpecStr := args[0]
 
-	validatorSpec := []*rpcpb.RemoveSubnetValidatorSpec{}
+	validatorSpec := []*rpcpb.RemoveChainValidatorSpec{}
 	if err := json.Unmarshal([]byte(validatorSpecStr), &validatorSpec); err != nil {
 		return err
 	}
 
 	ctx := getAsyncContext()
 
-	info, err := cli.RemoveSubnetValidator(
+	info, err := cli.RemoveChainValidator(
 		ctx,
 		validatorSpec,
 	)
@@ -515,7 +515,7 @@ func removeSubnetValidatorFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("remove-subnet-validator response: %+v"), info)
+	ux.Print(log, luxlog.Green.Wrap("remove-chain-validator response: %+v"), info)
 	return nil
 }
 
@@ -812,10 +812,10 @@ func newAddNodeCommand() *cobra.Command {
 		"[optional] JSON string of map from chain id to its upgrade file contents",
 	)
 	cmd.PersistentFlags().StringVar(
-		&subnetConfigs,
-		"subnet-configs",
+		&chainConfigs,
+		"chain-configs",
 		"",
-		"[optional] JSON string of map from subnet id to its config file contents",
+		"[optional] JSON string of map from chain id to its config file contents",
 	)
 	return cmd
 }
@@ -857,12 +857,12 @@ func addNodeFunc(_ *cobra.Command, args []string) error {
 		}
 		opts = append(opts, client.WithUpgradeConfigs(upgradeConfigsMap))
 	}
-	if subnetConfigs != "" {
-		subnetConfigsMap := make(map[string]string)
-		if err := json.Unmarshal([]byte(subnetConfigs), &subnetConfigsMap); err != nil {
+	if chainConfigs != "" {
+		chainConfigsMap := make(map[string]string)
+		if err := json.Unmarshal([]byte(chainConfigs), &chainConfigsMap); err != nil {
 			return err
 		}
-		opts = append(opts, client.WithSubnetConfigs(subnetConfigsMap))
+		opts = append(opts, client.WithChainConfigFiles(chainConfigsMap))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
@@ -895,10 +895,10 @@ func newRestartNodeCommand() *cobra.Command {
 		"node binary path",
 	)
 	cmd.PersistentFlags().StringVar(
-		&trackSubnets,
-		"whitelisted-subnets",
+		&trackChains,
+		"whitelisted-chains",
 		"",
-		"[optional] whitelisted subnets (comma-separated)",
+		"[optional] whitelisted chains (comma-separated)",
 	)
 	cmd.PersistentFlags().StringVar(
 		&pluginDir,
@@ -919,10 +919,10 @@ func newRestartNodeCommand() *cobra.Command {
 		"[optional] JSON string of map from chain id to its upgrade file contents",
 	)
 	cmd.PersistentFlags().StringVar(
-		&subnetConfigs,
-		"subnet-configs",
+		&chainConfigs,
+		"chain-configs",
 		"",
-		"[optional] JSON string of map from subnet id to its config file contents",
+		"[optional] JSON string of map from chain id to its config file contents",
 	)
 	return cmd
 }
@@ -939,7 +939,7 @@ func restartNodeFunc(_ *cobra.Command, args []string) error {
 	opts := []client.OpOption{
 		client.WithExecPath(luxdBinPath),
 		client.WithPluginDir(pluginDir),
-		client.WithTrackSubnets(trackSubnets),
+		client.WithTrackChains(trackChains),
 	}
 
 	if chainConfigs != "" {
@@ -956,12 +956,12 @@ func restartNodeFunc(_ *cobra.Command, args []string) error {
 		}
 		opts = append(opts, client.WithUpgradeConfigs(upgradeConfigsMap))
 	}
-	if subnetConfigs != "" {
-		subnetConfigsMap := make(map[string]string)
-		if err := json.Unmarshal([]byte(subnetConfigs), &subnetConfigsMap); err != nil {
+	if chainConfigs != "" {
+		chainConfigsMap := make(map[string]string)
+		if err := json.Unmarshal([]byte(chainConfigs), &chainConfigsMap); err != nil {
 			return err
 		}
-		opts = append(opts, client.WithSubnetConfigs(subnetConfigsMap))
+		opts = append(opts, client.WithChainConfigFiles(chainConfigsMap))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
@@ -1172,10 +1172,10 @@ func newLoadSnapshotCommand() *cobra.Command {
 		"[optional] JSON string of map from chain id to its upgrade file contents",
 	)
 	cmd.PersistentFlags().StringVar(
-		&subnetConfigs,
-		"subnet-configs",
+		&chainConfigs,
+		"chain-configs",
 		"",
-		"[optional] JSON string of map from subnet id to its config file contents",
+		"[optional] JSON string of map from chain id to its config file contents",
 	)
 	cmd.PersistentFlags().StringVar(
 		&globalNodeConfig,
@@ -1220,12 +1220,12 @@ func loadSnapshotFunc(_ *cobra.Command, args []string) error {
 		}
 		opts = append(opts, client.WithUpgradeConfigs(upgradeConfigsMap))
 	}
-	if subnetConfigs != "" {
-		subnetConfigsMap := make(map[string]string)
-		if err := json.Unmarshal([]byte(subnetConfigs), &subnetConfigsMap); err != nil {
+	if chainConfigs != "" {
+		chainConfigsMap := make(map[string]string)
+		if err := json.Unmarshal([]byte(chainConfigs), &chainConfigsMap); err != nil {
 			return err
 		}
-		opts = append(opts, client.WithSubnetConfigs(subnetConfigsMap))
+		opts = append(opts, client.WithChainConfigFiles(chainConfigsMap))
 	}
 
 	if globalNodeConfig != "" {

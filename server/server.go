@@ -1,5 +1,5 @@
 // Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 // Package server implements server.
 package server
@@ -70,9 +70,9 @@ var (
 	ErrNodeNotFound           = errors.New("node not found")
 	ErrPeerNotFound           = errors.New("peer not found")
 	ErrStatusCanceled         = errors.New("gRPC stream status canceled")
-	ErrNoBlockchainSpec       = errors.New("no blockchain spec was provided")
-	ErrNoSubnetID             = errors.New("subnetID is missing")
-	ErrNoElasticSubnetSpec    = errors.New("no elastic subnet spec was provided")
+	ErrNoChainSpec       = errors.New("no blockchain spec was provided")
+	ErrNoChainID             = errors.New("chainID is missing")
+	ErrNoElasticChainSpec    = errors.New("no elastic chain spec was provided")
 	ErrNoValidatorSpec        = errors.New("no validator spec was provided")
 )
 
@@ -285,11 +285,11 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	}
 
 	pluginDir := req.GetPluginDir()
-	chainSpecs := []network.BlockchainSpec{}
+	chainSpecs := []network.ChainSpec{}
 	if len(req.GetBlockchainSpecs()) > 0 {
 		s.log.Info("plugin-dir:", zap.String("plugin-dir", pluginDir))
 		for _, spec := range req.GetBlockchainSpecs() {
-			chainSpec, err := getNetworkBlockchainSpec(s.log, spec, true, pluginDir)
+			chainSpec, err := getNetworkChainSpec(s.log, spec, true, pluginDir)
 			if err != nil {
 				return nil, err
 			}
@@ -300,7 +300,7 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	var (
 		execPath          = req.GetExecPath()
 		numNodes          = req.GetNumNodes()
-		trackSubnets      = req.GetWhitelistedSubnets()
+		trackChains      = req.GetWhitelistedChains()
 		rootDataDir       = req.GetRootDataDir()
 		pid               = int32(os.Getpid())
 		globalNodeConfig  = req.GetGlobalNodeConfig()
@@ -335,14 +335,14 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 		execPath:            execPath,
 		rootDataDir:         rootDataDir,
 		numNodes:            numNodes,
-		trackSubnets:        trackSubnets,
+		trackChains:        trackChains,
 		redirectNodesOutput: s.cfg.RedirectNodesOutput,
 		pluginDir:           pluginDir,
 		globalNodeConfig:    globalNodeConfig,
 		customNodeConfigs:   customNodeConfigs,
 		chainConfigs:        req.ChainConfigs,
 		upgradeConfigs:      req.UpgradeConfigs,
-		subnetConfigs:       req.SubnetConfigs,
+		pChainConfigs:       req.ChainConfigFiles,
 		logLevel:            s.cfg.LogLevel,
 		reassignPortsIfUsed: req.GetReassignPortsIfUsed(),
 		dynamicPorts:        req.GetDynamicPorts(),
@@ -355,7 +355,7 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	s.log.Info("starting",
 		zap.String("exec-path", execPath),
 		zap.Uint32("num-nodes", numNodes),
-		zap.String("track-subnets", trackSubnets),
+		zap.String("track-chains", trackChains),
 		zap.Int32("pid", pid),
 		zap.String("root-data-dir", rootDataDir),
 		zap.String("plugin-dir", pluginDir),
@@ -409,7 +409,7 @@ func (s *server) updateClusterInfo() {
 	for chainID, chainInfo := range s.network.customChainIDToInfo {
 		s.clusterInfo.CustomChains[chainID.String()] = chainInfo.info
 	}
-	s.clusterInfo.Subnets = s.network.subnets
+	s.clusterInfo.Chains = s.network.chains
 }
 
 // wait until some of this conditions is met:
@@ -477,26 +477,26 @@ func (s *server) CreateBlockchains(
 	s.log.Debug("CreateBlockchains")
 
 	if len(req.GetBlockchainSpecs()) == 0 {
-		return nil, ErrNoBlockchainSpec
+		return nil, ErrNoChainSpec
 	}
 
-	chainSpecs := []network.BlockchainSpec{}
+	chainSpecs := []network.ChainSpec{}
 	for _, spec := range req.GetBlockchainSpecs() {
-		chainSpec, err := getNetworkBlockchainSpec(s.log, spec, false, s.network.pluginDir)
+		chainSpec, err := getNetworkChainSpec(s.log, spec, false, s.network.pluginDir)
 		if err != nil {
 			return nil, err
 		}
 		chainSpecs = append(chainSpecs, chainSpec)
 	}
 
-	// check that the given subnets exist
-	subnetsSet := set.Set[string]{}
-	subnetIDsList := maps.Keys(s.clusterInfo.Subnets)
-	subnetsSet.Add(subnetIDsList...)
+	// check that the given chains exist
+	chainsSet := set.Set[string]{}
+	chainIDsList := maps.Keys(s.clusterInfo.Chains)
+	chainsSet.Add(chainIDsList...)
 
 	for _, chainSpec := range chainSpecs {
-		if chainSpec.SubnetID != nil && !subnetsSet.Contains(*chainSpec.SubnetID) {
-			return nil, fmt.Errorf("subnet id %q does not exits", *chainSpec.SubnetID)
+		if chainSpec.ChainID != nil && !chainsSet.Contains(*chainSpec.ChainID) {
+			return nil, fmt.Errorf("chain id %q does not exist", *chainSpec.ChainID)
 		}
 	}
 
@@ -554,15 +554,15 @@ func (s *server) AddPermissionlessValidator(
 		validatorSpecList = append(validatorSpecList, validatorSpec)
 	}
 
-	// check that the given subnets exist
-	subnetsSet := set.Set[string]{}
-	subnetsSet.Add(maps.Keys(s.clusterInfo.Subnets)...)
+	// check that the given chains exist
+	chainsSet := set.Set[string]{}
+	chainsSet.Add(maps.Keys(s.clusterInfo.Chains)...)
 
 	for _, validatorSpec := range validatorSpecList {
-		if validatorSpec.SubnetID == "" {
-			return nil, ErrNoSubnetID
-		} else if !subnetsSet.Contains(validatorSpec.SubnetID) {
-			return nil, fmt.Errorf("subnet id %q does not exist", validatorSpec.SubnetID)
+		if validatorSpec.ChainID == "" {
+			return nil, ErrNoChainID
+		} else if !chainsSet.Contains(validatorSpec.ChainID) {
+			return nil, fmt.Errorf("chain id %q does not exist", validatorSpec.ChainID)
 		}
 	}
 
@@ -589,10 +589,10 @@ func (s *server) AddPermissionlessValidator(
 	return &rpcpb.AddPermissionlessValidatorResponse{ClusterInfo: clusterInfo}, nil
 }
 
-func (s *server) RemoveSubnetValidator(
+func (s *server) RemoveChainValidator(
 	_ context.Context,
-	req *rpcpb.RemoveSubnetValidatorRequest,
-) (*rpcpb.RemoveSubnetValidatorResponse, error) {
+	req *rpcpb.RemoveChainValidatorRequest,
+) (*rpcpb.RemoveChainValidatorResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -600,27 +600,27 @@ func (s *server) RemoveSubnetValidator(
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("RemoveSubnetValidator")
+	s.log.Debug("RemoveChainValidator")
 
 	if len(req.GetValidatorSpec()) == 0 {
 		return nil, ErrNoValidatorSpec
 	}
 
-	validatorSpecList := []network.RemoveSubnetValidatorSpec{}
+	validatorSpecList := []network.RemoveChainValidatorSpec{}
 	for _, spec := range req.GetValidatorSpec() {
-		validatorSpec := getRemoveSubnetValidatorSpec(spec)
+		validatorSpec := getRemoveChainValidatorSpec(spec)
 		validatorSpecList = append(validatorSpecList, validatorSpec)
 	}
 
-	// check that the given subnets exist
-	subnetsSet := set.Set[string]{}
-	subnetsSet.Add(maps.Keys(s.clusterInfo.Subnets)...)
+	// check that the given chains exist
+	chainsSet := set.Set[string]{}
+	chainsSet.Add(maps.Keys(s.clusterInfo.Chains)...)
 
 	for _, validatorSpec := range validatorSpecList {
-		if validatorSpec.SubnetID == "" {
-			return nil, ErrNoSubnetID
-		} else if !subnetsSet.Contains(validatorSpec.SubnetID) {
-			return nil, fmt.Errorf("subnet id %q does not exist", validatorSpec.SubnetID)
+		if validatorSpec.ChainID == "" {
+			return nil, ErrNoChainID
+		} else if !chainsSet.Contains(validatorSpec.ChainID) {
+			return nil, fmt.Errorf("chain id %q does not exist", validatorSpec.ChainID)
 		}
 	}
 
@@ -629,28 +629,28 @@ func (s *server) RemoveSubnetValidator(
 
 	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
 	defer cancel()
-	err := s.network.RemoveSubnetValidator(ctx, validatorSpecList)
+	err := s.network.RemoveChainValidator(ctx, validatorSpecList)
 
 	s.updateClusterInfo()
 
 	if err != nil {
-		s.log.Error("failed to remove subnet validator", zap.Error(err))
+		s.log.Error("failed to remove chain validator", zap.Error(err))
 		return nil, err
 	}
 
-	s.log.Info("successfully removed subnet validator")
+	s.log.Info("successfully removed chain validator")
 
 	clusterInfo, err := deepCopy(s.clusterInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &rpcpb.RemoveSubnetValidatorResponse{ClusterInfo: clusterInfo}, nil
+	return &rpcpb.RemoveChainValidatorResponse{ClusterInfo: clusterInfo}, nil
 }
 
-func (s *server) TransformElasticSubnets(
+func (s *server) TransformElasticChains(
 	_ context.Context,
-	req *rpcpb.TransformElasticSubnetsRequest,
-) (*rpcpb.TransformElasticSubnetsResponse, error) {
+	req *rpcpb.TransformElasticChainsRequest,
+) (*rpcpb.TransformElasticChainsResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -658,27 +658,27 @@ func (s *server) TransformElasticSubnets(
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("TransformElasticSubnet")
+	s.log.Debug("TransformElasticChain")
 
-	if len(req.GetElasticSubnetSpec()) == 0 {
-		return nil, ErrNoElasticSubnetSpec
+	if len(req.GetElasticChainSpec()) == 0 {
+		return nil, ErrNoElasticChainSpec
 	}
 
-	elasticSubnetSpecList := []network.ElasticSubnetSpec{}
-	for _, spec := range req.GetElasticSubnetSpec() {
-		elasticSubnetSpec := getNetworkElasticSubnetSpec(spec)
-		elasticSubnetSpecList = append(elasticSubnetSpecList, elasticSubnetSpec)
+	elasticParticipantsSpecList := []network.ElasticChainSpec{}
+	for _, spec := range req.GetElasticChainSpec() {
+		elasticParticipantsSpec := getNetworkElasticChainSpec(spec)
+		elasticParticipantsSpecList = append(elasticParticipantsSpecList, elasticParticipantsSpec)
 	}
 
-	// check that the given subnets exist
-	subnetsSet := set.Set[string]{}
-	subnetsSet.Add(maps.Keys(s.clusterInfo.Subnets)...)
+	// check that the given chains exist
+	chainsSet := set.Set[string]{}
+	chainsSet.Add(maps.Keys(s.clusterInfo.Chains)...)
 
-	for _, elasticSubnetSpec := range elasticSubnetSpecList {
-		if elasticSubnetSpec.SubnetID == nil {
-			return nil, ErrNoSubnetID
-		} else if !subnetsSet.Contains(*elasticSubnetSpec.SubnetID) {
-			return nil, fmt.Errorf("subnet id %q does not exist", *elasticSubnetSpec.SubnetID)
+	for _, elasticParticipantsSpec := range elasticParticipantsSpecList {
+		if elasticParticipantsSpec.ChainID == nil {
+			return nil, ErrNoChainID
+		} else if !chainsSet.Contains(*elasticParticipantsSpec.ChainID) {
+			return nil, fmt.Errorf("chain id %q does not exist", *elasticParticipantsSpec.ChainID)
 		}
 	}
 
@@ -687,16 +687,16 @@ func (s *server) TransformElasticSubnets(
 
 	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
 	defer cancel()
-	txIDs, assetIDs, err := s.network.TransformSubnets(ctx, elasticSubnetSpecList)
+	txIDs, assetIDs, err := s.network.TransformChains(ctx, elasticParticipantsSpecList)
 
 	s.updateClusterInfo()
 
 	if err != nil {
-		s.log.Error("failed to transform subnet into elastic subnet", zap.Error(err))
+		s.log.Error("failed to transform chain into elastic chain", zap.Error(err))
 		return nil, err
 	}
 
-	s.log.Info("subnet transformed into elastic subnet")
+	s.log.Info("chain transformed into elastic chain")
 
 	strTXIDs := []string{}
 	for _, txID := range txIDs {
@@ -712,10 +712,10 @@ func (s *server) TransformElasticSubnets(
 	if err != nil {
 		return nil, err
 	}
-	return &rpcpb.TransformElasticSubnetsResponse{ClusterInfo: clusterInfo, TxIds: strTXIDs, AssetIds: strAssetIDs}, nil
+	return &rpcpb.TransformElasticChainsResponse{ClusterInfo: clusterInfo, TxIds: strTXIDs, AssetIds: strAssetIDs}, nil
 }
 
-func (s *server) CreateSubnets(_ context.Context, req *rpcpb.CreateSubnetsRequest) (*rpcpb.CreateSubnetsResponse, error) {
+func (s *server) CreateChains(_ context.Context, req *rpcpb.CreateChainsRequest) (*rpcpb.CreateChainsResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -723,12 +723,12 @@ func (s *server) CreateSubnets(_ context.Context, req *rpcpb.CreateSubnetsReques
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("CreateSubnets", zap.Uint32("num-subnets", uint32(len(req.GetSubnetSpecs()))))
+	s.log.Debug("CreateParticipantGroups", zap.Uint32("num-groups", uint32(len(req.GetChainSpecs()))))
 
-	subnetSpecs := []network.SubnetSpec{}
-	for _, spec := range req.GetSubnetSpecs() {
-		subnetSpec := getNetworkSubnetSpec(spec)
-		subnetSpecs = append(subnetSpecs, subnetSpec)
+	participantsSpecs := []network.ParticipantsSpec{}
+	for _, spec := range req.GetChainSpecs() {
+		participantsSpec := getNetworkParticipantsSpec(spec)
+		participantsSpecs = append(participantsSpecs, participantsSpec)
 	}
 
 	s.log.Info("waiting for local cluster readiness")
@@ -738,26 +738,26 @@ func (s *server) CreateSubnets(_ context.Context, req *rpcpb.CreateSubnetsReques
 
 	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
 	defer cancel()
-	subnetIDs, err := s.network.CreateSubnets(ctx, subnetSpecs)
+	chainIDs, err := s.network.CreateParticipantGroups(ctx, participantsSpecs)
 	if err != nil {
-		s.log.Error("failed to create subnets", zap.Error(err))
+		s.log.Error("failed to create chains", zap.Error(err))
 		s.stopAndRemoveNetwork(err)
 		return nil, err
 	} else {
 		s.updateClusterInfo()
 	}
-	s.log.Info("subnets created")
+	s.log.Info("chains created")
 
-	strSubnetIDs := []string{}
-	for _, subnetID := range subnetIDs {
-		strSubnetIDs = append(strSubnetIDs, subnetID.String())
+	strChainIDs := []string{}
+	for _, chainID := range chainIDs {
+		strChainIDs = append(strChainIDs, chainID.String())
 	}
 
 	clusterInfo, err := deepCopy(s.clusterInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &rpcpb.CreateSubnetsResponse{ClusterInfo: clusterInfo, SubnetIds: strSubnetIDs}, nil
+	return &rpcpb.CreateChainsResponse{ClusterInfo: clusterInfo, ChainIds: strChainIDs}, nil
 }
 
 func (s *server) Health(ctx context.Context, _ *rpcpb.HealthRequest) (*rpcpb.HealthResponse, error) {
@@ -971,7 +971,7 @@ func (s *server) AddNode(_ context.Context, req *rpcpb.AddNodeRequest) (*rpcpb.A
 		RedirectStderr:     s.cfg.RedirectNodesOutput,
 		ChainConfigFiles:   req.ChainConfigs,
 		UpgradeConfigFiles: req.UpgradeConfigs,
-		SubnetConfigFiles:  req.SubnetConfigs,
+		PChainConfigFiles:  req.ChainConfigFiles,
 	}
 
 	if _, err := s.network.nw.AddNode(nodeConfig); err != nil {
@@ -1037,10 +1037,10 @@ func (s *server) RestartNode(ctx context.Context, req *rpcpb.RestartNodeRequest)
 		req.Name,
 		req.GetExecPath(),
 		req.GetPluginDir(),
-		req.GetWhitelistedSubnets(),
+		req.GetWhitelistedChains(),
 		req.GetChainConfigs(),
 		req.GetUpgradeConfigs(),
-		req.GetSubnetConfigs(),
+		req.GetChainConfigFiles(),
 	); err != nil {
 		return nil, err
 	}
@@ -1278,7 +1278,7 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 		rootDataDir:         rootDataDir,
 		chainConfigs:        req.ChainConfigs,
 		upgradeConfigs:      req.UpgradeConfigs,
-		subnetConfigs:       req.SubnetConfigs,
+		pChainConfigs:       req.ChainConfigFiles,
 		globalNodeConfig:    req.GetGlobalNodeConfig(),
 		logLevel:            s.cfg.LogLevel,
 		reassignPortsIfUsed: req.GetReassignPortsIfUsed(),
@@ -1404,14 +1404,14 @@ func isClientCanceled(ctxErr error, err error) bool {
 	return false
 }
 
-func getNetworkElasticSubnetSpec(
-	spec *rpcpb.ElasticSubnetSpec,
-) network.ElasticSubnetSpec {
+func getNetworkElasticChainSpec(
+	spec *rpcpb.ElasticChainSpec,
+) network.ElasticChainSpec {
 	minStakeDuration := time.Duration(spec.MinStakeDuration) * time.Hour
 	maxStakeDuration := time.Duration(spec.MaxStakeDuration) * time.Hour
 
-	elasticSubnetSpec := network.ElasticSubnetSpec{
-		SubnetID:                 &spec.SubnetId,
+	elasticParticipantsSpec := network.ElasticChainSpec{
+		ChainID:                 &spec.ChainId,
 		AssetName:                spec.AssetName,
 		AssetSymbol:              spec.AssetSymbol,
 		InitialSupply:            spec.InitialSupply,
@@ -1427,7 +1427,7 @@ func getNetworkElasticSubnetSpec(
 		MaxValidatorWeightFactor: byte(spec.MaxValidatorWeightFactor),
 		UptimeRequirement:        spec.UptimeRequirement,
 	}
-	return elasticSubnetSpec
+	return elasticParticipantsSpec
 }
 
 func getPermissionlessValidatorSpec(
@@ -1448,7 +1448,7 @@ func getPermissionlessValidatorSpec(
 	stakeDuration := time.Duration(spec.StakeDuration) * time.Hour
 
 	validatorSpec := network.PermissionlessValidatorSpec{
-		SubnetID:      spec.SubnetId,
+		ChainID:      spec.ChainId,
 		AssetID:       spec.AssetId,
 		NodeName:      spec.NodeName,
 		StakedAmount:  spec.StakedTokenAmount,
@@ -1458,24 +1458,24 @@ func getPermissionlessValidatorSpec(
 	return validatorSpec, nil
 }
 
-func getRemoveSubnetValidatorSpec(
-	spec *rpcpb.RemoveSubnetValidatorSpec,
-) network.RemoveSubnetValidatorSpec {
-	validatorSpec := network.RemoveSubnetValidatorSpec{
-		SubnetID:  spec.SubnetId,
+func getRemoveChainValidatorSpec(
+	spec *rpcpb.RemoveChainValidatorSpec,
+) network.RemoveChainValidatorSpec {
+	validatorSpec := network.RemoveChainValidatorSpec{
+		ChainID:  spec.ChainId,
 		NodeNames: spec.GetNodeNames(),
 	}
 	return validatorSpec
 }
 
-func getNetworkBlockchainSpec(
+func getNetworkChainSpec(
 	log luxlog.Logger,
 	spec *rpcpb.BlockchainSpec,
 	isNewEmptyNetwork bool,
 	pluginDir string,
-) (network.BlockchainSpec, error) {
-	if isNewEmptyNetwork && spec.SubnetId != nil {
-		return network.BlockchainSpec{}, errors.New("blockchain subnet id must be nil if starting a new empty network")
+) (network.ChainSpec, error) {
+	if isNewEmptyNetwork && spec.ChainId != nil {
+		return network.ChainSpec{}, errors.New("blockchain chain id must be nil if starting a new empty network")
 	}
 
 	vmName := spec.VmName
@@ -1483,7 +1483,7 @@ func getNetworkBlockchainSpec(
 	vmID, err := utils.VMID(vmName)
 	if err != nil {
 		log.Warn("failed to convert VM name to VM ID", zap.String("vm-name", vmName), zap.Error(err))
-		return network.BlockchainSpec{}, ErrInvalidVMName
+		return network.ChainSpec{}, ErrInvalidVMName
 	}
 
 	// there is no default plugindir from the ANR point of view, will not check if not given
@@ -1491,7 +1491,7 @@ func getNetworkBlockchainSpec(
 		if err := utils.CheckPluginPath(
 			filepath.Join(pluginDir, vmID.String()),
 		); err != nil {
-			return network.BlockchainSpec{}, err
+			return network.ChainSpec{}, err
 		}
 	}
 
@@ -1507,9 +1507,9 @@ func getNetworkBlockchainSpec(
 		networkUpgradeBytes = readFileOrString(spec.NetworkUpgrade)
 	}
 
-	var subnetConfigBytes []byte
-	if spec.SubnetSpec != nil && spec.SubnetSpec.SubnetConfig != "" {
-		subnetConfigBytes = readFileOrString(spec.SubnetSpec.SubnetConfig)
+	// Override chain config with ChainSpec.ChainConfigFile if provided
+	if spec.ChainSpec != nil && spec.ChainSpec.ChainConfigFile != "" {
+		chainConfigBytes = readFileOrString(spec.ChainSpec.ChainConfigFile)
 	}
 
 	perNodeChainConfig := map[string][]byte{}
@@ -1518,49 +1518,49 @@ func getNetworkBlockchainSpec(
 
 		perNodeChainConfigMap := map[string]interface{}{}
 		if err := json.Unmarshal(perNodeChainConfigBytes, &perNodeChainConfigMap); err != nil {
-			return network.BlockchainSpec{}, err
+			return network.ChainSpec{}, err
 		}
 
 		for nodeName, cfg := range perNodeChainConfigMap {
 			cfgBytes, err := json.Marshal(cfg)
 			if err != nil {
-				return network.BlockchainSpec{}, err
+				return network.ChainSpec{}, err
 			}
 			perNodeChainConfig[nodeName] = cfgBytes
 		}
 	}
 
-	blockchainSpec := network.BlockchainSpec{
+	chainSpec := network.ChainSpec{
 		VMName:             vmName,
 		Genesis:            genesisBytes,
 		ChainConfig:        chainConfigBytes,
 		NetworkUpgrade:     networkUpgradeBytes,
-		SubnetID:           spec.SubnetId,
-		BlockchainAlias:    spec.BlockchainAlias,
+		ChainID:           spec.ChainId,
+		Alias:    spec.BlockchainAlias,
 		PerNodeChainConfig: perNodeChainConfig,
 	}
 
-	if spec.SubnetSpec != nil {
-		subnetSpec := network.SubnetSpec{
-			Participants: spec.SubnetSpec.Participants,
-			SubnetConfig: subnetConfigBytes,
+	if spec.ChainSpec != nil {
+		participantsSpec := network.ParticipantsSpec{
+			Participants: spec.ChainSpec.Participants,
+			ChainConfig: chainConfigBytes,
 		}
-		blockchainSpec.SubnetSpec = &subnetSpec
+		chainSpec.ParticipantsSpec = &participantsSpec
 	}
 
-	return blockchainSpec, nil
+	return chainSpec, nil
 }
 
-func getNetworkSubnetSpec(
-	spec *rpcpb.SubnetSpec,
-) network.SubnetSpec {
-	var subnetConfigBytes []byte
-	if spec.SubnetConfig != "" {
-		subnetConfigBytes = readFileOrString(spec.SubnetConfig)
+func getNetworkParticipantsSpec(
+	spec *rpcpb.ChainSpec,
+) network.ParticipantsSpec {
+	var chainConfigBytes []byte
+	if spec.ChainConfigFile != "" {
+		chainConfigBytes = readFileOrString(spec.ChainConfigFile)
 	}
-	return network.SubnetSpec{
+	return network.ParticipantsSpec{
 		Participants: spec.Participants,
-		SubnetConfig: subnetConfigBytes,
+		ChainConfig:  chainConfigBytes,
 	}
 }
 

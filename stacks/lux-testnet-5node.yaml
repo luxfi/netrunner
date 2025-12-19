@@ -1,0 +1,60 @@
+name: lux-testnet-5node
+version: 1.0.0
+description: 5-node Lux Testnet local network
+
+engines:
+  - name: testnet-node-1
+    type: lux
+    network_id: 96368
+    http_port: 9750
+    staking_port: 9751
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-testnet-5node/node1
+
+  - name: testnet-node-2
+    type: lux
+    network_id: 96368
+    http_port: 9760
+    staking_port: 9761
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-testnet-5node/node2
+
+  - name: testnet-node-3
+    type: lux
+    network_id: 96368
+    http_port: 9770
+    staking_port: 9771
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-testnet-5node/node3
+
+  - name: testnet-node-4
+    type: lux
+    network_id: 96368
+    http_port: 9780
+    staking_port: 9781
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-testnet-5node/node4
+
+  - name: testnet-node-5
+    type: lux
+    network_id: 96368
+    http_port: 9790
+    staking_port: 9791
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-testnet-5node/node5
+
+networks:
+  - name: lux-testnet-local
+    type: l1
+    chain_id: 96368
+    endpoints:
+      - http://localhost:9750
+      - http://localhost:9760
+      - http://localhost:9770
+      - http://localhost:9780
+      - http://localhost:9790

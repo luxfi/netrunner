@@ -1,5 +1,5 @@
 // Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 // Package client implements client.
 package client
@@ -31,11 +31,13 @@ type Client interface {
 	Ping(ctx context.Context) (*rpcpb.PingResponse, error)
 	RPCVersion(ctx context.Context) (*rpcpb.RPCVersionResponse, error)
 	Start(ctx context.Context, execPath string, opts ...OpOption) (*rpcpb.StartResponse, error)
-	CreateBlockchains(ctx context.Context, blockchainSpecs []*rpcpb.BlockchainSpec) (*rpcpb.CreateBlockchainsResponse, error)
-	CreateSubnets(ctx context.Context, subnetSpecs []*rpcpb.SubnetSpec) (*rpcpb.CreateSubnetsResponse, error)
-	TransformElasticSubnets(ctx context.Context, elasticSubnetSpecs []*rpcpb.ElasticSubnetSpec) (*rpcpb.TransformElasticSubnetsResponse, error)
+	// CreateChains creates chains with VMs and genesis (uses rpcpb.CreateBlockchains)
+	CreateChains(ctx context.Context, chainSpecs []*rpcpb.BlockchainSpec) (*rpcpb.CreateBlockchainsResponse, error)
+	// CreateParticipantGroups creates participant groups (uses rpcpb.CreateChains)
+	CreateParticipantGroups(ctx context.Context, participantsSpecs []*rpcpb.ChainSpec) (*rpcpb.CreateChainsResponse, error)
+	TransformElasticChains(ctx context.Context, elasticChainSpecs []*rpcpb.ElasticChainSpec) (*rpcpb.TransformElasticChainsResponse, error)
 	AddPermissionlessValidator(ctx context.Context, validatorSpec []*rpcpb.PermissionlessValidatorSpec) (*rpcpb.AddPermissionlessValidatorResponse, error)
-	RemoveSubnetValidator(ctx context.Context, validatorSpec []*rpcpb.RemoveSubnetValidatorSpec) (*rpcpb.RemoveSubnetValidatorResponse, error)
+	RemoveChainValidator(ctx context.Context, validatorSpec []*rpcpb.RemoveChainValidatorSpec) (*rpcpb.RemoveChainValidatorResponse, error)
 	Health(ctx context.Context) (*rpcpb.HealthResponse, error)
 	WaitForHealthy(ctx context.Context) (*rpcpb.WaitForHealthyResponse, error)
 	URIs(ctx context.Context) ([]string, error)
@@ -116,10 +118,10 @@ func (c *client) Start(ctx context.Context, execPath string, opts ...OpOption) (
 		NumNodes:       &ret.numNodes,
 		ChainConfigs:   ret.chainConfigs,
 		UpgradeConfigs: ret.upgradeConfigs,
-		SubnetConfigs:  ret.subnetConfigs,
+		ChainConfigFiles:  ret.chainConfigs,
 	}
-	if ret.trackSubnets != "" {
-		req.WhitelistedSubnets = &ret.trackSubnets
+	if ret.trackChains != "" {
+		req.WhitelistedChains = &ret.trackChains
 	}
 	if ret.rootDataDir != "" {
 		req.RootDataDir = &ret.rootDataDir
@@ -127,8 +129,8 @@ func (c *client) Start(ctx context.Context, execPath string, opts ...OpOption) (
 	if ret.pluginDir != "" {
 		req.PluginDir = ret.pluginDir
 	}
-	if len(ret.blockchainSpecs) > 0 {
-		req.BlockchainSpecs = ret.blockchainSpecs
+	if len(ret.chainSpecs) > 0 {
+		req.BlockchainSpecs = ret.chainSpecs
 	}
 	if ret.globalNodeConfig != "" {
 		req.GlobalNodeConfig = &ret.globalNodeConfig
@@ -143,31 +145,31 @@ func (c *client) Start(ctx context.Context, execPath string, opts ...OpOption) (
 	return c.controlc.Start(ctx, req)
 }
 
-func (c *client) CreateBlockchains(ctx context.Context, blockchainSpecs []*rpcpb.BlockchainSpec) (*rpcpb.CreateBlockchainsResponse, error) {
+func (c *client) CreateChains(ctx context.Context, chainSpecs []*rpcpb.BlockchainSpec) (*rpcpb.CreateBlockchainsResponse, error) {
 	req := &rpcpb.CreateBlockchainsRequest{
-		BlockchainSpecs: blockchainSpecs,
+		BlockchainSpecs: chainSpecs,
 	}
 
-	c.log.Info("create blockchains")
+	c.log.Info("create chains")
 	return c.controlc.CreateBlockchains(ctx, req)
 }
 
-func (c *client) CreateSubnets(ctx context.Context, subnetSpecs []*rpcpb.SubnetSpec) (*rpcpb.CreateSubnetsResponse, error) {
-	req := &rpcpb.CreateSubnetsRequest{
-		SubnetSpecs: subnetSpecs,
+func (c *client) CreateParticipantGroups(ctx context.Context, participantsSpecs []*rpcpb.ChainSpec) (*rpcpb.CreateChainsResponse, error) {
+	req := &rpcpb.CreateChainsRequest{
+		ChainSpecs: participantsSpecs,
 	}
 
-	c.log.Info("create subnets")
-	return c.controlc.CreateSubnets(ctx, req)
+	c.log.Info("create participant groups")
+	return c.controlc.CreateChains(ctx, req)
 }
 
-func (c *client) TransformElasticSubnets(ctx context.Context, elasticSubnetSpecs []*rpcpb.ElasticSubnetSpec) (*rpcpb.TransformElasticSubnetsResponse, error) {
-	req := &rpcpb.TransformElasticSubnetsRequest{
-		ElasticSubnetSpec: elasticSubnetSpecs,
+func (c *client) TransformElasticChains(ctx context.Context, elasticChainSpecs []*rpcpb.ElasticChainSpec) (*rpcpb.TransformElasticChainsResponse, error) {
+	req := &rpcpb.TransformElasticChainsRequest{
+		ElasticChainSpec: elasticChainSpecs,
 	}
 
-	c.log.Info("transform subnets")
-	return c.controlc.TransformElasticSubnets(ctx, req)
+	c.log.Info("transform chains")
+	return c.controlc.TransformElasticChains(ctx, req)
 }
 
 func (c *client) AddPermissionlessValidator(ctx context.Context, validatorSpec []*rpcpb.PermissionlessValidatorSpec) (*rpcpb.AddPermissionlessValidatorResponse, error) {
@@ -175,17 +177,17 @@ func (c *client) AddPermissionlessValidator(ctx context.Context, validatorSpec [
 		ValidatorSpec: validatorSpec,
 	}
 
-	c.log.Info("add permissionless validators to elastic subnets")
+	c.log.Info("add permissionless validators to elastic chains")
 	return c.controlc.AddPermissionlessValidator(ctx, req)
 }
 
-func (c *client) RemoveSubnetValidator(ctx context.Context, validatorSpec []*rpcpb.RemoveSubnetValidatorSpec) (*rpcpb.RemoveSubnetValidatorResponse, error) {
-	req := &rpcpb.RemoveSubnetValidatorRequest{
+func (c *client) RemoveChainValidator(ctx context.Context, validatorSpec []*rpcpb.RemoveChainValidatorSpec) (*rpcpb.RemoveChainValidatorResponse, error) {
+	req := &rpcpb.RemoveChainValidatorRequest{
 		ValidatorSpec: validatorSpec,
 	}
 
-	c.log.Info("remove subnet validator")
-	return c.controlc.RemoveSubnetValidator(ctx, req)
+	c.log.Info("remove chain validator")
+	return c.controlc.RemoveChainValidator(ctx, req)
 }
 
 func (c *client) Health(ctx context.Context) (*rpcpb.HealthResponse, error) {
@@ -274,7 +276,7 @@ func (c *client) AddNode(ctx context.Context, name string, execPath string, opts
 		NodeConfig:     &ret.globalNodeConfig,
 		ChainConfigs:   ret.chainConfigs,
 		UpgradeConfigs: ret.upgradeConfigs,
-		SubnetConfigs:  ret.subnetConfigs,
+		ChainConfigFiles:  ret.chainConfigs,
 	}
 
 	if ret.pluginDir != "" {
@@ -311,12 +313,12 @@ func (c *client) RestartNode(ctx context.Context, name string, opts ...OpOption)
 	if ret.pluginDir != "" {
 		req.PluginDir = ret.pluginDir
 	}
-	if ret.trackSubnets != "" {
-		req.WhitelistedSubnets = &ret.trackSubnets
+	if ret.trackChains != "" {
+		req.WhitelistedChains = &ret.trackChains
 	}
 	req.ChainConfigs = ret.chainConfigs
 	req.UpgradeConfigs = ret.upgradeConfigs
-	req.SubnetConfigs = ret.subnetConfigs
+	req.ChainConfigFiles = ret.chainConfigs
 
 	c.log.Info("restart node", zap.String("name", name))
 	return c.controlc.RestartNode(ctx, req)
@@ -350,7 +352,7 @@ func (c *client) LoadSnapshot(ctx context.Context, snapshotName string, opts ...
 		SnapshotName:   snapshotName,
 		ChainConfigs:   ret.chainConfigs,
 		UpgradeConfigs: ret.upgradeConfigs,
-		SubnetConfigs:  ret.subnetConfigs,
+		ChainConfigFiles:  ret.chainConfigs,
 	}
 	if ret.execPath != "" {
 		req.ExecPath = &ret.execPath
@@ -392,16 +394,16 @@ func (c *client) Close() error {
 type Op struct {
 	numNodes            uint32
 	execPath            string
-	trackSubnets        string
+	trackChains        string
 	globalNodeConfig    string
 	rootDataDir         string
 	pluginDir           string
-	blockchainSpecs     []*rpcpb.BlockchainSpec
+	chainSpecs     []*rpcpb.BlockchainSpec
 	customNodeConfigs   map[string]string
-	numSubnets          uint32
+	numChains          uint32
 	chainConfigs        map[string]string
 	upgradeConfigs      map[string]string
-	subnetConfigs       map[string]string
+	pChainConfigs       map[string]string
 	reassignPortsIfUsed bool
 	dynamicPorts        bool
 }
@@ -432,15 +434,15 @@ func WithExecPath(execPath string) OpOption {
 	}
 }
 
-func WithWhitelistedSubnets(trackSubnets string) OpOption {
+func WithWhitelistedChains(trackChains string) OpOption {
 	return func(op *Op) {
-		op.trackSubnets = trackSubnets
+		op.trackChains = trackChains
 	}
 }
 
-func WithTrackSubnets(trackSubnets string) OpOption {
+func WithTrackChains(trackChains string) OpOption {
 	return func(op *Op) {
-		op.trackSubnets = trackSubnets
+		op.trackChains = trackChains
 	}
 }
 
@@ -456,10 +458,10 @@ func WithPluginDir(pluginDir string) OpOption {
 	}
 }
 
-// Slice of BlockchainSpec
-func WithBlockchainSpecs(blockchainSpecs []*rpcpb.BlockchainSpec) OpOption {
+// WithChainSpecs sets the chain specifications for creating chains with VMs
+func WithChainSpecs(chainSpecs []*rpcpb.BlockchainSpec) OpOption {
 	return func(op *Op) {
-		op.blockchainSpecs = blockchainSpecs
+		op.chainSpecs = chainSpecs
 	}
 }
 
@@ -477,10 +479,10 @@ func WithUpgradeConfigs(upgradeConfigs map[string]string) OpOption {
 	}
 }
 
-// Map from subnet id to its configuration json contents.
-func WithSubnetConfigs(subnetConfigs map[string]string) OpOption {
+// Map from chain id to its configuration json contents.
+func WithChainConfigFiles(chainConfigs map[string]string) OpOption {
 	return func(op *Op) {
-		op.subnetConfigs = subnetConfigs
+		op.chainConfigs = chainConfigs
 	}
 }
 
@@ -491,9 +493,9 @@ func WithCustomNodeConfigs(customNodeConfigs map[string]string) OpOption {
 	}
 }
 
-func WithNumSubnets(numSubnets uint32) OpOption {
+func WithNumChains(numChains uint32) OpOption {
 	return func(op *Op) {
-		op.numSubnets = numSubnets
+		op.numChains = numChains
 	}
 }
 

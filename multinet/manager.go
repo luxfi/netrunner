@@ -19,7 +19,7 @@ type NetworkType string
 
 const (
 	NetworkTypePrimary NetworkType = "primary" // Mainnet or Testnet
-	NetworkTypeSubnet  NetworkType = "subnet"  // L1/L2 subnets
+	NetworkTypeChain  NetworkType = "chain"  // L1/L2 chains
 )
 
 // NetworkConfig defines configuration for a single network
@@ -27,7 +27,7 @@ type NetworkConfig struct {
 	NetworkID   uint32      `json:"networkID"`
 	Name        string      `json:"name"`
 	Type        NetworkType `json:"type"`
-	ParentID    uint32      `json:"parentID,omitempty"` // For subnets
+	ParentID    uint32      `json:"parentID,omitempty"` // For chains
 	HTTPPort    int         `json:"httpPort"`
 	StakingPort int         `json:"stakingPort"`
 	DataDir     string      `json:"dataDir"`
@@ -39,7 +39,7 @@ type NetworkConfig struct {
 type ChainConfig struct {
 	ChainID   string `json:"chainID"`
 	VMID      string `json:"vmID"`
-	SubnetID  string `json:"subnetID,omitempty"`
+	PChainID  string `json:"pChainID,omitempty"`
 	Genesis   []byte `json:"genesis,omitempty"`
 	IsEVM     bool   `json:"isEVM"`
 }
@@ -73,14 +73,14 @@ type NetworkInstance struct {
 	Config    NetworkConfig
 	Network   network.Network
 	Status    NetworkStatus
-	Subnets   map[string]*SubnetInstance
+	Chains   map[string]*ChainInstance
 	StartTime time.Time
 }
 
-// SubnetInstance represents a running subnet
-type SubnetInstance struct {
-	SubnetID    string
+// ChainInstance represents a running chain
+type ChainInstance struct {
 	ChainID     string
+	PChainID    string
 	ParentNetID uint32
 	Validators  []ids.NodeID
 	Status      NetworkStatus
@@ -197,7 +197,7 @@ func (m *MultiNetworkManager) AddNetwork(config NetworkConfig) error {
 	instance := &NetworkInstance{
 		Config:  config,
 		Status:  NetworkStatusStopped,
-		Subnets: make(map[string]*SubnetInstance),
+		Chains: make(map[string]*ChainInstance),
 	}
 
 	m.networks[config.NetworkID] = instance
