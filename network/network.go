@@ -16,7 +16,7 @@ var (
 )
 
 type PermissionlessValidatorSpec struct {
-	SubnetID      string
+	ChainID       string
 	AssetID       string
 	NodeName      string
 	StakedAmount  uint64
@@ -24,8 +24,8 @@ type PermissionlessValidatorSpec struct {
 	StakeDuration time.Duration
 }
 
-type ElasticSubnetSpec struct {
-	SubnetID                 *string
+type ElasticChainSpec struct {
+	ChainID                  *string
 	AssetName                string
 	AssetSymbol              string
 	InitialSupply            uint64
@@ -42,25 +42,26 @@ type ElasticSubnetSpec struct {
 	UptimeRequirement        uint32
 }
 
-type SubnetSpec struct {
+type ParticipantsSpec struct {
 	Participants []string
-	SubnetConfig []byte
+	ChainConfig  []byte
 }
 
-type RemoveSubnetValidatorSpec struct {
+type RemoveChainValidatorSpec struct {
 	NodeNames []string
-	SubnetID  string
+	ChainID   string
 }
 
-type BlockchainSpec struct {
+type ChainSpec struct {
 	VMName             string
 	Genesis            []byte
-	SubnetID           *string
-	SubnetSpec         *SubnetSpec
+	ChainID            *string
+	ParticipantsSpec   *ParticipantsSpec
 	ChainConfig        []byte
 	NetworkUpgrade     []byte
-	BlockchainAlias    string
+	Alias              string
 	PerNodeChainConfig map[string][]byte
+	BlockchainName     string // Unique name for the blockchain (defaults to VMName if empty)
 }
 
 // Network is an abstraction of an Lux network
@@ -103,19 +104,19 @@ type Network interface {
 	// Get name of available snapshots
 	GetSnapshotNames() ([]string, error)
 	// Restart a given node using the same config, optionally changing binary path, plugin dir,
-	// track subnets, a map of chain configs, a map of upgrade configs, and
-	// a map of subnet configs
+	// track chains, a map of chain configs, a map of upgrade configs, and
+	// a map of chain configs
 	RestartNode(context.Context, string, string, string, string, map[string]string, map[string]string, map[string]string) error
-	// Create the specified blockchains
-	CreateBlockchains(context.Context, []BlockchainSpec) ([]ids.ID, error)
-	// Create the given numbers of subnets
-	CreateSubnets(context.Context, []SubnetSpec) ([]ids.ID, error)
-	// Transform subnet into elastic subnet
-	TransformSubnet(context.Context, []ElasticSubnetSpec) ([]ids.ID, []ids.ID, error)
-	// Add a validator into an elastic subnet
+	// Create the specified chains
+	CreateChains(context.Context, []ChainSpec) ([]ids.ID, error)
+	// Create chain participant groups (validators)
+	CreateParticipantGroups(context.Context, []ParticipantsSpec) ([]ids.ID, error)
+	// Transform chain into elastic chain
+	TransformChain(context.Context, []ElasticChainSpec) ([]ids.ID, []ids.ID, error)
+	// Add a validator into an elastic chain
 	AddPermissionlessValidators(context.Context, []PermissionlessValidatorSpec) error
-	// Remove a validator from a subnet
-	RemoveSubnetValidators(context.Context, []RemoveSubnetValidatorSpec) error
-	// Get the elastic subnet tx id for the given subnet id
-	GetElasticSubnetID(context.Context, ids.ID) (ids.ID, error)
+	// Remove a validator from a chain
+	RemoveChainValidators(context.Context, []RemoveChainValidatorSpec) error
+	// Get the elastic chain tx id for the given chain id
+	GetElasticChainID(context.Context, ids.ID) (ids.ID, error)
 }

@@ -24,26 +24,26 @@ import (
 
 const (
 	deprecatedBuildDirKey           = "build-dir"
-	deprecatedWhitelistedSubnetsKey = "whitelisted-subnets"
+	deprecatedWhitelistedChainsKey = "whitelisted-chains"
 )
 
-// NetworkState defines dynamic network information not available on blockchain db
+// NetworkState defines dynamic network information not available on chain db
 type NetworkState struct {
-	// Map from subnet id to elastic subnet tx id
-	SubnetID2ElasticSubnetID map[string]string `json:"subnetID2ElasticSubnetID"`
+	// Map from chain id to elastic chain tx id
+	ChainID2ElasticChainID map[string]string `json:"chainID2ElasticChainID"`
 }
 
 // snapshots generated using older ANR versions may contain deprecated luxd flags
 func fixDeprecatedLuxdFlags(flags map[string]interface{}) error {
-	if vIntf, ok := flags[deprecatedWhitelistedSubnetsKey]; ok {
+	if vIntf, ok := flags[deprecatedWhitelistedChainsKey]; ok {
 		v, ok := vIntf.(string)
 		if !ok {
-			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedWhitelistedSubnetsKey, vIntf)
+			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedWhitelistedChainsKey, vIntf)
 		}
 		if v != "" {
 			flags[config.TrackNetsKey] = v
 		}
-		delete(flags, deprecatedWhitelistedSubnetsKey)
+		delete(flags, deprecatedWhitelistedChainsKey)
 	}
 	if vIntf, ok := flags[deprecatedBuildDirKey]; ok {
 		v, ok := vIntf.(string)
@@ -68,7 +68,7 @@ func NewNetworkFromSnapshot(
 	pluginDir string,
 	chainConfigs map[string]string,
 	upgradeConfigs map[string]string,
-	subnetConfigs map[string]string,
+	pChainConfigs map[string]string,
 	flags map[string]interface{},
 	reassignPortsIfUsed bool,
 ) (network.Network, error) {
@@ -95,7 +95,7 @@ func NewNetworkFromSnapshot(
 		pluginDir,
 		chainConfigs,
 		upgradeConfigs,
-		subnetConfigs,
+		pChainConfigs,
 		flags,
 	)
 	return net, err
@@ -182,7 +182,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		BinaryPath:         ln.binaryPath,
 		ChainConfigFiles:   ln.chainConfigFiles,
 		UpgradeConfigFiles: ln.upgradeConfigFiles,
-		SubnetConfigFiles:  ln.subnetConfigFiles,
+		PChainConfigFiles:  ln.pChainConfigFiles,
 	}
 
 	// no need to save this, will be generated automatically on snapshot load
@@ -195,12 +195,12 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		return "", err
 	}
 	// save dynamic part of network not available on blockchain
-	subnetID2ElasticSubnetID := map[string]string{}
-	for subnetID, elasticSubnetID := range ln.subnetID2ElasticSubnetID {
-		subnetID2ElasticSubnetID[subnetID.String()] = elasticSubnetID.String()
+	chainID2ElasticChainID := map[string]string{}
+	for chainID, elasticChainID := range ln.chainID2ElasticChainID {
+		chainID2ElasticChainID[chainID.String()] = elasticChainID.String()
 	}
 	networkState := NetworkState{
-		SubnetID2ElasticSubnetID: subnetID2ElasticSubnetID,
+		ChainID2ElasticChainID: chainID2ElasticChainID,
 	}
 	networkStateJSON, err := json.MarshalIndent(networkState, "", "    ")
 	if err != nil {
@@ -220,7 +220,7 @@ func (ln *localNetwork) loadSnapshot(
 	pluginDir string,
 	chainConfigs map[string]string,
 	upgradeConfigs map[string]string,
-	subnetConfigs map[string]string,
+	pChainConfigs map[string]string,
 	flags map[string]interface{},
 ) error {
 	ln.lock.Lock()
@@ -289,8 +289,8 @@ func (ln *localNetwork) loadSnapshot(
 		if networkConfig.NodeConfigs[i].UpgradeConfigFiles == nil {
 			networkConfig.NodeConfigs[i].UpgradeConfigFiles = map[string]string{}
 		}
-		if networkConfig.NodeConfigs[i].SubnetConfigFiles == nil {
-			networkConfig.NodeConfigs[i].SubnetConfigFiles = map[string]string{}
+		if networkConfig.NodeConfigs[i].ChainConfigFiles == nil {
+			networkConfig.NodeConfigs[i].ChainConfigFiles = map[string]string{}
 		}
 		for k, v := range chainConfigs {
 			networkConfig.NodeConfigs[i].ChainConfigFiles[k] = v
@@ -298,8 +298,8 @@ func (ln *localNetwork) loadSnapshot(
 		for k, v := range upgradeConfigs {
 			networkConfig.NodeConfigs[i].UpgradeConfigFiles[k] = v
 		}
-		for k, v := range subnetConfigs {
-			networkConfig.NodeConfigs[i].SubnetConfigFiles[k] = v
+		for k, v := range chainConfigs {
+			networkConfig.NodeConfigs[i].ChainConfigFiles[k] = v
 		}
 	}
 	// load network state not available at blockchain db
@@ -314,17 +314,17 @@ func (ln *localNetwork) loadSnapshot(
 		if err := json.Unmarshal(networkStateJSON, &networkState); err != nil {
 			return fmt.Errorf("failure unmarshaling network state from snapshot: %w", err)
 		}
-		ln.subnetID2ElasticSubnetID = map[ids.ID]ids.ID{}
-		for subnetIDStr, elasticSubnetIDStr := range networkState.SubnetID2ElasticSubnetID {
-			subnetID, err := ids.FromString(subnetIDStr)
+		ln.chainID2ElasticChainID = map[ids.ID]ids.ID{}
+		for chainIDStr, elasticChainIDStr := range networkState.ChainID2ElasticChainID {
+			chainID, err := ids.FromString(chainIDStr)
 			if err != nil {
 				return err
 			}
-			elasticSubnetID, err := ids.FromString(elasticSubnetIDStr)
+			elasticChainID, err := ids.FromString(elasticChainIDStr)
 			if err != nil {
 				return err
 			}
-			ln.subnetID2ElasticSubnetID[subnetID] = elasticSubnetID
+			ln.chainID2ElasticChainID[chainID] = elasticChainID
 		}
 	}
 	return ln.loadConfig(ctx, networkConfig)

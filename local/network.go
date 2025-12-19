@@ -69,8 +69,8 @@ var (
 		config.BootstrapIPsKey: {},
 		config.BootstrapIDsKey: {},
 	}
-	chainConfigSubDir  = "chainConfigs"
-	subnetConfigSubDir = "subnetConfigs"
+	chainConfigSubDir   = "chainConfigs"
+	pChainConfigSubDir  = "pChainConfigs"
 
 	snapshotsRelPath = filepath.Join(".netrunner", "snapshots")
 
@@ -112,12 +112,12 @@ type localNetwork struct {
 	chainConfigFiles map[string]string
 	// upgrade config files to use per default
 	upgradeConfigFiles map[string]string
-	// subnet config files to use per default
-	subnetConfigFiles map[string]string
+	// P-chain config files to use per default
+	pChainConfigFiles map[string]string
 	// if true, for ports given in conf that are already taken, assign new random ones
 	reassignPortsIfUsed bool
-	// map from subnet id to elastic subnet tx id
-	subnetID2ElasticSubnetID map[ids.ID]ids.ID
+	// map from chain id to elastic chain tx id
+	chainID2ElasticChainID map[ids.ID]ids.ID
 }
 
 type deprecatedFlagEsp struct {
@@ -215,7 +215,7 @@ func init() {
 			"C": string(cChainConfig),
 		},
 		UpgradeConfigFiles: map[string]string{},
-		SubnetConfigFiles:  map[string]string{},
+		PChainConfigFiles: map[string]string{},
 	}
 
 	for i := 0; i < len(defaultNetworkConfig.NodeConfigs); i++ {
@@ -330,7 +330,7 @@ func newNetwork(
 		rootDir:                  rootDir,
 		snapshotsDir:             snapshotsDir,
 		reassignPortsIfUsed:      reassignPortsIfUsed,
-		subnetID2ElasticSubnetID: map[ids.ID]ids.ID{},
+		chainID2ElasticChainID: map[ids.ID]ids.ID{},
 	}
 	return net, nil
 }
@@ -442,9 +442,9 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 	if ln.upgradeConfigFiles == nil {
 		ln.upgradeConfigFiles = map[string]string{}
 	}
-	ln.subnetConfigFiles = networkConfig.SubnetConfigFiles
-	if ln.subnetConfigFiles == nil {
-		ln.subnetConfigFiles = map[string]string{}
+	ln.chainConfigFiles = networkConfig.ChainConfigFiles
+	if ln.chainConfigFiles == nil {
+		ln.chainConfigFiles = map[string]string{}
 	}
 
 	// Sort node configs so beacons start first
@@ -496,8 +496,8 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 	if nodeConfig.UpgradeConfigFiles == nil {
 		nodeConfig.UpgradeConfigFiles = map[string]string{}
 	}
-	if nodeConfig.SubnetConfigFiles == nil {
-		nodeConfig.SubnetConfigFiles = map[string]string{}
+	if nodeConfig.ChainConfigFiles == nil {
+		nodeConfig.ChainConfigFiles = map[string]string{}
 	}
 
 	// load node defaults
@@ -516,10 +516,10 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 			nodeConfig.UpgradeConfigFiles[k] = v
 		}
 	}
-	for k, v := range ln.subnetConfigFiles {
-		_, ok := nodeConfig.SubnetConfigFiles[k]
+	for k, v := range ln.chainConfigFiles {
+		_, ok := nodeConfig.ChainConfigFiles[k]
 		if !ok {
-			nodeConfig.SubnetConfigFiles[k] = v
+			nodeConfig.ChainConfigFiles[k] = v
 		}
 	}
 	addNetworkFlags(ln.flags, nodeConfig.Flags)
@@ -688,7 +688,7 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 				if healthClient == nil {
 					return fmt.Errorf("health client is nil for node %v", nodeName)
 				}
-				health, err := (*healthClient).Health(ctx, nil)
+				health, err := healthClient.Health(ctx, nil)
 				if err == nil && health.Healthy {
 					ln.log.Debug("node became healthy", zap.String("name", nodeName))
 					return nil
@@ -893,16 +893,16 @@ func (ln *localNetwork) resumeNode(
 }
 
 // Restart [nodeName] using the same config, optionally changing [binaryPath],
-// [pluginDir], [trackSubnets], [chainConfigs], [upgradeConfigs], [subnetConfigs]
+// [pluginDir], [trackChains], [chainConfigs], [upgradeConfigs], [pChainConfigs]
 func (ln *localNetwork) RestartNode(
 	ctx context.Context,
 	nodeName string,
 	binaryPath string,
 	pluginDir string,
-	trackSubnets string,
+	trackChains string,
 	chainConfigs map[string]string,
 	upgradeConfigs map[string]string,
-	subnetConfigs map[string]string,
+	pChainConfigs map[string]string,
 ) error {
 	ln.lock.Lock()
 	defer ln.lock.Unlock()
@@ -912,10 +912,10 @@ func (ln *localNetwork) RestartNode(
 		nodeName,
 		binaryPath,
 		pluginDir,
-		trackSubnets,
+		trackChains,
 		chainConfigs,
 		upgradeConfigs,
-		subnetConfigs,
+		pChainConfigs,
 	)
 }
 
@@ -924,10 +924,10 @@ func (ln *localNetwork) restartNode(
 	nodeName string,
 	binaryPath string,
 	pluginDir string,
-	trackSubnets string,
+	trackChains string,
 	chainConfigs map[string]string,
 	upgradeConfigs map[string]string,
-	subnetConfigs map[string]string,
+	pChainConfigs map[string]string,
 ) error {
 	node, ok := ln.nodes[nodeName]
 	if !ok {
@@ -943,8 +943,8 @@ func (ln *localNetwork) restartNode(
 		nodeConfig.Flags[config.PluginDirKey] = pluginDir
 	}
 
-	if trackSubnets != "" {
-		nodeConfig.Flags[config.TrackNetsKey] = trackSubnets
+	if trackChains != "" {
+		nodeConfig.Flags[config.TrackNetsKey] = trackChains
 	}
 
 	// keep same ports, dbdir in node flags
@@ -961,9 +961,9 @@ func (ln *localNetwork) restartNode(
 	for k, v := range upgradeConfigs {
 		nodeConfig.UpgradeConfigFiles[k] = v
 	}
-	// apply subnet configs
-	for k, v := range subnetConfigs {
-		nodeConfig.SubnetConfigFiles[k] = v
+	// apply chain configs
+	for k, v := range chainConfigs {
+		nodeConfig.ChainConfigFiles[k] = v
 	}
 
 	if !node.paused {

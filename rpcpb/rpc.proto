@@ -43,9 +43,9 @@ service ControlService {
     };
   }
 
-  rpc TransformElasticSubnets(TransformElasticSubnetsRequest) returns (TransformElasticSubnetsResponse) {
+  rpc TransformElasticChains(TransformElasticChainsRequest) returns (TransformElasticChainsResponse) {
     option (google.api.http) = {
-      post: "/v1/control/transformelasticsubnets"
+      post: "/v1/control/transformelasticchains"
       body: "*"
     };
   }
@@ -57,16 +57,16 @@ service ControlService {
     };
   }
 
-  rpc RemoveSubnetValidator(RemoveSubnetValidatorRequest) returns (RemoveSubnetValidatorResponse) {
+  rpc RemoveChainValidator(RemoveChainValidatorRequest) returns (RemoveChainValidatorResponse) {
     option (google.api.http) = {
-      post: "/v1/control/removesubnetvalidator"
+      post: "/v1/control/removechainvalidator"
       body: "*"
     };
   }
 
-  rpc CreateSubnets(CreateSubnetsRequest) returns (CreateSubnetsResponse) {
+  rpc CreateChains(CreateChainsRequest) returns (CreateChainsResponse) {
     option (google.api.http) = {
-      post: "/v1/control/createsubnets"
+      post: "/v1/control/createchains"
       body: "*"
     };
   }
@@ -191,7 +191,7 @@ service ControlService {
   }
 }
 
-message SubnetParticipants {
+message ChainParticipants {
   repeated string node_names = 1;
 }
 
@@ -209,18 +209,18 @@ message ClusterInfo {
   bool custom_chains_healthy = 7;
   // The map of blockchain IDs in "ids.ID" format to its blockchain information.
   map<string, CustomChainInfo> custom_chains = 8;
-  map<string, SubnetInfo> subnets          = 9;
+  map<string, ChainInfo> chains          = 9;
 }
 
-message SubnetInfo {
-  // If Subnet is an Elastic Subnet
+message ChainInfo {
+  // If Chain is an Elastic Chain
   bool is_elastic = 1;
 
-  // TXID for the elastic subnet transform
-  string elastic_subnet_id = 2;
+  // TXID for the elastic chain transform
+  string elastic_chain_id = 2;
 
-  // node validators of subnet
-  SubnetParticipants subnet_participants = 3;
+  // node validators of chain
+  ChainParticipants chain_participants = 3;
 }
 
 message CustomChainInfo {
@@ -232,13 +232,13 @@ message CustomChainInfo {
   // VM ID in "ids.ID" format.
   string vm_id = 2;
 
-  // Create subnet transaction ID -- subnet ID.
-  // The subnet ID must be whitelisted by the lux node.
-  string subnet_id = 3;
+  // Create chain transaction ID -- P-Chain chain ID.
+  // The chain ID must be whitelisted by the lux node.
+  string pchain_id = 3;
 
   // Create blockchain transaction ID -- blockchain ID>
   // The blockchain ID is used for RPC endpoints.
-  string chain_id = 4;
+  string blockchain_id = 4;
 }
 
 message NodeInfo {
@@ -249,7 +249,7 @@ message NodeInfo {
   string log_dir              = 5;
   string db_dir               = 6;
   string plugin_dir           = 7;
-  string whitelisted_subnets  = 8;
+  string whitelisted_chains  = 8;
   bytes  config               = 9;
   bool   paused               = 10;
 }
@@ -265,7 +265,7 @@ message ListOfAttachedPeerInfo {
 message StartRequest {
   string exec_path                    = 1;
   optional uint32 num_nodes           = 2;
-  optional string whitelisted_subnets = 3;
+  optional string whitelisted_chains = 3;
   optional string global_node_config  = 4;
   // Used for both database and log files.
   optional string root_data_dir = 5;
@@ -276,19 +276,19 @@ message StartRequest {
   // The list of:
   // - custom chain's VM name
   // - genesis file path
-  // - (optional) subnet id to use.
+  // - (optional) chain id to use.
   // - chain config file path
   // - network upgrade file path
   //
-  // subnet id must be always nil when using StartRequest, as the network is empty and has no preloaded
-  // subnet ids available.
+  // chain id must be always nil when using StartRequest, as the network is empty and has no preloaded
+  // chain ids available.
   //
   // The matching file with the name in "ids.ID" format must exist.
-  // e.g., ids.ToID(hashing.ComputeHash256("subnetevm")).String()
-  // e.g., subnet-cli create VMID subnetevm
+  // e.g., ids.ToID(hashing.ComputeHash256("chainevm")).String()
+  // e.g., chain-cli create VMID chainevm
   //
   // If this field is set to none (by default), the node/network-runner
-  // does not install the custom chain and does not create the subnet,
+  // does not install the custom chain and does not create the chain,
   // even if the VM binary exists on the local plugins directory.
   repeated BlockchainSpec blockchain_specs = 7;
 
@@ -310,10 +310,10 @@ message StartRequest {
   // use dynamic ports instead of default ones
   optional bool dynamic_ports = 12;
 
-  // Map of subnet id to subnet config file contents.
-  // If specified, will create a file "subnetid.json" under subnets config dir with
+  // Map of chain id to chain config file contents.
+  // If specified, will create a file "chainid.json" under chains config dir with
   // the contents provided here.
-  map<string, string> subnet_configs = 13;
+  map<string, string> chain_config_files = 13;
 }
 
 message RPCVersionRequest {}
@@ -327,15 +327,15 @@ message StartResponse {
   repeated string chain_ids = 2;
 }
 
-message SubnetSpec {
+message ChainSpec {
   // if empty, assumes all nodes should be participants
   repeated string participants = 1;
   // either file path or file contents
-  string subnet_config = 2;
+  string chain_config_file = 2;
 }
 
-message ElasticSubnetSpec {
-  string subnet_id = 1;
+message ElasticChainSpec {
+  string chain_id = 1;
   string asset_name = 2;
   string asset_symbol = 3;
   uint64 initial_supply = 4;
@@ -352,18 +352,18 @@ message ElasticSubnetSpec {
   uint32 uptime_requirement = 15;
 }
 
-message TransformElasticSubnetsRequest {
-  repeated ElasticSubnetSpec elastic_subnet_spec = 1;
+message TransformElasticChainsRequest {
+  repeated ElasticChainSpec elastic_chain_spec = 1;
 }
 
-message TransformElasticSubnetsResponse {
+message TransformElasticChainsResponse {
   ClusterInfo cluster_info = 1;
   repeated string tx_ids = 2;
   repeated string asset_ids = 3;
 }
 
 message PermissionlessValidatorSpec {
-  string subnet_id = 1;
+  string chain_id = 1;
   string node_name = 2;
   uint64 staked_token_amount = 3;
   string asset_id = 4;
@@ -379,16 +379,16 @@ message AddPermissionlessValidatorResponse {
   ClusterInfo cluster_info = 1;
 }
 
-message RemoveSubnetValidatorSpec {
-  string subnet_id = 1;
+message RemoveChainValidatorSpec {
+  string chain_id = 1;
   repeated string node_names = 2;
 }
 
-message RemoveSubnetValidatorRequest {
-  repeated RemoveSubnetValidatorSpec validator_spec = 1;
+message RemoveChainValidatorRequest {
+  repeated RemoveChainValidatorSpec validator_spec = 1;
 }
 
-message RemoveSubnetValidatorResponse {
+message RemoveChainValidatorResponse {
   ClusterInfo cluster_info = 1;
 }
 
@@ -396,10 +396,10 @@ message BlockchainSpec {
   string vm_name = 1;
   // either file path or file contents
   string genesis = 2;
-  // either a subnet_id is given for a previously created subnet,
-  // or a subnet specification is given for a new subnet generation
-  optional string subnet_id = 3;
-  optional SubnetSpec subnet_spec = 4;
+  // either a chain_id is given for a previously created chain,
+  // or a chain specification is given for a new chain generation
+  optional string chain_id = 3;
+  optional ChainSpec chain_spec = 4;
   // General chain config, either file path or file contents
   string chain_config = 5;
   // either file path or file contents
@@ -413,15 +413,15 @@ message CreateBlockchainsRequest {
   // The list of:
   // - custom chain's VM name
   // - genesis file path
-  // - (optional) subnet id to use.
+  // - (optional) chain id to use.
   // - chain config file path
   // - network upgrade file path
-  // - subnet config file path
+  // - chain config file path
   // - chain config file path for specific nodes
   //
   // The matching file with the name in "ids.ID" format must exist.
-  // e.g., ids.ToID(hashing.ComputeHash256("subnetevm")).String()
-  // e.g., subnet-cli create VMID subnetevm
+  // e.g., ids.ToID(hashing.ComputeHash256("chainevm")).String()
+  // e.g., chain-cli create VMID chainevm
   //
   // If this field is set to none (by default), the node/network-runner
   // will return error
@@ -433,13 +433,13 @@ message CreateBlockchainsResponse {
   repeated string chain_ids = 2;
 }
 
-message CreateSubnetsRequest {
-  repeated SubnetSpec subnet_specs = 1;
+message CreateChainsRequest {
+  repeated ChainSpec chain_specs = 1;
 }
 
-message CreateSubnetsResponse {
+message CreateChainsResponse {
   ClusterInfo cluster_info = 1;
-  repeated string subnet_ids = 2;
+  repeated string chain_ids = 2;
 }
 
 message HealthRequest {}
@@ -480,7 +480,7 @@ message RestartNodeRequest {
 
   // Optional fields are set to the previous values if empty.
   optional string exec_path           = 2;
-  optional string whitelisted_subnets = 3;
+  optional string whitelisted_chains = 3;
 
   // Map of chain name to config file contents.
   // If specified, will create a file "chainname/config.json" with
@@ -492,10 +492,10 @@ message RestartNodeRequest {
   // the contents provided here.
   map<string, string> upgrade_configs = 5;
 
-  // Map of subnet id to subnet config file contents.
-  // If specified, will create a file "subnetid.json" under subnets config dir with
+  // Map of chain id to chain config file contents.
+  // If specified, will create a file "chainid.json" under chains config dir with
   // the contents provided here.
-  map<string, string> subnet_configs = 6;
+  map<string, string> chain_config_files = 6;
 
   // Plugin dir from which to load all custom VM executables.
   string plugin_dir = 7;
@@ -544,10 +544,10 @@ message AddNodeRequest {
   // the contents provided here.
   map<string, string> upgrade_configs = 5;
 
-  // Map of subnet id to subnet config file contents.
-  // If specified, will create a file "subnetid.json" under subnets config dir with
+  // Map of chain id to chain config file contents.
+  // If specified, will create a file "chainid.json" under chains config dir with
   // the contents provided here.
-  map<string, string> subnet_configs = 6;
+  map<string, string> chain_config_files = 6;
 
   // Plugin dir from which to load all custom VM executables.
   string plugin_dir = 7;
@@ -600,7 +600,7 @@ message LoadSnapshotRequest {
   map<string, string> upgrade_configs = 6;
   optional string global_node_config  = 7;
   optional bool reassign_ports_if_used = 8;
-  map<string, string> subnet_configs = 9;
+  map<string, string> chain_config_files = 9;
 }
 
 message LoadSnapshotResponse {

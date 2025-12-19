@@ -1,0 +1,23 @@
+name: lux-local
+version: 1.0.0
+description: Local Lux L1 for testing
+
+engines:
+  - name: lux-node-1
+    type: lux
+    network_id: 96369
+    http_port: 9650
+    staking_port: 9651
+    log_level: info
+    wait_healthy: true
+    extra:
+      dev-mode: true
+      sybil-protection-disabled-weight: 100
+
+networks:
+  - name: lux-local
+    type: l1
+    engine: lux-node-1
+    chain_id: 96369
+    endpoints:
+      - http://localhost:9650

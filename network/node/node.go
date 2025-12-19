@@ -80,8 +80,8 @@ type Config struct {
 	ChainConfigFiles map[string]string `json:"chainConfigFiles"`
 	// May be nil.
 	UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
-	// May be nil.
-	SubnetConfigFiles map[string]string `json:"subnetConfigFiles"`
+	// May be nil. P-Chain chain (formerly subnet) config files.
+	PChainConfigFiles map[string]string `json:"pChainConfigFiles"`
 	// Flags can hold additional flags for the node.
 	// It can be empty.
 	// The precedence of flags handling is:

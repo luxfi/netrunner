@@ -11,10 +11,18 @@ import (
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/api/info"
 	"github.com/luxfi/node/indexer"
+	"github.com/luxfi/node/utils/rpc"
 	"github.com/luxfi/node/vms/exchangevm"
 	"github.com/luxfi/node/vms/platformvm"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
+
+// HealthClient is the interface for health API client operations
+type HealthClient interface {
+	Readiness(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error)
+	Health(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error)
+	Liveness(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error)
+}
 
 // EthClient is the interface for ethereum client operations
 type EthClient interface {
@@ -63,7 +71,7 @@ type Client interface {
 	CChainAPI() interface{} // evmclient.Client
 	CChainEthAPI() EthClient // ethclient websocket wrapper that adds mutexed calls, and lazy conn init (on first call)
 	InfoAPI() *info.Client
-	HealthAPI() *health.Client
+	HealthAPI() HealthClient
 	AdminAPI() *admin.Client
 	PChainIndexAPI() *indexer.Client
 	CChainIndexAPI() *indexer.Client

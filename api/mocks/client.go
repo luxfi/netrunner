@@ -8,10 +8,6 @@ import (
 
 	exchangevm "github.com/luxfi/node/vms/exchangevm"
 
-	evmclient "github.com/luxfi/evm/plugin/evm/client"
-
-	health "github.com/luxfi/node/api/health"
-
 	indexer "github.com/luxfi/node/indexer"
 
 	info "github.com/luxfi/node/api/info"
@@ -43,16 +39,14 @@ func (_m *Client) AdminAPI() *admin.Client {
 }
 
 // CChainAPI provides a mock function with given fields:
-func (_m *Client) CChainAPI() evmclient.Client {
+func (_m *Client) CChainAPI() interface{} {
 	ret := _m.Called()
 
-	var r0 evmclient.Client
-	if rf, ok := ret.Get(0).(func() evmclient.Client); ok {
+	var r0 interface{}
+	if rf, ok := ret.Get(0).(func() interface{}); ok {
 		r0 = rf()
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(evmclient.Client)
-		}
+		r0 = ret.Get(0)
 	}
 
 	return r0
@@ -91,15 +85,15 @@ func (_m *Client) CChainIndexAPI() *indexer.Client {
 }
 
 // HealthAPI provides a mock function with given fields:
-func (_m *Client) HealthAPI() *health.Client {
+func (_m *Client) HealthAPI() api.HealthClient {
 	ret := _m.Called()
 
-	var r0 *health.Client
-	if rf, ok := ret.Get(0).(func() *health.Client); ok {
+	var r0 api.HealthClient
+	if rf, ok := ret.Get(0).(func() api.HealthClient); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*health.Client)
+			r0 = ret.Get(0).(api.HealthClient)
 		}
 	}
 
