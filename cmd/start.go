@@ -114,7 +114,7 @@ func getNetworkConfig(network string) multinet.NetworkConfig {
 			Validators:  3,
 		}
 	default:
-		// Could be a subnet name
+		// Could be a chain name
 		return multinet.NetworkConfig{}
 	}
 }

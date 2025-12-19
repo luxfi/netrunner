@@ -1,5 +1,5 @@
 // Copyright (C) 2019-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package local
 
@@ -130,13 +130,24 @@ const (
 	Jan1_2020 uint64 = 1577836800
 )
 
-// GenerateVestingSchedule creates an unlock schedule with 1% per year for 100 years
-// starting from Jan 1, 2020. This means ~5-6% is already unlocked as of Dec 2025.
+// ImmediateUnlockLUX is 5% of 1B = 50M LUX for immediate spending (fees, transactions)
+const ImmediateUnlockLUX uint64 = OneBillionLUX * 5 / 100
+
+// GenerateVestingSchedule creates an unlock schedule with:
+// - 5% immediately available (locktime=0) for transaction fees
+// - 1% per year for 95 years starting from Jan 1, 2020
+// This ensures the wallet has spendable funds for chain creation and other operations.
 func GenerateVestingSchedule() []map[string]interface{} {
-	schedule := make([]map[string]interface{}, 100)
-	for year := 0; year < 100; year++ {
+	// First entry: immediately available funds (locktime=0)
+	schedule := make([]map[string]interface{}, 96) // 1 immediate + 95 vested
+	schedule[0] = map[string]interface{}{
+		"amount":   ImmediateUnlockLUX,
+		"locktime": uint64(0), // Immediately available
+	}
+	// Remaining 95% vests 1% per year starting from 2020
+	for year := 0; year < 95; year++ {
 		unlockTime := Jan1_2020 + (uint64(year) * SecondsPerYear)
-		schedule[year] = map[string]interface{}{
+		schedule[year+1] = map[string]interface{}{
 			"amount":   OnePercentLUX,
 			"locktime": unlockTime,
 		}
@@ -145,8 +156,9 @@ func GenerateVestingSchedule() []map[string]interface{} {
 }
 
 // GenerateAllocationsFromKeys creates genesis allocations for loaded keys with vesting
+// The first key gets immediately spendable funds (locktime=0) for transaction fees.
+// Other keys get vesting schedules starting from Jan 1, 2020.
 func GenerateAllocationsFromKeys(keys []KeyInfo, hrp string) ([]map[string]interface{}, error) {
-	vestingSchedule := GenerateVestingSchedule()
 	allocations := make([]map[string]interface{}, len(keys))
 
 	for i, key := range keys {
@@ -154,11 +166,27 @@ func GenerateAllocationsFromKeys(keys []KeyInfo, hrp string) ([]map[string]inter
 		if err != nil {
 			return nil, fmt.Errorf("failed to format address for key %d: %w", i, err)
 		}
+
+		var unlockSchedule []map[string]interface{}
+		if i == 0 {
+			// First key: all funds immediately available (locktime=0) for transactions
+			// This matches how mainnet treasury works
+			unlockSchedule = []map[string]interface{}{
+				{
+					"amount":   OneBillionLUX,
+					"locktime": uint64(0),
+				},
+			}
+		} else {
+			// Other keys: use vesting schedule
+			unlockSchedule = GenerateVestingSchedule()
+		}
+
 		allocations[i] = map[string]interface{}{
 			"ethAddr":        key.EthAddr,
 			"luxAddr":        luxAddr,
-			"initialAmount":  OneBillionLUX, // 1B LUX on P-chain
-			"unlockSchedule": vestingSchedule,
+			"initialAmount":  uint64(0), // initialAmount is NOT immediately spendable
+			"unlockSchedule": unlockSchedule,
 		}
 	}
 	return allocations, nil

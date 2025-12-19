@@ -1,0 +1,60 @@
+name: lux-mainnet-5node
+version: 1.0.0
+description: 5-node Lux Mainnet local network
+
+engines:
+  - name: mainnet-node-1
+    type: lux
+    network_id: 96369
+    http_port: 9650
+    staking_port: 9651
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-5node/node1
+
+  - name: mainnet-node-2
+    type: lux
+    network_id: 96369
+    http_port: 9660
+    staking_port: 9661
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-5node/node2
+
+  - name: mainnet-node-3
+    type: lux
+    network_id: 96369
+    http_port: 9670
+    staking_port: 9671
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-5node/node3
+
+  - name: mainnet-node-4
+    type: lux
+    network_id: 96369
+    http_port: 9680
+    staking_port: 9681
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-5node/node4
+
+  - name: mainnet-node-5
+    type: lux
+    network_id: 96369
+    http_port: 9690
+    staking_port: 9691
+    log_level: info
+    wait_healthy: true
+    data_dir: /tmp/lux-mainnet-5node/node5
+
+networks:
+  - name: lux-mainnet-local
+    type: l1
+    chain_id: 96369
+    endpoints:
+      - http://localhost:9650
+      - http://localhost:9660
+      - http://localhost:9670
+      - http://localhost:9680
+      - http://localhost:9690

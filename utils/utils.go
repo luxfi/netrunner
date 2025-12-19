@@ -97,34 +97,34 @@ func MkDirWithTimestamp(dirPrefix string) (string, error) {
 	return dirName, os.MkdirAll(dirName, os.ModePerm)
 }
 
-func VerifySubnetHasCorrectParticipants(
+func VerifyChainHasCorrectParticipants(
 	log luxlog.Logger,
-	subnetParticipants []string,
+	chainParticipants []string,
 	cluster *rpcb.ClusterInfo,
-	subnetID string,
+	chainID string,
 ) bool {
 	if cluster != nil {
-		participatingNodeNames := cluster.Subnets[subnetID].GetSubnetParticipants().GetNodeNames()
+		participatingNodeNames := cluster.Chains[chainID].GetChainParticipants().GetNodeNames()
 
 		var nodeIsInList bool
-		// Check that all subnet validators are equal to the node IDs added as participant in subnet creation
-		for _, node := range subnetParticipants {
+		// Check that all chain validators are equal to the node IDs added as participant in chain creation
+		for _, node := range chainParticipants {
 			nodeIsInList = false
-			for _, subnetValidator := range participatingNodeNames {
-				if subnetValidator == node {
+			for _, chainValidator := range participatingNodeNames {
+				if chainValidator == node {
 					nodeIsInList = true
 					break
 				}
 			}
 			if !nodeIsInList {
-				ux.Print(log, luxlog.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: %#v", cluster)))
-				ux.Print(log, luxlog.Red.Wrap(fmt.Sprintf("VerifySubnetHasCorrectParticipants: node not in list subnet %q node %q %v %v", subnetID, node, subnetParticipants, participatingNodeNames)))
+				ux.Print(log, "%s", luxlog.Red.Wrap(fmt.Sprintf("VerifyChainHasCorrectParticipants: %#v", cluster)))
+				ux.Print(log, "%s", luxlog.Red.Wrap(fmt.Sprintf("VerifyChainHasCorrectParticipants: node not in list chain %q node %q %v %v", chainID, node, chainParticipants, participatingNodeNames)))
 				return false
 			}
 		}
 		return true
 	} else {
-		ux.Print(log, luxlog.Red.Wrap("VerifySubnetHasCorrectParticipants: cluster is nil"))
+		ux.Print(log, "%s", luxlog.Red.Wrap("VerifyChainHasCorrectParticipants: cluster is nil"))
 	}
 	return false
 }

@@ -1,5 +1,5 @@
 // Copyright (C) 2019-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package local
 
@@ -213,14 +213,20 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		}
 	}
 
-	// Set initialStakedFunds to the first validator key address
-	// This address must exist in allocations with proper unlock schedule
-	// The genesis package uses this to split staked funds among validators
-	firstValidatorAddr, err := FormatAddress("P", hrp, validatorKeys[0].ShortID)
-	if err != nil {
-		return network.Config{}, fmt.Errorf("couldn't format first validator address: %w", err)
+	// Set initialStakedFunds to the SECOND validator key address (not first).
+	// The first key is kept OUT of initialStakedFunds so its allocation becomes
+	// regular P-chain UTXOs, which are needed for wallet operations (chain creation, etc).
+	// The second key's allocation will go to stakers for their stake weight.
+	if len(validatorKeys) > 1 {
+		secondValidatorAddr, err := FormatAddress("P", hrp, validatorKeys[1].ShortID)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("couldn't format second validator address: %w", err)
+		}
+		genesis["initialStakedFunds"] = []string{secondValidatorAddr}
+	} else {
+		// Single node case: use empty initialStakedFunds
+		genesis["initialStakedFunds"] = []string{}
 	}
-	genesis["initialStakedFunds"] = []string{firstValidatorAddr}
 
 	// Update start time to now
 	genesis["startTime"] = uint64(now)
@@ -247,7 +253,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 			IsBeacon:             true,
 			ChainConfigFiles:     map[string]string{},
 			UpgradeConfigFiles:   map[string]string{},
-			SubnetConfigFiles:    map[string]string{},
+			PChainConfigFiles:    map[string]string{},
 		}
 	}
 

@@ -1,5 +1,5 @@
 // Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package main
 
@@ -126,22 +126,22 @@ func run(log luxlog.Logger, binaryPath string) error {
 	}
 	log.Info("All nodes healthy")
 
-	// Create DEX blockchain on a new subnet
+	// Create DEX blockchain on a new chain
 	log.Info("Creating DEX blockchain...")
 	createCtx, createCancel := context.WithTimeout(context.Background(), createBlockchainTimeout)
 	defer createCancel()
 
 	// DEX blockchain specification
-	dexBlockchainSpec := []network.BlockchainSpec{
+	dexChainSpec := []network.ChainSpec{
 		{
 			VMName:          "dexvm",          // Matches constants.DexVMName
 			Genesis:         dexGenesisJSON(), // DEX genesis configuration
-			BlockchainAlias: "dex",            // Alias for easier access
-			// SubnetID not specified = creates new subnet with all nodes as validators
+			Alias: "dex",            // Alias for easier access
+			// ChainID not specified = creates new chain with all nodes as validators
 		},
 	}
 
-	chainIDs, err := nw.CreateBlockchains(createCtx, dexBlockchainSpec)
+	chainIDs, err := nw.CreateChains(createCtx, dexChainSpec)
 	if err != nil {
 		return fmt.Errorf("failed to create DEX blockchain: %w", err)
 	}

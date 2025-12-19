@@ -24,7 +24,7 @@ var multinetCmd = &cobra.Command{
 	Short: "Manage multiple heterogeneous networks in parallel",
 	Long: `Run and validate multiple networks simultaneously with shared BadgerDB
 for cross-chain ACID transactions. Supports both primary networks (mainnet/testnet)
-and their subnets (L1s/L2s).`,
+and their chains (L1s/L2s).`,
 }
 
 // startCmd starts multiple networks
@@ -40,7 +40,7 @@ shared database for cross-chain transactions.`,
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Configure networks for parallel validation",
-	Long:  `Set up mainnet, testnet, and their subnets for parallel validation.`,
+	Long:  `Set up mainnet, testnet, and their chains for parallel validation.`,
 	RunE:  runConfigure,
 }
 
@@ -99,7 +99,7 @@ func runStartMulti(cmd *cobra.Command, args []string) error {
 	fmt.Println("\nNetwork endpoints:")
 	fmt.Println("  Lux Mainnet: http://localhost:9630")
 	fmt.Println("  Lux Testnet: http://localhost:9620")
-	fmt.Println("\nSubnets are accessible through their parent networks.")
+	fmt.Println("\nChains are accessible through their parent networks.")
 	fmt.Println("\nPress Ctrl+C to stop all networks...")
 
 	// Wait for interrupt
@@ -159,27 +159,27 @@ func loadDefaultNetworks(manager *multinet.MultiNetworkManager) error {
 		},
 	}
 
-	// Zoo Subnet on Mainnet
+	// Zoo Chain on Mainnet
 	zooMainnetConfig := multinet.NetworkConfig{
 		NetworkID:   200200,
-		Name:        "Zoo Network (Mainnet Subnet)",
-		Type:        multinet.NetworkTypeSubnet,
+		Name:        "Zoo Network (Mainnet Chain)",
+		Type:        multinet.NetworkTypeChain,
 		ParentID:    96369,
 		HTTPPort:    0, // Uses parent network's port
 		StakingPort: 0, // Uses parent network's port
-		DataDir:     "/tmp/multinetwork/mainnet/subnets/zoo",
+		DataDir:     "/tmp/multinetwork/mainnet/chains/zoo",
 		Validators:  5,
 	}
 
-	// Hanzo Subnet on Mainnet
+	// Hanzo Chain on Mainnet
 	hanzoMainnetConfig := multinet.NetworkConfig{
 		NetworkID:   36963,
-		Name:        "Hanzo Network (Mainnet Subnet)",
-		Type:        multinet.NetworkTypeSubnet,
+		Name:        "Hanzo Network (Mainnet Chain)",
+		Type:        multinet.NetworkTypeChain,
 		ParentID:    96369,
 		HTTPPort:    0,
 		StakingPort: 0,
-		DataDir:     "/tmp/multinetwork/mainnet/subnets/hanzo",
+		DataDir:     "/tmp/multinetwork/mainnet/chains/hanzo",
 		Validators:  5,
 	}
 
@@ -245,17 +245,17 @@ func runConfigure(cmd *cobra.Command, args []string) error {
 		{
 			NetworkID:   200200,
 			Name:        "Zoo Network",
-			Type:        multinet.NetworkTypeSubnet,
+			Type:        multinet.NetworkTypeChain,
 			ParentID:    96369,
-			DataDir:     "/tmp/multinetwork/mainnet/subnets/zoo",
+			DataDir:     "/tmp/multinetwork/mainnet/chains/zoo",
 			Validators:  5,
 		},
 		{
 			NetworkID:   36963,
 			Name:        "Hanzo Network",
-			Type:        multinet.NetworkTypeSubnet,
+			Type:        multinet.NetworkTypeChain,
 			ParentID:    96369,
-			DataDir:     "/tmp/multinetwork/mainnet/subnets/hanzo",
+			DataDir:     "/tmp/multinetwork/mainnet/chains/hanzo",
 			Validators:  5,
 		},
 	}
@@ -278,8 +278,8 @@ func runConfigure(cmd *cobra.Command, args []string) error {
 	fmt.Println("\nConfiguration includes:")
 	fmt.Println("  • Lux Mainnet (96369) - Primary Network")
 	fmt.Println("  • Lux Testnet (96368) - Primary Network")
-	fmt.Println("  • Zoo Network (200200) - Subnet on Mainnet")
-	fmt.Println("  • Hanzo Network (36963) - Subnet on Mainnet")
+	fmt.Println("  • Zoo Network (200200) - Chain on Mainnet")
+	fmt.Println("  • Hanzo Network (36963) - Chain on Mainnet")
 
 	return nil
 }

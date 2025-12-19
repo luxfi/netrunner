@@ -1,5 +1,5 @@
 // Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
-// See the file LICENSE for licensing terms.
+// SPDX-License-Identifier: BSD-3-Clause
 
 package server
 
@@ -71,14 +71,14 @@ type localNetwork struct {
 	stopCh   chan struct{}
 	stopOnce sync.Once
 
-	subnets map[string]*rpcpb.SubnetInfo
+	chains map[string]*rpcpb.ChainInfo
 
 	prometheusConfPath string
 }
 
 type chainInfo struct {
 	info         *rpcpb.CustomChainInfo
-	subnetID     ids.ID
+	chainID     ids.ID
 	blockchainID ids.ID
 }
 
@@ -86,7 +86,7 @@ type localNetworkOptions struct {
 	execPath            string
 	rootDataDir         string
 	numNodes            uint32
-	trackSubnets        string
+	trackChains        string
 	redirectNodesOutput bool
 	globalNodeConfig    string
 
@@ -97,8 +97,8 @@ type localNetworkOptions struct {
 	chainConfigs map[string]string
 	// upgrade configs to be added to the network, besides the ones in default config, or saved snapshot
 	upgradeConfigs map[string]string
-	// subnet configs to be added to the network, besides the ones in default config, or saved snapshot
-	subnetConfigs map[string]string
+	// P-chain configs to be added to the network, besides the ones in default config, or saved snapshot
+	pChainConfigs map[string]string
 
 	snapshotsDir string
 
@@ -130,7 +130,7 @@ func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 		customChainIDToInfo: make(map[ids.ID]chainInfo),
 		stopCh:              make(chan struct{}),
 		nodeInfos:           make(map[string]*rpcpb.NodeInfo),
-		subnets:             make(map[string]*rpcpb.SubnetInfo),
+		chains:             make(map[string]*rpcpb.ChainInfo),
 	}, nil
 }
 
@@ -211,8 +211,8 @@ func (lc *localNetwork) createConfig() error {
 		if cfg.NodeConfigs[i].UpgradeConfigFiles == nil {
 			cfg.NodeConfigs[i].UpgradeConfigFiles = map[string]string{}
 		}
-		if cfg.NodeConfigs[i].SubnetConfigFiles == nil {
-			cfg.NodeConfigs[i].SubnetConfigFiles = map[string]string{}
+		if cfg.NodeConfigs[i].ChainConfigFiles == nil {
+			cfg.NodeConfigs[i].ChainConfigFiles = map[string]string{}
 		}
 
 		for k, v := range lc.options.chainConfigs {
@@ -221,8 +221,8 @@ func (lc *localNetwork) createConfig() error {
 		for k, v := range lc.options.upgradeConfigs {
 			cfg.NodeConfigs[i].UpgradeConfigFiles[k] = v
 		}
-		for k, v := range lc.options.subnetConfigs {
-			cfg.NodeConfigs[i].SubnetConfigFiles[k] = v
+		for k, v := range lc.options.chainConfigs {
+			cfg.NodeConfigs[i].ChainConfigFiles[k] = v
 		}
 
 		if lc.options.dynamicPorts {
@@ -231,8 +231,8 @@ func (lc *localNetwork) createConfig() error {
 			delete(cfg.NodeConfigs[i].Flags, config.StakingPortKey)
 		}
 
-		if lc.options.trackSubnets != "" {
-			cfg.NodeConfigs[i].Flags[config.TrackNetsKey] = lc.options.trackSubnets
+		if lc.options.trackChains != "" {
+			cfg.NodeConfigs[i].Flags[config.TrackNetsKey] = lc.options.trackChains
 		}
 
 		cfg.NodeConfigs[i].BinaryPath = lc.execPath
@@ -301,7 +301,7 @@ func (lc *localNetwork) Start(ctx context.Context) error {
 // Assumes [lc.lock] isn't held.
 func (lc *localNetwork) CreateChains(
 	ctx context.Context,
-	chainSpecs []network.BlockchainSpec, // VM name + genesis bytes
+	chainSpecs []network.ChainSpec, // VM name + genesis bytes
 ) ([]ids.ID, error) {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
@@ -327,7 +327,7 @@ func (lc *localNetwork) CreateChains(
 		return nil, err
 	}
 
-	chainIDs, err := lc.nw.CreateBlockchains(ctx, chainSpecs)
+	chainIDs, err := lc.nw.CreateChains(ctx, chainSpecs)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (lc *localNetwork) AddPermissionlessValidators(ctx context.Context, validat
 	return nil
 }
 
-func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpecs []network.RemoveSubnetValidatorSpec) error {
+func (lc *localNetwork) RemoveChainValidator(ctx context.Context, validatorSpecs []network.RemoveChainValidatorSpec) error {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
@@ -404,7 +404,7 @@ func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpec
 		return err
 	}
 
-	err := lc.nw.RemoveSubnetValidators(ctx, validatorSpecs)
+	err := lc.nw.RemoveChainValidators(ctx, validatorSpecs)
 	if err != nil {
 		return err
 	}
@@ -413,16 +413,16 @@ func (lc *localNetwork) RemoveSubnetValidator(ctx context.Context, validatorSpec
 		return err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished removing subnet validators")))
+	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished removing chain validators")))
 	return nil
 }
 
-func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs []network.ElasticSubnetSpec) ([]ids.ID, []ids.ID, error) {
+func (lc *localNetwork) TransformChains(ctx context.Context, elasticChainSpecs []network.ElasticChainSpec) ([]ids.ID, []ids.ID, error) {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
-	if len(elasticSubnetSpecs) == 0 {
-		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no subnets specified...")))
+	if len(elasticChainSpecs) == 0 {
+		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no chains specified...")))
 		return nil, nil, nil
 	}
 
@@ -443,7 +443,7 @@ func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs
 		return nil, nil, err
 	}
 
-	chainIDs, assetIDs, err := lc.nw.TransformSubnet(ctx, elasticSubnetSpecs)
+	chainIDs, assetIDs, err := lc.nw.TransformChain(ctx, elasticChainSpecs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -452,18 +452,18 @@ func (lc *localNetwork) TransformSubnets(ctx context.Context, elasticSubnetSpecs
 		return nil, nil, err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished transforming subnets")))
+	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished transforming chains")))
 	return chainIDs, assetIDs, nil
 }
 
-// Creates the given number of subnets.
+// CreateParticipantGroups creates the given number of participant groups (validators).
 // Assumes [lc.lock] isn't held.
-func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network.SubnetSpec) ([]ids.ID, error) {
+func (lc *localNetwork) CreateParticipantGroups(ctx context.Context, participantsSpecs []network.ParticipantsSpec) ([]ids.ID, error) {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 
-	if len(subnetSpecs) == 0 {
-		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no subnets specified...")))
+	if len(participantsSpecs) == 0 {
+		ux.Print(lc.log, luxlog.Orange.Wrap(luxlog.Bold.Wrap("no chains specified...")))
 		return nil, nil
 	}
 
@@ -484,7 +484,7 @@ func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network
 		return nil, err
 	}
 
-	subnetIDs, err := lc.nw.CreateSubnets(ctx, subnetSpecs)
+	chainIDs, err := lc.nw.CreateParticipantGroups(ctx, participantsSpecs)
 	if err != nil {
 		return nil, err
 	}
@@ -493,8 +493,8 @@ func (lc *localNetwork) CreateSubnets(ctx context.Context, subnetSpecs []network
 		return nil, err
 	}
 
-	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished adding subnets")))
-	return subnetIDs, nil
+	ux.Print(lc.log, luxlog.Green.Wrap(luxlog.Bold.Wrap("finished adding chains")))
+	return chainIDs, nil
 }
 
 // Loads a snapshot and sets [l.nw] to the network created from the snapshot.
@@ -521,7 +521,7 @@ func (lc *localNetwork) LoadSnapshot(snapshotName string) error {
 		lc.pluginDir,
 		lc.options.chainConfigs,
 		lc.options.upgradeConfigs,
-		lc.options.subnetConfigs,
+		lc.options.chainConfigs,
 		globalNodeConfig,
 		lc.options.reassignPortsIfUsed,
 	)
@@ -539,10 +539,10 @@ func (lc *localNetwork) LoadSnapshot(snapshotName string) error {
 
 // Populates [lc.customChainIDToInfo] for all chains other than those on
 // the Primary Network (P-Chain, X-Chain, C-Chain.)
-// Populates [lc.subnets] with all subnets that exist.
+// Populates [lc.chains] with all chains that exist.
 // Doesn't contain the Primary network.
 // Assumes [lc.lock] is held.
-func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
+func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 	nodes, err := lc.nw.GetAllNodes()
 	if err != nil {
 		return err
@@ -580,33 +580,33 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 			info: &rpcpb.CustomChainInfo{
 				ChainName: blockchain.Name,
 				VmId:      blockchain.VMID.String(),
-				SubnetId:  blockchain.NetID.String(),
-				ChainId:   blockchain.ID.String(),
+				PchainId:  blockchain.NetID.String(),
+				BlockchainId:   blockchain.ID.String(),
 			},
-			subnetID:     blockchain.NetID,
+			chainID:     blockchain.NetID,
 			blockchainID: blockchain.ID,
 		}
 	}
 
-	subnets, err := (*pChainClient).GetNets(ctx, nil)
+	chains, err := (*pChainClient).GetNets(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	subnetIDList := []string{}
-	for _, subnet := range subnets {
+	chainIDList := []string{}
+	for _, chain := range chains {
 		// Skip both PlatformChainID and PrimaryNetworkID (which is ids.Empty)
-		if subnet.ID != luxd_constants.PlatformChainID && subnet.ID != luxd_constants.PrimaryNetworkID {
-			subnetIDList = append(subnetIDList, subnet.ID.String())
+		if chain.ID != luxd_constants.PlatformChainID && chain.ID != luxd_constants.PrimaryNetworkID {
+			chainIDList = append(chainIDList, chain.ID.String())
 		}
 	}
 
-	for _, subnetIDStr := range subnetIDList {
-		subnetID, err := ids.FromString(subnetIDStr)
+	for _, chainIDStr := range chainIDList {
+		chainID, err := ids.FromString(chainIDStr)
 		if err != nil {
 			return err
 		}
-		vdrs, err := (*pChainClient).GetCurrentValidators(ctx, subnetID, nil)
+		vdrs, err := (*pChainClient).GetCurrentValidators(ctx, chainID, nil)
 		if err != nil {
 			return err
 		}
@@ -621,24 +621,24 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 		}
 
 		isElastic := false
-		elasticSubnetID := ids.Empty
-		if _, _, err := (*pChainClient).GetCurrentSupply(ctx, subnetID); err == nil {
+		elasticChainID := ids.Empty
+		if _, _, err := (*pChainClient).GetCurrentSupply(ctx, chainID); err == nil {
 			isElastic = true
-			elasticSubnetID, err = lc.nw.GetElasticSubnetID(ctx, subnetID)
+			elasticChainID, err = lc.nw.GetElasticChainID(ctx, chainID)
 			if err != nil {
 				return err
 			}
 		}
 
-		lc.subnets[subnetIDStr] = &rpcpb.SubnetInfo{
+		lc.chains[chainIDStr] = &rpcpb.ChainInfo{
 			IsElastic:          isElastic,
-			ElasticSubnetId:    elasticSubnetID.String(),
-			SubnetParticipants: &rpcpb.SubnetParticipants{NodeNames: nodeNameList},
+			ElasticChainId:    elasticChainID.String(),
+			ChainParticipants: &rpcpb.ChainParticipants{NodeNames: nodeNameList},
 		}
 	}
 
 	for chainID, chainInfo := range lc.customChainIDToInfo {
-		vs, err := (*pChainClient).GetCurrentValidators(ctx, chainInfo.subnetID, nil)
+		vs, err := (*pChainClient).GetCurrentValidators(ctx, chainInfo.chainID, nil)
 		if err != nil {
 			return err
 		}
@@ -651,7 +651,7 @@ func (lc *localNetwork) updateSubnetInfo(ctx context.Context) error {
 			}
 		}
 		if len(nodeNames) != len(vs) {
-			return fmt.Errorf("not all subnet validators are in network for subnet %s", chainInfo.subnetID.String())
+			return fmt.Errorf("not all chain validators are in network for chain %s", chainInfo.chainID.String())
 		}
 
 		sort.Strings(nodeNames)
@@ -676,7 +676,7 @@ func (lc *localNetwork) AwaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 }
 
 // Returns nil when [lc.nw] reports healthy.
-// Updates node and subnet info.
+// Updates node and chain info.
 // Assumes [lc.lock] is held.
 func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) error {
 	ux.Print(lc.log, luxlog.Blue.Wrap(luxlog.Bold.Wrap("waiting for all nodes to report healthy...")))
@@ -689,7 +689,7 @@ func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 		return err
 	}
 
-	if err := lc.updateSubnetInfo(ctx); err != nil {
+	if err := lc.updateChainInfo(ctx); err != nil {
 		return err
 	}
 
@@ -725,7 +725,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 
 	lc.nodeInfos = make(map[string]*rpcpb.NodeInfo)
 	for name, node := range nodes {
-		trackSubnets, err := node.GetFlag(config.TrackNetsKey)
+		trackChains, err := node.GetFlag(config.TrackNetsKey)
 		if err != nil {
 			return err
 		}
@@ -739,7 +739,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 			DbDir:              node.GetDbDir(),
 			Config:             []byte(node.GetConfigFile()),
 			PluginDir:          node.GetPluginDir(),
-			WhitelistedSubnets: trackSubnets,
+			WhitelistedChains: trackChains,
 			Paused:             node.GetPaused(),
 		}
 

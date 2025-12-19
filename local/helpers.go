@@ -126,12 +126,12 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 		return nil, err
 	}
 	flags[config.ChainConfigDirKey] = chainConfigDir
-	// subnet configs dir
-	subnetConfigDir := filepath.Join(nodeRootDir, subnetConfigSubDir)
-	if err := os.MkdirAll(subnetConfigDir, 0o750); err != nil {
+	// P-chain configs dir
+	pChainConfigDir := filepath.Join(nodeRootDir, pChainConfigSubDir)
+	if err := os.MkdirAll(pChainConfigDir, 0o750); err != nil {
 		return nil, err
 	}
-	flags[config.NetConfigDirKey] = subnetConfigDir
+	flags[config.NetConfigDirKey] = pChainConfigDir
 	// chain configs
 	for chainAlias, chainConfigFile := range nodeConfig.ChainConfigFiles {
 		chainConfigPath := filepath.Join(chainConfigDir, chainAlias, configFileName)
@@ -146,11 +146,11 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 			return nil, fmt.Errorf("couldn't write file at %q: %w", chainUpgradePath, err)
 		}
 	}
-	// subnet configs
-	for subnetID, subnetConfigFile := range nodeConfig.SubnetConfigFiles {
-		subnetConfigPath := filepath.Join(subnetConfigDir, subnetID+".json")
-		if err := createFileAndWrite(subnetConfigPath, []byte(subnetConfigFile)); err != nil {
-			return nil, fmt.Errorf("couldn't write file at %q: %w", subnetConfigPath, err)
+	// P-chain configs
+	for chainID, pChainConfigFile := range nodeConfig.PChainConfigFiles {
+		pChainConfigPath := filepath.Join(pChainConfigDir, chainID+".json")
+		if err := createFileAndWrite(pChainConfigPath, []byte(pChainConfigFile)); err != nil {
+			return nil, fmt.Errorf("couldn't write file at %q: %w", pChainConfigPath, err)
 		}
 	}
 	return flags, nil
