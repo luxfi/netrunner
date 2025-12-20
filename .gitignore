@@ -32,3 +32,11 @@ AGENTS.md
 GEMINI.md
 QWEN.md
 CODEX.md
+
+# Generated files
+*.log
+lux
+l2chains
+netrunner
+magic.mgc
+network/default/

@@ -768,14 +768,14 @@ func (ln *localNetwork) addPrimaryValidators(
 		}
 		ctx, cancel = createDefaultCtx(ctx)
 		tx, err := w.pWallet.IssueAddPermissionlessValidatorTx(
-			&txs.NetValidator{
+			&txs.ChainValidator{
 				Validator: txs.Validator{
 					NodeID: nodeID,
 					Start:  uint64(time.Now().Add(validationStartOffset).Unix()),
 					End:    uint64(time.Now().Add(validationDuration).Unix()),
 					Wght:   genesis.LocalParams.MinValidatorStake,
 				},
-				Net: ids.Empty,
+				Chain: ids.Empty,
 			},
 			proofOfPossession,
 			w.luxAssetID,
@@ -916,7 +916,7 @@ func (ln *localNetwork) removeChainValidators(
 				return fmt.Errorf("node %s is currently not a chain validator of chain %s", nodeName, chainID.String())
 			}
 			ctx, cancel := createDefaultCtx(ctx)
-			tx, err := w.pWallet.IssueRemoveNetValidatorTx(
+			tx, err := w.pWallet.IssueRemoveChainValidatorTx(
 				nodeID,
 				chainID,
 				common.WithContext(ctx),
@@ -1028,14 +1028,14 @@ func (ln *localNetwork) addPermissionlessValidators(
 			endTime = uint64(validatorSpec.StartTime.Add(validatorSpec.StakeDuration).Unix())
 		}
 		tx, err := w.pWallet.IssueAddPermissionlessValidatorTx(
-			&txs.NetValidator{
+			&txs.ChainValidator{
 				Validator: txs.Validator{
 					NodeID: validatorNodeID,
 					Start:  startTime,
 					End:    endTime,
 					Wght:   validatorSpec.StakedAmount,
 				},
-				Net: chainID,
+				Chain: chainID,
 			},
 			&signer.Empty{},
 			assetID,
@@ -1221,8 +1221,8 @@ func (ln *localNetwork) addChainValidators(
 				continue
 			}
 			ctx, cancel := createDefaultCtx(ctx)
-			tx, err := w.pWallet.IssueAddNetValidatorTx(
-				&txs.NetValidator{
+			tx, err := w.pWallet.IssueAddChainValidatorTx(
+				&txs.ChainValidator{
 					Validator: txs.Validator{
 						NodeID: nodeID,
 						// reasonable delay in most/slow test environments
@@ -1230,7 +1230,7 @@ func (ln *localNetwork) addChainValidators(
 						End:   uint64(primaryValidatorsEndtime[nodeID].Unix()),
 						Wght:  chainValidatorsWeight,
 					},
-					Net: chainID,
+					Chain: chainID,
 				},
 				common.WithContext(ctx),
 				defaultPoll,
