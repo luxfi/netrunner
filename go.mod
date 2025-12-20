@@ -4,19 +4,21 @@ go 1.25.5
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
+exclude github.com/luxfi/geth v1.16.1
+
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
-	github.com/luxfi/consensus v1.22.27
+	github.com/luxfi/consensus v1.22.31
 	github.com/luxfi/constants v1.2.3
-	github.com/luxfi/crypto v1.17.24
+	github.com/luxfi/crypto v1.17.25
 	github.com/luxfi/genesis v1.5.6
 	github.com/luxfi/geth v1.16.56
 	github.com/luxfi/ids v1.2.4
 	github.com/luxfi/log v1.1.26
 	github.com/luxfi/math v1.0.2
 	github.com/luxfi/metric v1.4.8
-	github.com/luxfi/node v1.22.20
+	github.com/luxfi/node v1.22.21
 	github.com/luxfi/units v1.0.0
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
@@ -43,7 +45,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251211224604-2e727cd2e6fe // indirect
-	github.com/StephenButtolph/canoto v0.17.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
@@ -69,7 +70,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ethereum/c-kzg-4844/v2 v2.1.5 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
-	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/getsentry/sentry-go v0.35.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -106,6 +106,7 @@ require (
 	github.com/luxfi/p2p v1.4.7 // indirect
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/utils v1.0.0 // indirect
+	github.com/luxfi/vm v1.0.0 // indirect
 	github.com/luxfi/warp v1.16.37 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
