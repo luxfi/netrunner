@@ -13,13 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Version = ""
+var (
+	Version   = "dev"
+	Commit    = "none"
+	BuildDate = "unknown"
+)
 
 var rootCmd = &cobra.Command{
 	Use:        "netrunner",
 	Short:      "netrunner commands",
 	SuggestFor: []string{"network-runner"},
-	Version:    Version,
+	Version:    fmt.Sprintf("%s (commit: %s, built: %s)", Version, Commit, BuildDate),
 }
 
 func init() {
