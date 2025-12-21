@@ -11,7 +11,7 @@ BUILD_DIR := build
 GOARCH := $(shell go env GOARCH)
 GOOS := $(shell go env GOOS)
 CGO_CFLAGS := -O -D__BLST_PORTABLE__
-LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.buildDate=$(BUILD_DATE)
+LDFLAGS := -X github.com/luxfi/netrunner/cmd.Version=$(VERSION) -X github.com/luxfi/netrunner/cmd.Commit=$(COMMIT) -X github.com/luxfi/netrunner/cmd.BuildDate=$(BUILD_DATE)
 
 # Default target
 .PHONY: all
