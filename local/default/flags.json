@@ -9,5 +9,6 @@
   "log-level": "INFO",
   "sybil-protection-enabled": false,
   "sybil-protection-disabled-weight": 100,
-  "network-health-min-conn-peers": 0
+  "network-health-min-conn-peers": 0,
+  "track-all-chains": true
 }
