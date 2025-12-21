@@ -41,7 +41,7 @@ func fixDeprecatedLuxdFlags(flags map[string]interface{}) error {
 			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedWhitelistedChainsKey, vIntf)
 		}
 		if v != "" {
-			flags[config.TrackNetsKey] = v
+			flags[config.TrackChainsKey] = v
 		}
 		delete(flags, deprecatedWhitelistedChainsKey)
 	}

@@ -518,20 +518,37 @@ func (s *server) CreateBlockchains(
 	defer s.mu.Unlock()
 
 	if s.network == nil {
+		s.log.Error("CreateBlockchains: network not bootstrapped")
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("CreateBlockchains")
+	// Log the incoming request for debugging
+	s.log.Info("CreateBlockchains: received request",
+		zap.Int("numBlockchainSpecs", len(req.GetBlockchainSpecs())),
+	)
 
 	if len(req.GetBlockchainSpecs()) == 0 {
+		s.log.Error("CreateBlockchains: no blockchain specs provided")
 		return nil, ErrNoChainSpec
 	}
 
+	// Log details of each blockchain spec being processed
 	chainSpecs := []network.ChainSpec{}
-	for _, spec := range req.GetBlockchainSpecs() {
+	for i, spec := range req.GetBlockchainSpecs() {
+		s.log.Info("CreateBlockchains: processing blockchain spec",
+			zap.Int("index", i),
+			zap.String("vmName", spec.GetVmName()),
+			zap.Bool("hasGenesis", spec.GetGenesis() != ""),
+			zap.Bool("hasChainId", spec.GetChainId() != ""),
+		)
 		chainSpec, err := getNetworkChainSpec(s.log, spec, false, s.network.pluginDir)
 		if err != nil {
-			return nil, err
+			s.log.Error("CreateBlockchains: failed to parse blockchain spec",
+				zap.Error(err),
+				zap.Int("specIndex", i),
+				zap.String("vmName", spec.GetVmName()),
+			)
+			return nil, fmt.Errorf("failed to parse blockchain spec %d (VM=%s): %w", i, spec.GetVmName(), err)
 		}
 		chainSpecs = append(chainSpecs, chainSpec)
 	}
@@ -543,6 +560,11 @@ func (s *server) CreateBlockchains(
 
 	for _, chainSpec := range chainSpecs {
 		if chainSpec.ChainID != nil && !chainsSet.Contains(*chainSpec.ChainID) {
+			s.log.Error("CreateBlockchains: chain ID does not exist",
+				zap.String("chainID", *chainSpec.ChainID),
+				zap.String("vmName", chainSpec.VMName),
+				zap.Strings("existingChains", chainIDsList),
+			)
 			return nil, fmt.Errorf("chain id %q does not exist", *chainSpec.ChainID)
 		}
 	}
@@ -550,18 +572,39 @@ func (s *server) CreateBlockchains(
 	s.clusterInfo.Healthy = false
 	s.clusterInfo.CustomChainsHealthy = false
 
+	s.log.Info("CreateBlockchains: starting chain creation",
+		zap.Int("numChains", len(chainSpecs)),
+		zap.Duration("timeout", waitForHealthyTimeout),
+	)
+
 	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
 	defer cancel()
 	chainIDs, err := s.network.CreateChains(ctx, chainSpecs)
 	if err != nil {
-		s.log.Error("failed to create blockchains", zap.Error(err), zap.String("errorDetail", err.Error()))
-		fmt.Printf("ERROR: failed to create blockchains: %v\n", err)
-		s.stopAndRemoveNetwork(err)
-		return nil, err
-	} else {
-		s.updateClusterInfo()
+		// Build detailed error context for logging
+		vmNames := make([]string, len(chainSpecs))
+		for i, spec := range chainSpecs {
+			vmNames[i] = spec.VMName
+		}
+		s.log.Error("CreateBlockchains: failed to create blockchains",
+			zap.Error(err),
+			zap.String("errorDetail", fmt.Sprintf("%+v", err)),
+			zap.Strings("vmNames", vmNames),
+			zap.Int("numChainSpecs", len(chainSpecs)),
+			zap.String("pluginDir", s.network.pluginDir),
+		)
+		// Also print to stdout for immediate visibility
+		fmt.Printf("ERROR: CreateBlockchains failed: %v\n", err)
+		fmt.Printf("ERROR: VMs attempted: %v\n", vmNames)
+		fmt.Printf("ERROR: Plugin directory: %s\n", s.network.pluginDir)
+		// Don't stop the entire network on chain creation failure - keep it running
+		// so user can retry or investigate. This makes the network more resilient.
+		return nil, fmt.Errorf("CreateBlockchains failed for VMs %v: %w", vmNames, err)
 	}
-	s.log.Info("custom chains created")
+	s.updateClusterInfo()
+	s.log.Info("CreateBlockchains: custom chains created successfully",
+		zap.Int("numChains", len(chainIDs)),
+	)
 
 	strChainIDs := []string{}
 	for _, chainID := range chainIDs {
@@ -788,7 +831,9 @@ func (s *server) CreateChains(_ context.Context, req *rpcpb.CreateChainsRequest)
 	chainIDs, err := s.network.CreateParticipantGroups(ctx, participantsSpecs)
 	if err != nil {
 		s.log.Error("failed to create chains", zap.Error(err))
-		s.stopAndRemoveNetwork(err)
+		// Don't stop the entire network on chain creation failure - keep it running
+		// so user can retry or investigate. This makes the network more resilient.
+		// s.stopAndRemoveNetwork(err)  // Commented out for resilience
 		return nil, err
 	} else {
 		s.updateClusterInfo()

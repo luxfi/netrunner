@@ -8,7 +8,7 @@
   {
       "version": "v1.9.6",
       "old_name": "whitelisted-subnets",
-      "new_name": "track-subnets",
+      "new_name": "track-chains",
       "value_map": ""
   }
 ]
