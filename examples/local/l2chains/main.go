@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -22,17 +23,46 @@ import (
 const (
 	healthyTimeout          = 3 * time.Minute
 	createBlockchainTimeout = 5 * time.Minute
-	luxdBinaryPath          = "/Users/z/go/bin/luxd"
-	pluginDir               = "/Users/z/.luxd/plugins"
 )
+
+func getLuxdBinaryPath() string {
+	// Check LUXD_PATH env var first
+	if p := os.Getenv("LUXD_PATH"); p != "" {
+		return p
+	}
+	// Default to $GOPATH/bin/luxd or $HOME/go/bin/luxd
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		return filepath.Join(gopath, "bin", "luxd")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, "go", "bin", "luxd")
+}
+
+func getPluginDir() string {
+	// Check LUXD_PLUGIN_DIR env var first
+	if p := os.Getenv("LUXD_PLUGIN_DIR"); p != "" {
+		return p
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".lux", "plugins")
+}
+
+func getGenesisDir() string {
+	// Check LUX_GENESIS_DIR env var first
+	if p := os.Getenv("LUX_GENESIS_DIR"); p != "" {
+		return p
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, "work", "lux", "genesis")
+}
 
 // L2Chain defines configuration for deploying an L2 chain
 type L2Chain struct {
-	Name       string
-	ChainID    uint64
-	VMName     string
-	Alias      string
-	GenesisPath string
+	Name        string
+	ChainID     uint64
+	VMName      string
+	Alias       string
+	GenesisFile string // relative to genesis dir
 }
 
 // L2 Chain configurations
@@ -42,21 +72,21 @@ var l2Chains = []L2Chain{
 		ChainID:     200200,
 		VMName:      "subnetevm",
 		Alias:       "zoo",
-		GenesisPath: "/Users/z/work/lux/genesis/chains/zoo/genesis.json",
+		GenesisFile: "chains/zoo/genesis.json",
 	},
 	{
 		Name:        "SPC",
 		ChainID:     36911,
 		VMName:      "subnetevm",
 		Alias:       "spc",
-		GenesisPath: "/Users/z/work/lux/genesis/chains/spc/genesis.json",
+		GenesisFile: "chains/spc/genesis.json",
 	},
 	{
 		Name:        "Hanzo AI",
 		ChainID:     36963,
 		VMName:      "subnetevm",
 		Alias:       "hanzo",
-		GenesisPath: "/Users/z/work/lux/genesis/chains/ai/genesis.json",
+		GenesisFile: "chains/ai/genesis.json",
 	},
 }
 
@@ -94,9 +124,19 @@ func main() {
 }
 
 func run(log luxlog.Logger) error {
+	luxdPath := getLuxdBinaryPath()
+	pluginPath := getPluginDir()
+	genesisPath := getGenesisDir()
+
+	log.Info("Configuration",
+		zap.String("luxd", luxdPath),
+		zap.String("plugins", pluginPath),
+		zap.String("genesis", genesisPath),
+	)
+
 	// Create mainnet config for 5-node network
 	log.Info("Creating mainnet configuration...")
-	netConfig, err := local.NewMainnetConfig(luxdBinaryPath, 5)
+	netConfig, err := local.NewMainnetConfig(luxdPath, 5)
 	if err != nil {
 		return fmt.Errorf("failed to create mainnet config: %w", err)
 	}
@@ -104,7 +144,7 @@ func run(log luxlog.Logger) error {
 	// Add plugin directory and allow private IPs (required for local testing)
 	// Also enable output redirection to see errors
 	for i := range netConfig.NodeConfigs {
-		netConfig.NodeConfigs[i].Flags[config.PluginDirKey] = pluginDir
+		netConfig.NodeConfigs[i].Flags[config.PluginDirKey] = pluginPath
 		netConfig.NodeConfigs[i].Flags[config.NetworkAllowPrivateIPsKey] = true
 		netConfig.NodeConfigs[i].RedirectStdout = true
 		netConfig.NodeConfigs[i].RedirectStderr = true
@@ -149,17 +189,19 @@ func run(log luxlog.Logger) error {
 
 	// Deploy L2 chains
 	for _, chain := range l2Chains {
+		genesisFile := filepath.Join(genesisPath, chain.GenesisFile)
 		log.Info("Deploying L2 chain...",
 			zap.String("name", chain.Name),
 			zap.Uint64("chainId", chain.ChainID),
 			zap.String("alias", chain.Alias),
+			zap.String("genesis", genesisFile),
 		)
 
-		genesis, err := os.ReadFile(chain.GenesisPath)
+		genesis, err := os.ReadFile(genesisFile)
 		if err != nil {
 			log.Error("Failed to read genesis file",
 				zap.String("chain", chain.Name),
-				zap.String("path", chain.GenesisPath),
+				zap.String("path", genesisFile),
 				zap.Error(err),
 			)
 			continue
