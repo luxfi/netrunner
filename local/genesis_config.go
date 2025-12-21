@@ -9,16 +9,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/luxfi/constants"
+	"github.com/luxfi/crypto/bls/signer/localsigner"
 	"github.com/luxfi/genesis/configs"
 	"github.com/luxfi/ids"
+	"github.com/luxfi/keys"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/constants"
-	"github.com/luxfi/crypto/bls/signer/localsigner"
 	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/node/vms/platformvm/signer"
 	"golang.org/x/exp/maps"
@@ -324,4 +327,160 @@ func NewConfigForNetworkWithCustomGenesis(binaryPath string, numNodes uint32, ge
 	}
 
 	return netConfig, nil
+}
+
+// NewConfigWithPreExistingKeys creates a network config using pre-existing validator keys.
+// This is useful for:
+// - Maintaining consistent NodeIDs across network restarts
+// - Using keys with pre-configured BLS signers
+// - Deploying to mainnet/testnet with known validator identities
+//
+// The keysDir should contain subdirectories (e.g., node1, node2) with:
+// - staker.crt and staker.key for TLS identity
+// - bls/signer.key for BLS signer (optional)
+// - ec/private.key for P-Chain addresses (optional)
+func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir string) (network.Config, error) {
+	// Get genesis for the specified network
+	genesisJSON, err := configs.GetGenesis(networkID)
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to get genesis for network %d: %w", networkID, err)
+	}
+
+	// Load validator keys from the keys directory
+	ks := keys.NewKeyStore(keysDir)
+	validatorKeys, err := ks.LoadAll()
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to load validator keys from %s: %w", keysDir, err)
+	}
+
+	if len(validatorKeys) == 0 {
+		return network.Config{}, fmt.Errorf("no validator keys found in %s", keysDir)
+	}
+
+	// Start with the default config structure
+	netConfig := NewDefaultConfig(binaryPath)
+
+	// Parse genesis to modify it
+	var genesis map[string]interface{}
+	if err := json.Unmarshal(genesisJSON, &genesis); err != nil {
+		return network.Config{}, fmt.Errorf("failed to parse genesis: %w", err)
+	}
+
+	// Build initial stakers from loaded keys
+	hrp := constants.GetHRP(networkID)
+	numNodes := uint32(len(validatorKeys))
+
+	initialStakers := make([]map[string]interface{}, numNodes)
+	for i, vk := range validatorKeys {
+		rewardAddr, err := address.Format("P", hrp, vk.PChainAddr[:])
+		if err != nil {
+			return network.Config{}, fmt.Errorf("couldn't format reward address for node %d: %w", i, err)
+		}
+
+		staker := map[string]interface{}{
+			"nodeID":        vk.NodeID.String(),
+			"rewardAddress": rewardAddr,
+			"delegationFee": 20000, // 2% delegation fee
+		}
+
+		// Add BLS signer if available
+		if len(vk.BLSPublicKey) > 0 && len(vk.BLSPoP) > 0 {
+			staker["signer"] = map[string]interface{}{
+				"publicKey":         vk.BLSPublicKeyHex(),
+				"proofOfPossession": vk.BLSPoPHex(),
+			}
+		}
+
+		initialStakers[i] = staker
+	}
+
+	// Update genesis with initial stakers
+	genesis["initialStakers"] = initialStakers
+
+	// Generate P-Chain allocations from the loaded keys
+	allocBuilder := keys.NewAllocationBuilder(networkID, validatorKeys).
+		WithAmount(100 * keys.MegaLux).  // 100M LUX per validator
+		WithFeeAccount(0, 10*keys.MegaLux). // First validator gets extra for fees
+		WithImmediateUnlock()
+
+	keyAllocations, err := allocBuilder.Build()
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to build allocations: %w", err)
+	}
+
+	// Convert P-Chain allocations to genesis format
+	pchainAllocs := make([]interface{}, len(keyAllocations.PChainAllocations))
+	for i, alloc := range keyAllocations.PChainAllocations {
+		unlockSchedule := make([]map[string]interface{}, len(alloc.UnlockSchedule))
+		for j, unlock := range alloc.UnlockSchedule {
+			unlockSchedule[j] = map[string]interface{}{
+				"amount":   unlock.Amount,
+				"locktime": unlock.Locktime,
+			}
+		}
+		pchainAllocs[i] = map[string]interface{}{
+			"ethAddr":        alloc.ETHAddr,
+			"luxAddr":        alloc.LUXAddr,
+			"initialAmount":  alloc.InitialAmount,
+			"unlockSchedule": unlockSchedule,
+		}
+	}
+	genesis["allocations"] = pchainAllocs
+
+	// Set initial staked funds
+	genesis["initialStakedFunds"] = keyAllocations.InitialStakedFunds
+
+	// Update start time to now
+	now := time.Now().Unix()
+	genesis["startTime"] = uint64(now)
+
+	// Re-serialize genesis
+	updatedGenesis, err := json.MarshalIndent(genesis, "", "  ")
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to serialize updated genesis: %w", err)
+	}
+	netConfig.Genesis = string(updatedGenesis)
+
+	// Configure node configs with the loaded staking keys
+	netConfig.NodeConfigs = make([]node.Config, numNodes)
+	for i, vk := range validatorKeys {
+		port := 9630 + int(i)*2
+		netConfig.NodeConfigs[i] = node.Config{
+			Flags: map[string]interface{}{
+				config.HTTPPortKey:    port,
+				config.StakingPortKey: port + 1,
+			},
+			StakingKey:        string(vk.StakerKey),
+			StakingCert:       string(vk.StakerCert),
+			StakingSigningKey: base64.StdEncoding.EncodeToString(vk.BLSSecretKey),
+			IsBeacon:          true,
+			ChainConfigFiles:  map[string]string{},
+			UpgradeConfigFiles: map[string]string{},
+			PChainConfigFiles: map[string]string{},
+		}
+	}
+
+	return netConfig, nil
+}
+
+// DefaultKeysPath returns the default path for pre-existing validator keys
+func DefaultKeysPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, "work", "lux", "keys")
+}
+
+// NewMainnetConfigWithKeys creates a mainnet config using pre-existing validator keys
+func NewMainnetConfigWithKeys(binaryPath string, keysDir string) (network.Config, error) {
+	if keysDir == "" {
+		keysDir = DefaultKeysPath()
+	}
+	return NewConfigWithPreExistingKeys(binaryPath, configs.LuxMainnetID, keysDir)
+}
+
+// NewTestnetConfigWithKeys creates a testnet config using pre-existing validator keys
+func NewTestnetConfigWithKeys(binaryPath string, keysDir string) (network.Config, error) {
+	if keysDir == "" {
+		keysDir = DefaultKeysPath()
+	}
+	return NewConfigWithPreExistingKeys(binaryPath, configs.LuxTestnetID, keysDir)
 }
