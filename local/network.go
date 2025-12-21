@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/netip"
 	"os"
 	"os/user"
@@ -944,7 +945,7 @@ func (ln *localNetwork) restartNode(
 	}
 
 	if trackChains != "" {
-		nodeConfig.Flags[config.TrackNetsKey] = trackChains
+		nodeConfig.Flags[config.TrackChainsKey] = trackChains
 	}
 
 	// keep same ports, dbdir in node flags
@@ -967,10 +968,19 @@ func (ln *localNetwork) restartNode(
 	}
 
 	if !node.paused {
+		// Get the ports before removing the node
+		apiPort := node.GetAPIPort()
+		p2pPort := node.GetP2PPort()
+
 		if err := ln.removeNode(ctx, nodeName); err != nil {
 			return err
 		}
 		syscall.Sync()
+
+		// Wait for ports to be released (TCP TIME_WAIT)
+		// This prevents "bind: address already in use" errors
+		// Use shorter timeout (5s) since ports are usually available quickly after process stop
+		waitForPortsAvailable(apiPort, p2pPort, 5*time.Second)
 	}
 
 	if _, err := ln.addNode(nodeConfig); err != nil {
@@ -995,6 +1005,34 @@ func (ln *localNetwork) isPausedNode(nodeConfig *node.Config) bool {
 		return true
 	}
 	return false
+}
+
+// waitForPortsAvailable waits until the specified ports are available for binding.
+// This is necessary after stopping a node to ensure the ports are released from TIME_WAIT state.
+func waitForPortsAvailable(apiPort, p2pPort uint16, timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	checkInterval := 100 * time.Millisecond
+
+	for time.Now().Before(deadline) {
+		apiAvailable := isPortAvailable(apiPort)
+		p2pAvailable := isPortAvailable(p2pPort)
+
+		if apiAvailable && p2pAvailable {
+			return
+		}
+
+		time.Sleep(checkInterval)
+	}
+}
+
+// isPortAvailable checks if a TCP port is available for binding
+func isPortAvailable(port uint16) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
 }
 
 // Set [nodeConfig].Name if it isn't given and assert it's unique.

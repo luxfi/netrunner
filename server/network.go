@@ -232,7 +232,7 @@ func (lc *localNetwork) createConfig() error {
 		}
 
 		if lc.options.trackChains != "" {
-			cfg.NodeConfigs[i].Flags[config.TrackNetsKey] = lc.options.trackChains
+			cfg.NodeConfigs[i].Flags[config.TrackChainsKey] = lc.options.trackChains
 		}
 
 		cfg.NodeConfigs[i].BinaryPath = lc.execPath
@@ -725,7 +725,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 
 	lc.nodeInfos = make(map[string]*rpcpb.NodeInfo)
 	for name, node := range nodes {
-		trackChains, err := node.GetFlag(config.TrackNetsKey)
+		trackChains, err := node.GetFlag(config.TrackChainsKey)
 		if err != nil {
 			return err
 		}

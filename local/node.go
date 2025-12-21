@@ -130,7 +130,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		Network:              peer.TestNetwork,
 		Router:               router,
 		VersionCompatibility: version.GetCompatibility(time.Now()),
-		MyNets:               set.Set[ids.ID]{},
+		MyChains:             set.Set[ids.ID]{},
 		Beacons:              validators.NewManager(),
 		Validators:           validators.NewManager(),
 		NetworkID:            node.networkID,
