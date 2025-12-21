@@ -118,20 +118,41 @@ func generatePrivateKey() ([]byte, error) {
 	return key, nil
 }
 
-// Vesting configuration constants
+// UTXO chain constants (P/X chains)
+//
+// UTXO Base Unit: MicroLux (10^-6 LUX) - consensus constraint, uses uint64
+// UTXO Decimals: 6
+//
+// EVM Base Unit: WeiLux (10^-18 LUX) - presentation only, uses uint256
+// ERC20 Decimals: 18
 const (
-	// OneBillionLUX is 1B LUX in nLUX (9 decimals)
-	OneBillionLUX uint64 = 1_000_000_000_000_000_000
-	// OnePercentLUX is 1% of 1B = 10M LUX
+	// MicroLux is the base unit for UTXO chains (P/X)
+	// 1 LUX = 1,000,000 MicroLux
+	MicroLux uint64 = 1_000_000 // 10^6
+
+	// OneBillionLUX is 1B LUX in MicroLux (UTXO base unit)
+	// 1,000,000,000 * 10^6 = 10^15 MicroLux
+	OneBillionLUX uint64 = 1_000_000_000 * MicroLux
+
+	// OneMillionLUX is 1M LUX in MicroLux (UTXO base unit)
+	// 1,000,000 * 10^6 = 10^12 MicroLux
+	OneMillionLUX uint64 = 1_000_000 * MicroLux
+
+	// OnePercentLUX is 1% of 1B = 10M LUX in MicroLux
 	OnePercentLUX uint64 = OneBillionLUX / 100
+
 	// SecondsPerYear for vesting calculations
 	SecondsPerYear uint64 = 365 * 24 * 3600
+
 	// Jan1_2020 is Unix timestamp for Jan 1, 2020 00:00:00 UTC (vesting start)
 	Jan1_2020 uint64 = 1577836800
 )
 
 // ImmediateUnlockLUX is 5% of 1B = 50M LUX for immediate spending (fees, transactions)
 const ImmediateUnlockLUX uint64 = OneBillionLUX * 5 / 100
+
+// DefaultValidatorStake is 1M LUX per validator in μLUX
+const DefaultValidatorStake uint64 = OneMillionLUX
 
 // GenerateVestingSchedule creates an unlock schedule with:
 // - 5% immediately available (locktime=0) for transaction fees
@@ -200,4 +221,46 @@ func GenerateCChainAllocFromKeys(keys []KeyInfo) map[string]map[string]string {
 		alloc[key.EthAddr] = map[string]string{"balance": balanceHex}
 	}
 	return alloc
+}
+
+// GenerateValidatorAllocations creates P-Chain allocations for a given number of validators.
+// Each validator gets DefaultValidatorStake (1M LUX) with funds immediately available.
+// The first validator gets extra funds for transaction fees and chain creation.
+func GenerateValidatorAllocations(numValidators uint32, hrp string) ([]map[string]interface{}, []KeyInfo, error) {
+	// Generate or load keys for the validators
+	keys, err := LoadOrGenerateKeys("", int(numValidators))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate validator keys: %w", err)
+	}
+
+	allocations := make([]map[string]interface{}, numValidators)
+	for i := uint32(0); i < numValidators; i++ {
+		key := keys[i]
+		luxAddr, err := FormatAddress("P", hrp, key.ShortID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to format address for validator %d: %w", i, err)
+		}
+
+		// All validator funds immediately available (locktime=0)
+		// First validator gets extra for fees
+		amount := DefaultValidatorStake
+		if i == 0 {
+			// First validator gets 10x stake for fees, chain creation, etc.
+			amount = DefaultValidatorStake * 10
+		}
+
+		allocations[i] = map[string]interface{}{
+			"ethAddr":       key.EthAddr,
+			"luxAddr":       luxAddr,
+			"initialAmount": uint64(0),
+			"unlockSchedule": []map[string]interface{}{
+				{
+					"amount":   amount,
+					"locktime": uint64(0), // Immediately available
+				},
+			},
+		}
+	}
+
+	return allocations, keys, nil
 }

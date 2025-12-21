@@ -1113,7 +1113,7 @@ func (ln *localNetwork) transformToElasticChains(
 			return nil, nil, err
 		}
 		ctx, cancel := createDefaultCtx(ctx)
-		transformChainTx, err := w.pWallet.IssueTransformNetTx(chainID, chainAssetID,
+		transformChainTx, err := w.pWallet.IssueTransformChainTx(chainID, chainAssetID,
 			elasticParticipantsSpec.InitialSupply, elasticParticipantsSpec.MaxSupply, elasticParticipantsSpec.MinConsumptionRate,
 			elasticParticipantsSpec.MaxConsumptionRate, elasticParticipantsSpec.MinValidatorStake, elasticParticipantsSpec.MaxValidatorStake,
 			elasticParticipantsSpec.MinStakeDuration, elasticParticipantsSpec.MaxStakeDuration, elasticParticipantsSpec.MinDelegationFee,
@@ -1152,7 +1152,7 @@ func createChains(
 	for i := uint32(0); i < numChains; i++ {
 		log.Info("creating chain tx")
 		ctx, cancel := createDefaultCtx(ctx)
-		tx, err := w.pWallet.IssueCreateNetTx(
+		tx, err := w.pWallet.IssueCreateSubnetTx(
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,
 				Addrs:     []ids.ShortID{w.addr},

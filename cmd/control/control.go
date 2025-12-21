@@ -226,12 +226,6 @@ func newStartCommand() *cobra.Command {
 		"",
 		"[optional] JSON string of map from chain id to its upgrade file contents",
 	)
-	cmd.PersistentFlags().StringVar(
-		&chainConfigs,
-		"chain-configs",
-		"",
-		"[optional] JSON string of map from chain id to its config file contents",
-	)
 	cmd.PersistentFlags().BoolVar(
 		&reassignPortsIfUsed,
 		"reassign-ports-if-used",
@@ -811,12 +805,6 @@ func newAddNodeCommand() *cobra.Command {
 		"",
 		"[optional] JSON string of map from chain id to its upgrade file contents",
 	)
-	cmd.PersistentFlags().StringVar(
-		&chainConfigs,
-		"chain-configs",
-		"",
-		"[optional] JSON string of map from chain id to its config file contents",
-	)
 	return cmd
 }
 
@@ -917,12 +905,6 @@ func newRestartNodeCommand() *cobra.Command {
 		"upgrade-configs",
 		"",
 		"[optional] JSON string of map from chain id to its upgrade file contents",
-	)
-	cmd.PersistentFlags().StringVar(
-		&chainConfigs,
-		"chain-configs",
-		"",
-		"[optional] JSON string of map from chain id to its config file contents",
 	)
 	return cmd
 }
@@ -1170,12 +1152,6 @@ func newLoadSnapshotCommand() *cobra.Command {
 		"upgrade-configs",
 		"",
 		"[optional] JSON string of map from chain id to its upgrade file contents",
-	)
-	cmd.PersistentFlags().StringVar(
-		&chainConfigs,
-		"chain-configs",
-		"",
-		"[optional] JSON string of map from chain id to its config file contents",
 	)
 	cmd.PersistentFlags().StringVar(
 		&globalNodeConfig,
