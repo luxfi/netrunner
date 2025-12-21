@@ -76,6 +76,53 @@ var (
 	ErrNoValidatorSpec        = errors.New("no validator spec was provided")
 )
 
+// ensureNetworkDataDir reuses an existing network directory if one exists with node data,
+// otherwise creates a new timestamped directory. This allows restarting a network with
+// persistent state while still tracking when each network was first started.
+func ensureNetworkDataDir(baseDir, prefix string) (string, error) {
+	// Look for existing network directories with node data
+	entries, err := os.ReadDir(baseDir)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+
+	// Find the most recent network directory that has node data
+	var latestNetworkDir string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasPrefix(name, prefix+"_") {
+			continue
+		}
+		// Check if this directory has node subdirectories
+		networkPath := filepath.Join(baseDir, name)
+		nodeEntries, _ := os.ReadDir(networkPath)
+		hasNodes := false
+		for _, nodeEntry := range nodeEntries {
+			if nodeEntry.IsDir() && strings.HasPrefix(nodeEntry.Name(), "node") {
+				hasNodes = true
+				break
+			}
+		}
+		if hasNodes {
+			// Timestamps sort lexicographically, so later entries are more recent
+			if latestNetworkDir == "" || name > filepath.Base(latestNetworkDir) {
+				latestNetworkDir = networkPath
+			}
+		}
+	}
+
+	if latestNetworkDir != "" {
+		// Reuse existing network directory
+		return latestNetworkDir, nil
+	}
+
+	// No existing network with nodes, create new timestamped directory
+	return utils.MkDirWithTimestamp(filepath.Join(baseDir, prefix))
+}
+
 type Config struct {
 	Port   string
 	GwPort string
@@ -315,8 +362,8 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 			return nil, err
 		}
 	}
-	rootDataDir = filepath.Join(rootDataDir, networkRootDirPrefix)
-	rootDataDir, err = utils.MkDirWithTimestamp(rootDataDir)
+	// Reuse existing network directory if it has node data, otherwise create new timestamped one
+	rootDataDir, err = ensureNetworkDataDir(rootDataDir, networkRootDirPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -1263,8 +1310,8 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 			return nil, err
 		}
 	}
-	rootDataDir = filepath.Join(rootDataDir, networkRootDirPrefix)
-	rootDataDir, err = utils.MkDirWithTimestamp(rootDataDir)
+	// Reuse existing network directory if it has node data, otherwise create new timestamped one
+	rootDataDir, err = ensureNetworkDataDir(rootDataDir, networkRootDirPrefix)
 	if err != nil {
 		return nil, err
 	}
