@@ -54,7 +54,7 @@ var (
 	gRPCGatewayEp   string
 	execPath1       string
 	execPath2       string
-	subnetEvmPath   string
+	evmPath   string
 	genesisPath     string
 	genesisContents string
 
@@ -147,10 +147,10 @@ func init() {
 		"node executable path (to upgrade to)",
 	)
 	flag.StringVar(
-		&subnetEvmPath,
-		"subnet-evm-path",
+		&evmPath,
+		"evm-path",
 		"",
-		"path to subnet-evm binary",
+		"path to evm binary",
 	)
 }
 
@@ -187,7 +187,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	}, log)
 	gomega.Ω(err).Should(gomega.BeNil())
 
-	genesisPath = "tests/e2e/subnet-evm-genesis.json"
+	genesisPath = "tests/e2e/evm-genesis.json"
 	genesisByteContents, err := os.ReadFile(genesisPath)
 	gomega.Ω(err).Should(gomega.BeNil())
 	genesisContents = string(genesisByteContents)
@@ -217,7 +217,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 				client.WithPluginDir(filepath.Join(filepath.Dir(execPath1), "plugins")),
 				client.WithChainSpecs([]*rpcpb.BlockchainSpec{
 					{
-						VmName:  "subnetevm",
+						VmName:  "evm",
 						Genesis: genesisPath, // test genesis path usage
 					},
 				}),
@@ -235,7 +235,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:  "subnetevm",
+						VmName:  "evm",
 						Genesis: genesisPath, // test genesis path usage
 					},
 				},
@@ -275,7 +275,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:   "subnetevm",
+						VmName:   "evm",
 						Genesis:  genesisContents,
 						SubnetId: &existingSubnetID,
 					},
@@ -315,7 +315,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			_, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:   "subnetevm",
+						VmName:   "evm",
 						Genesis:  genesisContents,
 						SubnetId: &existingSubnetID,
 					},
@@ -331,7 +331,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:     "subnetevm",
+						VmName:     "evm",
 						Genesis:    genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: subnetParticipants},
 					},
@@ -363,7 +363,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:     "subnetevm",
+						VmName:     "evm",
 						Genesis:    genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: subnetParticipants2},
 					},
@@ -395,12 +395,12 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:   "subnetevm",
+						VmName:   "evm",
 						Genesis:  genesisContents,
 						SubnetId: &existingSubnetID,
 					},
 					{
-						VmName:   "subnetevm",
+						VmName:   "evm",
 						Genesis:  genesisContents,
 						SubnetId: &existingSubnetID,
 					},
@@ -422,12 +422,12 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:     "subnetevm",
+						VmName:     "evm",
 						Genesis:    genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: disjointNewSubnetParticipants[0]},
 					},
 					{
-						VmName:     "subnetevm",
+						VmName:     "evm",
 						Genesis:    genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: disjointNewSubnetParticipants[1]},
 					},
