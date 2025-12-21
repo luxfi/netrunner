@@ -28,6 +28,11 @@ import (
 // This uses the proper genesis configuration from github.com/luxfi/genesis/configs.
 // For non-local networks (mainnet/testnet), it dynamically injects initial stakers
 // based on the generated node staking keys.
+//
+// When LUX_MNEMONIC environment variable is set, validator keys are derived
+// deterministically from the mnemonic, ensuring consistent node identities
+// and P-Chain allocations across network restarts.
+//
 // Supported network IDs:
 //   - 96369: LUX Mainnet
 //   - 96368: LUX Testnet
@@ -179,53 +184,51 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 	// Update genesis with initial stakers
 	genesis["initialStakers"] = initialStakers
 
-	// Load validator keys from ~/.lux/keys/ (generates new ones if missing)
-	// Each key gets 1B LUX with 1% vesting per year since Jan 1, 2020
-	validatorKeys, err := LoadOrGenerateKeys("", 5)
-	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to load validator keys: %w", err)
+	// Check if genesis already has allocations from the configs package
+	// (which may include dynamic allocations from ~/.lux/genesis/{network}/pchain.json)
+	existingAllocs, hasAllocs := genesis["allocations"].([]interface{})
+	if hasAllocs && len(existingAllocs) > 0 {
+		// Use existing allocations from genesis - don't overwrite
+		// This preserves dynamic P-Chain allocations configured via:
+		// - LUX_PCHAIN_ALLOCS environment variable
+		// - LUX_PCHAIN_ALLOCS_FILE environment variable
+		// - ~/.lux/genesis/{network}/pchain.json file
+	} else {
+		// No allocations in genesis - auto-generate based on numNodes (--num-validators)
+		// Each validator gets 1M LUX (DefaultValidatorStake) immediately available
+		// First validator gets 10M LUX for fees, chain creation, etc.
+		validatorAllocs, _, err := GenerateValidatorAllocations(numNodes, hrp)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to generate validator allocations: %w", err)
+		}
+
+		// Convert to []interface{} for JSON marshaling
+		allocations := make([]interface{}, len(validatorAllocs))
+		for i, alloc := range validatorAllocs {
+			allocations[i] = alloc
+		}
+		genesis["allocations"] = allocations
 	}
 
-	// Generate allocations from loaded keys with proper vesting schedule
-	keyAllocations, err := GenerateAllocationsFromKeys(validatorKeys, hrp)
-	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to generate allocations: %w", err)
-	}
-
-	// Convert to []interface{} for JSON marshaling
-	allocations := make([]interface{}, len(keyAllocations))
-	for i, alloc := range keyAllocations {
-		allocations[i] = alloc
-	}
-	genesis["allocations"] = allocations
-
-	// Update C-chain genesis with proper allocations
+	// C-chain genesis is immutable - don't modify it
+	// The C-chain genesis from configs package contains the real mainnet state
 	now := time.Now().Unix()
-	if cChainGenesisStr, ok := genesis["cChainGenesis"].(string); ok {
-		var cChainGenesis map[string]interface{}
-		if err := json.Unmarshal([]byte(cChainGenesisStr), &cChainGenesis); err == nil {
-			// Update the alloc field with our validator keys
-			cChainGenesis["alloc"] = GenerateCChainAllocFromKeys(validatorKeys)
-			// Re-serialize C-chain genesis
-			if updatedCChain, err := json.Marshal(cChainGenesis); err == nil {
-				genesis["cChainGenesis"] = string(updatedCChain)
+
+	// Check if initialStakedFunds already exists in genesis from configs package
+	// If not, extract from the second allocation's address
+	if _, hasStakedFunds := genesis["initialStakedFunds"]; !hasStakedFunds {
+		// Extract second allocation address for initialStakedFunds
+		if allocs, ok := genesis["allocations"].([]interface{}); ok && len(allocs) > 1 {
+			if secondAlloc, ok := allocs[1].(map[string]interface{}); ok {
+				if luxAddr, ok := secondAlloc["luxAddr"].(string); ok {
+					genesis["initialStakedFunds"] = []string{luxAddr}
+				}
 			}
 		}
-	}
-
-	// Set initialStakedFunds to the SECOND validator key address (not first).
-	// The first key is kept OUT of initialStakedFunds so its allocation becomes
-	// regular P-chain UTXOs, which are needed for wallet operations (chain creation, etc).
-	// The second key's allocation will go to stakers for their stake weight.
-	if len(validatorKeys) > 1 {
-		secondValidatorAddr, err := FormatAddress("P", hrp, validatorKeys[1].ShortID)
-		if err != nil {
-			return network.Config{}, fmt.Errorf("couldn't format second validator address: %w", err)
+		// Fall back to empty if we couldn't extract
+		if _, hasStakedFunds := genesis["initialStakedFunds"]; !hasStakedFunds {
+			genesis["initialStakedFunds"] = []string{}
 		}
-		genesis["initialStakedFunds"] = []string{secondValidatorAddr}
-	} else {
-		// Single node case: use empty initialStakedFunds
-		genesis["initialStakedFunds"] = []string{}
 	}
 
 	// Update start time to now
