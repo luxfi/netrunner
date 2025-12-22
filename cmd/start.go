@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/luxfi/constants"
 	"github.com/luxfi/keys"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
@@ -173,26 +174,35 @@ func getNetworkConfig(network string) multinet.NetworkConfig {
 	switch network {
 	case "mainnet":
 		return multinet.NetworkConfig{
-			NetworkID:   96369,
+			NetworkID:   constants.MainnetID, // 1
 			Name:        "Lux Mainnet",
 			Type:        multinet.NetworkTypePrimary,
 			HTTPPort:    9630,
 			StakingPort: 9631,
-			DataDir:     "/tmp/netrunner/mainnet",
+			DataDir:     "~/.lux/networks/mainnet",
 			Validators:  5,
 		}
 	case "testnet":
 		return multinet.NetworkConfig{
-			NetworkID:   96368,
+			NetworkID:   constants.TestnetID, // 2
 			Name:        "Lux Testnet",
 			Type:        multinet.NetworkTypePrimary,
 			HTTPPort:    9620,
 			StakingPort: 9621,
-			DataDir:     "/tmp/netrunner/testnet",
+			DataDir:     "~/.lux/networks/testnet",
+			Validators:  3,
+		}
+	case "devnet":
+		return multinet.NetworkConfig{
+			NetworkID:   constants.DevnetID, // 3
+			Name:        "Lux Devnet",
+			Type:        multinet.NetworkTypePrimary,
+			HTTPPort:    9610,
+			StakingPort: 9611,
+			DataDir:     "~/.lux/networks/devnet",
 			Validators:  3,
 		}
 	default:
-		// Could be a chain name
 		return multinet.NetworkConfig{}
 	}
 }
