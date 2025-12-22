@@ -526,7 +526,8 @@ func TestGenerateDefaultNetwork(t *testing.T) {
 	require := require.New(t)
 	binaryPath := "pepito"
 	networkConfig := NewDefaultConfig(binaryPath)
-	net, err := newNetwork(luxlog.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", false)
+	// Use reassignPortsIfUsed=true to avoid port conflicts in CI/parallel tests
+	net, err := newNetwork(luxlog.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", true)
 	require.NoError(err)
 	err = net.loadConfig(context.Background(), networkConfig)
 	require.NoError(err)

@@ -636,12 +636,21 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 	// it shouldn't happen that just one is empty, most probably both,
 	// but in any case if just one is empty it's unusable so we just assign a new one.
 	if nodeConfig.StakingCert == "" || nodeConfig.StakingKey == "" {
+		ln.log.Warn("staking cert/key empty, generating new ones",
+			zap.String("node", nodeConfig.Name),
+			zap.Int("certLen", len(nodeConfig.StakingCert)),
+			zap.Int("keyLen", len(nodeConfig.StakingKey)))
 		stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
 		if err != nil {
 			return nil, fmt.Errorf("couldn't generate staking Cert/Key: %w", err)
 		}
 		nodeConfig.StakingCert = string(stakingCert)
 		nodeConfig.StakingKey = string(stakingKey)
+	} else {
+		ln.log.Info("using provided staking cert/key",
+			zap.String("node", nodeConfig.Name),
+			zap.Int("certLen", len(nodeConfig.StakingCert)),
+			zap.Int("keyLen", len(nodeConfig.StakingKey)))
 	}
 	if nodeConfig.StakingSigningKey == "" {
 		secretKey, err := bls.NewSecretKey()
