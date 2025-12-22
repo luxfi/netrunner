@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/luxfi/crypto/bls"
+	luxcrypto "github.com/luxfi/crypto/secp256k1"
+	"github.com/luxfi/ids"
+	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/math/set"
+	"github.com/luxfi/keys"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
@@ -26,13 +33,10 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/ids"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
-	"github.com/luxfi/crypto/bls"
-	luxlog "github.com/luxfi/log"
-	"github.com/luxfi/math/set"
+	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/node/utils/wrappers"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
@@ -178,6 +182,44 @@ func init() {
 			}
 			if _, ok := sched["locktime"]; ok {
 				sched["locktime"] = float64(lockTime)
+			}
+		}
+	}
+
+	// If LUX_PRIVATE_KEY is set, also allocate funds to that address for chain creation
+	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+		privKeyBytes, err := hex.DecodeString(privKeyHex)
+		if err == nil && len(privKeyBytes) == 32 {
+			// Derive P-chain address from private key
+			luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
+			if err == nil {
+				pubKey := luxPrivKey.PublicKey()
+				pChainAddr := ids.ShortID(pubKey.Address())
+				// For default network (local, ID 1337), use "custom" HRP
+				luxAddr, err := address.Format("X", "custom", pChainAddr[:])
+				if err == nil {
+					fmt.Printf("🔑 Adding default network allocation for LUX_PRIVATE_KEY address: %s\n", luxAddr)
+					privKeyAlloc := map[string]interface{}{
+						"ethAddr":       "0x" + hex.EncodeToString(pChainAddr[:]),
+						"luxAddr":       luxAddr,
+						"initialAmount": float64(0),
+						"unlockSchedule": []interface{}{
+							map[string]interface{}{
+								"amount":   float64(100000000000000000), // 100M LUX in nLUX
+								"locktime": float64(0),                  // Immediately available
+							},
+						},
+					}
+					allocations = append(allocations, privKeyAlloc)
+					genesisMap["allocations"] = allocations
+
+					// CRITICAL: Also add to initialStakedFunds so funds are available on P-chain
+					// This is required for CreateChainTx and other P-chain operations
+					initialStakedFunds, _ := genesisMap["initialStakedFunds"].([]interface{})
+					initialStakedFunds = append(initialStakedFunds, luxAddr)
+					genesisMap["initialStakedFunds"] = initialStakedFunds
+					fmt.Printf("🔑 Added %s to initialStakedFunds for P-chain access\n", luxAddr)
+				}
 			}
 		}
 	}
@@ -415,6 +457,72 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 	if int(numNodes) < len(netConfig.NodeConfigs) {
 		netConfig.NodeConfigs = netConfig.NodeConfigs[:numNodes]
 	}
+
+	// If LUX_MNEMONIC is set, add allocations for mnemonic-derived address
+	mnemonic := os.Getenv("LUX_MNEMONIC")
+	fmt.Printf("🔍 DEBUG: NewDefaultConfigNNodes called, LUX_MNEMONIC set=%v\n", mnemonic != "")
+	if mnemonic != "" {
+		vk, err := keys.DeriveValidatorFromMnemonic(mnemonic, 0)
+		if err != nil {
+			return netConfig, fmt.Errorf("failed to derive key from mnemonic: %w", err)
+		}
+
+		// Parse genesis
+		var genesis map[string]interface{}
+		if err := json.Unmarshal([]byte(netConfig.Genesis), &genesis); err != nil {
+			return netConfig, fmt.Errorf("failed to parse genesis: %w", err)
+		}
+
+		// Create X-chain and P-chain addresses
+		// Network ID 1337 uses "local" HRP (per constants.NetworkIDToHRP)
+		const hrp = "local"
+		fmt.Printf("🔍 DEBUG: vk.PChainAddr (base58): %s\n", vk.PChainAddr.String())
+		fmt.Printf("🔍 DEBUG: vk.PChainAddr (hex): %x\n", vk.PChainAddr[:])
+		xLuxAddr, err := address.Format("X", hrp, vk.PChainAddr[:])
+		if err != nil {
+			return netConfig, fmt.Errorf("failed to format X-chain address: %w", err)
+		}
+		pLuxAddr, err := address.Format("P", hrp, vk.PChainAddr[:])
+		if err != nil {
+			return netConfig, fmt.Errorf("failed to format P-chain address: %w", err)
+		}
+
+		fmt.Printf("🔑 Adding local network allocations for LUX_MNEMONIC: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
+
+		// Get existing allocations
+		allocations, _ := genesis["allocations"].([]interface{})
+
+		// Add X-chain allocation
+		allocations = append(allocations, map[string]interface{}{
+			"luxAddr":        xLuxAddr,
+			"ethAddr":        "0x0000000000000000000000000000000000000000",
+			"initialAmount":  2_000_000_000_000_000_000, // 2B LUX
+			"unlockSchedule": []interface{}{},
+		})
+
+		// Add P-chain allocation with unlockSchedule (builder only reads P-chain amounts from unlockSchedule)
+		allocations = append(allocations, map[string]interface{}{
+			"luxAddr":       pLuxAddr,
+			"ethAddr":       "0x0000000000000000000000000000000000000000",
+			"initialAmount": 0, // Not used for P-chain - amounts come from unlockSchedule
+			"unlockSchedule": []interface{}{
+				map[string]interface{}{
+					"amount":   uint64(2_000_000_000_000_000_000), // 2B LUX
+					"locktime": uint64(0),                         // Immediately available
+				},
+			},
+		})
+
+		genesis["allocations"] = allocations
+
+		// Re-encode genesis
+		updatedGenesis, err := json.MarshalIndent(genesis, "", "  ")
+		if err != nil {
+			return netConfig, fmt.Errorf("failed to encode updated genesis: %w", err)
+		}
+		netConfig.Genesis = string(updatedGenesis)
+	}
+
 	return netConfig, nil
 }
 
