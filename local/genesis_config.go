@@ -539,27 +539,32 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 	}
 
 	// Check if persisted validator keys exist
-	keysDir := validatorKeysDir()
+	keysDir := os.Getenv("LUX_KEYS_DIR")
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
 	ks := keys.NewKeyStore(keysDir)
 
 	var validatorKeys []*keys.ValidatorKey
 	var err error
 
-	// Try to load existing keys first (for stable NodeIDs across runs)
-	existingKeys, _ := ks.LoadAll()
-	if len(existingKeys) >= int(numNodes) {
-		fmt.Printf("🔑 Loading %d validators from %s (stable NodeIDs)...\n", numNodes, keysDir)
-		validatorKeys = existingKeys[:numNodes]
+	// Try to load existing keys in order: node0, node1, ..., node{n-1}
+	validatorKeys = make([]*keys.ValidatorKey, numNodes)
+	allExist := true
+	for i := uint32(0); i < numNodes; i++ {
+		name := fmt.Sprintf("node%d", i)
+		vk, err := ks.Load(name)
+		if err != nil || vk == nil {
+			allExist = false
+			break
+		}
+		validatorKeys[i] = vk
+	}
 
-		// Verify NodeIDs match what we'd derive from mnemonic (EC keys should match)
-		derivedKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, int(numNodes))
-		if err == nil {
-			for i, vk := range validatorKeys {
-				if vk.PChainAddr != derivedKeys[i].PChainAddr {
-					fmt.Printf("⚠️  Warning: Persisted key %d has different P-chain address than mnemonic would derive\n", i)
-					fmt.Printf("   Persisted: %s, Derived: %s\n", vk.PChainAddr.String(), derivedKeys[i].PChainAddr.String())
-				}
-			}
+	if allExist {
+		fmt.Printf("🔑 Loading %d validators from %s (stable NodeIDs)...\n", numNodes, keysDir)
+		for i, vk := range validatorKeys {
+			fmt.Printf("   node%d: %s\n", i, vk.NodeID.String())
 		}
 	} else {
 		// No existing keys - derive from mnemonic and persist
