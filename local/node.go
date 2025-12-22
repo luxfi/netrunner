@@ -83,7 +83,7 @@ type localNode struct {
 
 func defaultGetConnFunc(ctx context.Context, node node.Node) (net.Conn, error) {
 	dialer := net.Dialer{}
-	return dialer.DialContext(ctx, constants.NetworkType, net.JoinHostPort(node.GetURL(), fmt.Sprintf("%d", node.GetP2PPort())))
+	return dialer.DialContext(ctx, constants.NetworkType, net.JoinHostPort(node.GetHost(), fmt.Sprintf("%d", node.GetP2PPort())))
 }
 
 // AttachPeer: see Network
@@ -195,12 +195,19 @@ func (node *localNode) GetAPIClient() api.Client {
 	return node.client
 }
 
+// GetHost returns the node's host/IP (e.g. 127.0.0.1).
 // See node.Node
-func (node *localNode) GetURL() string {
+func (node *localNode) GetHost() string {
 	if node.httpHost == "0.0.0.0" || node.httpHost == "." {
 		return "0.0.0.0"
 	}
 	return "127.0.0.1"
+}
+
+// GetURL returns the full HTTP API URL (e.g. http://127.0.0.1:9630).
+// See node.Node
+func (node *localNode) GetURL() string {
+	return fmt.Sprintf("http://%s:%d", node.GetHost(), node.apiPort)
 }
 
 // See node.Node

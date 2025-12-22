@@ -9,12 +9,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/luxfi/genesis/pkg/genesis"
+	"github.com/luxfi/keys"
 	"github.com/luxfi/node/vms/platformvm/reward"
 
 	"github.com/luxfi/node/vms/components/lux"
@@ -97,7 +100,7 @@ func (ln *localNetwork) getNode() node.Node {
 // get node client URI for an arbitrary node in the network
 func (ln *localNetwork) getClientURI() (string, error) { //nolint
 	node := ln.getNode()
-	clientURI := fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort())
+	clientURI := node.GetURL() // GetURL now returns full URL http://host:port
 	ln.log.Info("getClientURI",
 		"nodeName", node.GetName(),
 		"uri", clientURI)
@@ -233,7 +236,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 	fmt.Println()
 	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("waiting for chains to be discovered on all nodes...")))
 
-	maxWait := 60 * time.Second
+	maxWait := 2 * time.Minute
 	pollInterval := 2 * time.Second
 	deadline := time.Now().Add(maxWait)
 
@@ -250,9 +253,11 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 
 			discovered := false
 			for time.Now().Before(deadline) {
-				// Try to query the chain RPC endpoint - if it responds, the chain is discovered
+				// Try to query the chain RPC endpoint with eth_chainId - if it responds, the chain is discovered
 				chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", node.GetURL(), blockchainID)
-				req, err := http.NewRequestWithContext(ctx, "POST", chainRPCURL, nil)
+				// Use a proper JSON-RPC request body to ensure the EVM endpoint responds
+				jsonRPCBody := strings.NewReader(`{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`)
+				req, err := http.NewRequestWithContext(ctx, "POST", chainRPCURL, jsonRPCBody)
 				if err != nil {
 					return fmt.Errorf("failed to create request: %w", err)
 				}
@@ -261,20 +266,33 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 				client := &http.Client{Timeout: 5 * time.Second}
 				resp, err := client.Do(req)
 				if err == nil {
+					body, _ := io.ReadAll(resp.Body)
 					resp.Body.Close()
-					// Any response (even error) means the chain endpoint exists
-					discovered = true
-					ln.log.Debug("chain discovered on node",
+					// Check if we got a valid response (not a 404 or other error)
+					if resp.StatusCode == 200 {
+						discovered = true
+						ln.log.Debug("chain discovered on node",
+							"node", nodeName,
+							"blockchain-id", blockchainID,
+							"status", resp.StatusCode,
+							"response", string(body),
+						)
+						break
+					}
+					ln.log.Debug("chain endpoint returned non-200",
 						"node", nodeName,
 						"blockchain-id", blockchainID,
+						"status", resp.StatusCode,
+						"response", string(body),
 					)
-					break
+				} else {
+					ln.log.Debug("chain not yet discovered, waiting",
+						"node", nodeName,
+						"blockchain-id", blockchainID,
+						"error", err.Error(),
+						"url", chainRPCURL,
+					)
 				}
-
-				ln.log.Debug("chain not yet discovered, waiting",
-					"node", nodeName,
-					"blockchain-id", blockchainID,
-				)
 
 				select {
 				case <-ctx.Done():
@@ -444,6 +462,15 @@ func (ln *localNetwork) installCustomChains(
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to add primary validators: %w", err)
+	}
+
+	// Ensure P-chain has liquid funds for chain creation
+	// Genesis allocations go to X-chain, so we may need to export/import to P-chain
+	if err := fundPChainFromXChain(ctx, w, ln.log); err != nil {
+		ln.log.Error("installCustomChains: failed to fund P-chain from X-chain",
+			"error", err.Error(),
+		)
+		return nil, fmt.Errorf("failed to fund P-chain from X-chain: %w", err)
 	}
 
 	// create missing chains
@@ -864,17 +891,58 @@ type wallet struct {
 }
 
 // getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
-// Keys are loaded from disk, never hardcoded in source.
+// Priority: LUX_MNEMONIC > LUX_PRIVATE_KEY > disk keys
 func getDefaultKey() (*secp256k1.PrivateKey, error) {
-	keys, err := LoadOrGenerateKeys("", 1)
+	// If LUX_MNEMONIC is set, derive key from mnemonic (index 0)
+	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
+		fmt.Printf("🔑 getDefaultKey: Using LUX_MNEMONIC (len=%d)\n", len(mnemonic))
+		vk, err := keys.DeriveValidatorFromMnemonic(mnemonic, 0)
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive key from mnemonic: %w", err)
+		}
+		fmt.Printf("🔑 VK.PChainAddr (from mnemonic derivation): %s\n", vk.PChainAddr.String())
+
+		privKey, err := secp256k1.ToPrivateKey(vk.ECPrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		pubKey := privKey.PublicKey()
+		walletAddr := ids.ShortID(pubKey.Address())
+		fmt.Printf("🔑 Wallet address (from secp256k1 key): %s\n", walletAddr.String())
+		fmt.Printf("🔑 Addresses match: %v\n", vk.PChainAddr == walletAddr)
+
+		return privKey, nil
+	}
+
+	// If LUX_PRIVATE_KEY is set, use it directly (hex encoded, 64 chars = 32 bytes)
+	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+		fmt.Printf("🔑 getDefaultKey: Using LUX_PRIVATE_KEY (len=%d): %s...\n", len(privKeyHex), privKeyHex[:16])
+		privKeyBytes, err := hex.DecodeString(privKeyHex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode LUX_PRIVATE_KEY: %w", err)
+		}
+		privKey, err := secp256k1.ToPrivateKey(privKeyBytes)
+		if err != nil {
+			return nil, err
+		}
+		pubKey := privKey.PublicKey()
+		addr := ids.ShortID(pubKey.Address())
+		fmt.Printf("🔑 getDefaultKey: Derived address ShortID: %s\n", addr.String())
+		return privKey, nil
+	}
+
+	// Fall back to loading from disk
+	fmt.Printf("🔑 getDefaultKey: Falling back to disk keys\n")
+	loadedKeys, err := LoadOrGenerateKeys("", 1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load keys from ~/.lux/keys: %w", err)
 	}
-	if len(keys) == 0 {
+	if len(loadedKeys) == 0 {
 		return nil, errors.New("no keys found in ~/.lux/keys")
 	}
+	fmt.Printf("🔑 getDefaultKey: Loaded key from disk: %s...\n", loadedKeys[0].PrivKeyHex[:16])
 	// Convert hex to private key
-	privKeyBytes, err := hex.DecodeString(keys[0].PrivKeyHex)
+	privKeyBytes, err := hex.DecodeString(loadedKeys[0].PrivKeyHex)
 	if err != nil {
 		return nil, fmt.Errorf("invalid key format: %w", err)
 	}
@@ -892,12 +960,26 @@ func newWallet(
 		return nil, fmt.Errorf("failed to get wallet key: %w", err)
 	}
 	kc := secp256k1fx.NewKeychain(privKey)
+
+	// Debug: print addresses being queried
+	fmt.Printf("🔍 Wallet querying for addresses: %v\n", kc.Addrs)
+
 	// Use dedicated timeout context for FetchState to avoid parent context cancellation propagation
 	fetchCtx, fetchCancel := createDefaultCtx(ctx)
 	luxState, err := primary.FetchState(fetchCtx, uri, kc.Addrs)
 	fetchCancel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch state from %s: %w", uri, err)
+	}
+
+	// Debug: print network context and UTXOs
+	xChainIDForDebug := luxState.XCTX.BlockchainID
+	fmt.Printf("🔍 Network ID: %d, X-chain ID: %s\n", luxState.XCTX.NetworkID, xChainIDForDebug)
+	fmt.Printf("🔍 LUX Asset ID: %s\n", luxState.XCTX.XAssetID)
+	xUtxos, _ := luxState.UTXOs.UTXOs(ctx, xChainIDForDebug, xChainIDForDebug)
+	fmt.Printf("🔍 Fetched %d X-chain UTXOs\n", len(xUtxos))
+	for i, utxo := range xUtxos {
+		fmt.Printf("   UTXO[%d]: ID=%s, AssetID=%s\n", i, utxo.UTXOID.TxID, utxo.AssetID())
 	}
 	pClient := platformvm.NewClient(uri)
 	pTXs := make(map[ids.ID]*txs.Tx)
@@ -967,8 +1049,14 @@ func (ln *localNetwork) addPrimaryValidators(
 	for _, v := range vdrs {
 		curValidators.Add(v.NodeID)
 	}
+	// Debug: log current validators from genesis
+	fmt.Printf("🔍 GetCurrentValidators returned %d validators:\n", len(vdrs))
+	for _, v := range vdrs {
+		fmt.Printf("   - %s (weight: %d)\n", v.NodeID.String(), v.Weight)
+	}
 	for nodeName, node := range ln.nodes {
 		nodeID := node.GetNodeID()
+		fmt.Printf("🔍 Checking node %s (ID: %s) - in curValidators: %v\n", nodeName, nodeID.String(), curValidators.Contains(nodeID))
 
 		if curValidators.Contains(nodeID) {
 			continue
@@ -1090,6 +1178,73 @@ func importPChainFromXChain(ctx context.Context, w *wallet, owner *secp256k1fx.O
 		defaultPoll,
 	)
 	return err
+}
+
+// fundPChainFromXChain ensures the wallet has liquid P-chain funds for chain creation.
+// With direct P-chain genesis allocations, this may not need to do anything.
+// Falls back to X->P export/import if P-chain has insufficient funds.
+func fundPChainFromXChain(ctx context.Context, w *wallet, log luxlog.Logger) error {
+	// Amount needed for chain operations (1 LUX should be plenty for fees)
+	const requiredAmount = uint64(1_000_000_000) // 1 LUX in nLUX
+
+	// Debug: print wallet address for verification against genesis
+	fmt.Printf("🔍 DEBUG: Wallet address (short): %s\n", w.addr.String())
+	fmt.Printf("🔍 DEBUG: Wallet P-chain address: P-lux1%s (bech32 would differ)\n", w.addr.String())
+	fmt.Printf("🔍 DEBUG: LUX asset ID: %s\n", w.luxAssetID.String())
+
+	// First check if P-chain already has sufficient funds
+	balances, err := w.pBuilder.GetBalance()
+	if err != nil {
+		log.Warn("failed to check P-chain balance, will try X->P transfer", "error", err.Error())
+		fmt.Printf("⚠️  DEBUG: P-chain balance check failed: %v\n", err)
+	} else {
+		fmt.Printf("🔍 DEBUG: P-chain balances map has %d entries\n", len(balances))
+		for assetID, bal := range balances {
+			fmt.Printf("   - Asset %s: %d nLUX\n", assetID.String(), bal)
+		}
+		pBalance := balances[w.luxAssetID]
+		log.Info("P-chain balance check", "balance", pBalance, "required", requiredAmount)
+		fmt.Printf("💰 P-chain balance: %d nLUX (need %d)\n", pBalance, requiredAmount)
+		if pBalance >= requiredAmount {
+			log.Info(luxlog.Green.Wrap("P-chain already has sufficient funds, skipping X->P transfer"))
+			fmt.Printf("✅ P-chain already funded, no transfer needed\n")
+			return nil
+		}
+	}
+
+	// Also check X-chain balance for debugging
+	xBalances, xErr := w.xWallet.Builder().GetFTBalance()
+	if xErr != nil {
+		fmt.Printf("⚠️  DEBUG: X-chain balance check failed: %v\n", xErr)
+	} else {
+		fmt.Printf("🔍 DEBUG: X-chain balances:\n")
+		for assetID, bal := range xBalances {
+			fmt.Printf("   - Asset %s: %d nLUX\n", assetID.String(), bal)
+		}
+	}
+
+	// P-chain doesn't have enough, try to export from X-chain
+	owner := &secp256k1fx.OutputOwners{
+		Threshold: 1,
+		Addrs:     []ids.ShortID{w.addr},
+	}
+
+	log.Info(luxlog.Green.Wrap("funding P-chain from X-chain for chain creation"))
+	fmt.Printf("💰 Exporting %d nLUX from X-chain to P-chain for address %s\n", requiredAmount, w.addr.String())
+
+	// Export LUX from X-chain to P-chain
+	if err := exportXChainToPChain(ctx, w, owner, w.luxAssetID, requiredAmount); err != nil {
+		return fmt.Errorf("failed to export from X-chain: %w", err)
+	}
+	fmt.Printf("✅ Export from X-chain completed\n")
+
+	// Import on P-chain
+	if err := importPChainFromXChain(ctx, w, owner, w.xChainID); err != nil {
+		return fmt.Errorf("failed to import on P-chain: %w", err)
+	}
+	fmt.Printf("✅ Import on P-chain completed, wallet funded\n")
+
+	return nil
 }
 
 func (ln *localNetwork) removeChainValidators(
@@ -1591,7 +1746,7 @@ func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 		if node.paused {
 			continue
 		}
-		uri := fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort())
+		uri := node.GetURL()
 		adminCli := admin.NewClient(uri)
 		// Use different variable name to avoid shadowing outer context
 		apiCtx, cancel := createDefaultCtx(ctx)
@@ -1654,7 +1809,7 @@ func (ln *localNetwork) verifyVMsAvailable(ctx context.Context, vmIDs []ids.ID) 
 		if node.paused {
 			continue
 		}
-		uri := fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort())
+		uri := node.GetURL()
 		adminCli := admin.NewClient(uri)
 
 		for _, vmID := range vmIDs {
