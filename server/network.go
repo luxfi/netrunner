@@ -165,11 +165,26 @@ func (lc *localNetwork) createConfig() error {
 	}
 
 	// Use the appropriate genesis configuration based on network ID
+	// If LUX_MNEMONIC is set, derive validators from it (preferred for mainnet/testnet)
+	mnemonic := os.Getenv("LUX_MNEMONIC")
+	useMnemonic := mnemonic != ""
+	fmt.Printf("🔍 DEBUG: LUX_MNEMONIC set: %v (len=%d)\n", useMnemonic, len(mnemonic))
+
 	switch networkID {
 	case 96369: // LUX Mainnet
-		cfg, err = local.NewMainnetConfig(lc.options.execPath, lc.options.numNodes)
+		if useMnemonic {
+			fmt.Printf("🔑 Using NewMainnetConfigFromMnemonic (mnemonic-derived keys)\n")
+			cfg, err = local.NewMainnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+		} else {
+			fmt.Printf("📦 Using NewMainnetConfig (embedded keys)\n")
+			cfg, err = local.NewMainnetConfig(lc.options.execPath, lc.options.numNodes)
+		}
 	case 96368: // LUX Testnet
-		cfg, err = local.NewTestnetConfig(lc.options.execPath, lc.options.numNodes)
+		if useMnemonic {
+			cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+		} else {
+			cfg, err = local.NewTestnetConfig(lc.options.execPath, lc.options.numNodes)
+		}
 	default:
 		cfg, err = local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
 	}
@@ -732,7 +747,7 @@ func (lc *localNetwork) updateNodeInfo() error {
 
 		lc.nodeInfos[name] = &rpcpb.NodeInfo{
 			Name:               node.GetName(),
-			Uri:                fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort()),
+			Uri:                node.GetURL(),
 			Id:                 node.GetNodeID().String(),
 			ExecPath:           node.GetBinaryPath(),
 			LogDir:             node.GetLogsDir(),

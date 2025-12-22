@@ -23,7 +23,9 @@ type Node interface {
 	GetNodeID() ids.NodeID
 	// Return a client that can be used to make API calls.
 	GetAPIClient() api.Client
-	// Return this node's IP (e.g. 127.0.0.1).
+	// Return this node's host/IP (e.g. 127.0.0.1).
+	GetHost() string
+	// Return this node's full HTTP API URL (e.g. http://127.0.0.1:9630).
 	GetURL() string
 	// Return this node's P2P (staking) port.
 	GetP2PPort() uint16

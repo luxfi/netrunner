@@ -13,7 +13,6 @@ import (
 
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/constants"
 	luxlog "github.com/luxfi/log"
 	"go.uber.org/zap"
 )
@@ -97,7 +96,9 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 			contents:  decodedStakingSigningKey,
 		},
 	}
-	if networkID != constants.LocalID {
+	// Always write genesis file if provided, even for LocalID
+	// This allows custom genesis (e.g., with mnemonic-derived validators) to override defaults
+	if len(genesis) > 0 {
 		files = append(files, file{
 			flagValue: filepath.Join(nodeRootDir, genesisFileName),
 			path:      filepath.Join(nodeRootDir, genesisFileName),
@@ -191,12 +192,15 @@ func getPort(
 		switch gotPort := portIntf.(type) {
 		case int:
 			port = uint16(gotPort)
+			fmt.Printf("🔍 getPort: %s found in flags as int=%d\n", portKey, port)
 		case float64:
 			port = uint16(gotPort)
+			fmt.Printf("🔍 getPort: %s found in flags as float64=%d\n", portKey, port)
 		default:
 			return 0, fmt.Errorf("expected flag %q to be int/float64 but got %T", portKey, portIntf)
 		}
 	} else if portIntf, ok := configFile[portKey]; ok {
+		fmt.Printf("🔍 getPort: %s NOT in flags, checking configFile\n", portKey)
 		portFromConfigFile, ok := portIntf.(float64)
 		if !ok {
 			return 0, fmt.Errorf("expected flag %q to be float64 but got %T", portKey, portIntf)
@@ -205,12 +209,14 @@ func getPort(
 	} else {
 		// Use a random free port.
 		// Note: it is possible but unlikely for getFreePort to return the same port multiple times.
+		fmt.Printf("🔍 getPort: %s NOT in flags or configFile, using random port\n", portKey)
 		port, err = getFreePort()
 		if err != nil {
 			return 0, fmt.Errorf("couldn't get free port: %w", err)
 		}
 	}
 	if reassignIfUsed && isFreePort(port) != nil {
+		fmt.Printf("🔍 getPort: %s port %d NOT free, reassigning to random\n", portKey, port)
 		port, err = getFreePort()
 		if err != nil {
 			return 0, fmt.Errorf("couldn't get free port: %w", err)
