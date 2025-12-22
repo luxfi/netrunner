@@ -515,22 +515,70 @@ func NewTestnetConfigWithKeys(binaryPath string, keysDir string) (network.Config
 	return NewConfigWithPreExistingKeys(binaryPath, configs.TestnetChainID, keysDir)
 }
 
+// validatorKeysDir returns the directory path for persisted validator keys
+func validatorKeysDir() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".lux", "keys")
+}
+
 // NewConfigFromMnemonic creates a network config by deriving validator keys from LUX_MNEMONIC.
-// This is the preferred method for starting mainnet/testnet as it doesn't depend on files on disk.
-// The mnemonic is used to derive 5 validator EC keys (for P-chain allocations).
-// TLS staking certs and BLS keys are generated fresh for each run.
+// This is the preferred method for starting mainnet/testnet.
+//
+// IMPORTANT: Keys are derived from mnemonic ONCE and persisted to disk (~/.lux/netrunner-validators/).
+// On subsequent runs, keys are loaded from disk to maintain stable NodeIDs.
+// This follows Avalanche's pattern where identity = persistent staking keys.
+//
+// The mnemonic is used to derive:
+// - EC keys (for P-chain allocations) - deterministic from mnemonic
+// - TLS staking certs (for NodeID) - generated once, then persisted
+// - BLS keys (for consensus) - deterministic from mnemonic
 func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32) (network.Config, error) {
 	mnemonic := os.Getenv("LUX_MNEMONIC")
 	if mnemonic == "" {
 		return network.Config{}, fmt.Errorf("LUX_MNEMONIC environment variable not set")
 	}
 
-	fmt.Printf("🔑 Deriving %d validators from LUX_MNEMONIC...\n", numNodes)
+	// Check if persisted validator keys exist
+	keysDir := validatorKeysDir()
+	ks := keys.NewKeyStore(keysDir)
 
-	// Derive validator keys from mnemonic
-	validatorKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, int(numNodes))
-	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to derive validator keys: %w", err)
+	var validatorKeys []*keys.ValidatorKey
+	var err error
+
+	// Try to load existing keys first (for stable NodeIDs across runs)
+	existingKeys, _ := ks.LoadAll()
+	if len(existingKeys) >= int(numNodes) {
+		fmt.Printf("🔑 Loading %d validators from %s (stable NodeIDs)...\n", numNodes, keysDir)
+		validatorKeys = existingKeys[:numNodes]
+
+		// Verify NodeIDs match what we'd derive from mnemonic (EC keys should match)
+		derivedKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, int(numNodes))
+		if err == nil {
+			for i, vk := range validatorKeys {
+				if vk.PChainAddr != derivedKeys[i].PChainAddr {
+					fmt.Printf("⚠️  Warning: Persisted key %d has different P-chain address than mnemonic would derive\n", i)
+					fmt.Printf("   Persisted: %s, Derived: %s\n", vk.PChainAddr.String(), derivedKeys[i].PChainAddr.String())
+				}
+			}
+		}
+	} else {
+		// No existing keys - derive from mnemonic and persist
+		fmt.Printf("🔑 Deriving %d validators from LUX_MNEMONIC (first run)...\n", numNodes)
+
+		validatorKeys, err = keys.DeriveValidatorsFromMnemonic(mnemonic, int(numNodes))
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to derive validator keys: %w", err)
+		}
+
+		// Persist keys to disk for stable NodeIDs on future runs
+		fmt.Printf("📁 Persisting validator keys to %s...\n", keysDir)
+		for i, vk := range validatorKeys {
+			name := fmt.Sprintf("node%d", i)
+			if err := ks.Save(name, vk); err != nil {
+				return network.Config{}, fmt.Errorf("failed to save validator key %d: %w", i, err)
+			}
+			fmt.Printf("   Saved %s: NodeID=%s\n", name, vk.NodeID.String())
+		}
 	}
 
 	// Get base genesis
