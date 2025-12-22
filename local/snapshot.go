@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network"
@@ -156,7 +155,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 	if err := ln.stop(ctx); err != nil {
 		return "", err
 	}
-	syscall.Sync()
+	syncFilesystem()
 	// create main snapshot dirs
 	snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
 	if err := os.MkdirAll(snapshotDBDir, os.ModePerm); err != nil {
