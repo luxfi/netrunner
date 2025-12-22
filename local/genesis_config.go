@@ -653,9 +653,9 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		// Add per-node specific flags
 		nodeFlags[config.HTTPPortKey] = port
 		nodeFlags[config.StakingPortKey] = port + 1
-		// Enable dev-mode to allow sybil protection disabled on mainnet/testnet
-		// This is required for local testing with custom genesis
-		nodeFlags[config.DevModeKey] = true
+		// Enable sybil protection for mainnet - validators have proper keys
+		// The genesis validators have matching NodeIDs from deterministic TLS certs
+		nodeFlags[config.SybilProtectionEnabledKey] = true
 
 		netConfig.NodeConfigs[i] = node.Config{
 			Flags:              nodeFlags,
