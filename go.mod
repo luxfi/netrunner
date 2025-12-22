@@ -16,7 +16,7 @@ require (
 	github.com/luxfi/genesis v1.5.10
 	github.com/luxfi/geth v1.16.60
 	github.com/luxfi/ids v1.2.5
-	github.com/luxfi/keys v1.0.1
+	github.com/luxfi/keys v1.0.2
 	github.com/luxfi/log v1.1.26
 	github.com/luxfi/math v1.1.1
 	github.com/luxfi/metric v1.4.8
