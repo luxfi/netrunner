@@ -275,12 +275,12 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 
 // NewMainnetConfig creates a network config for LUX Mainnet (network ID 96369)
 func NewMainnetConfig(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigForNetwork(binaryPath, numNodes, configs.LuxMainnetID)
+	return NewConfigForNetwork(binaryPath, numNodes, configs.MainnetChainID)
 }
 
 // NewTestnetConfig creates a network config for LUX Testnet (network ID 96368)
 func NewTestnetConfig(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigForNetwork(binaryPath, numNodes, configs.LuxTestnetID)
+	return NewConfigForNetwork(binaryPath, numNodes, configs.TestnetChainID)
 }
 
 // NewLocalConfig creates a network config for local development (network ID 1337)
@@ -504,7 +504,7 @@ func NewMainnetConfigWithKeys(binaryPath string, keysDir string) (network.Config
 	if keysDir == "" {
 		keysDir = DefaultKeysPath()
 	}
-	return NewConfigWithPreExistingKeys(binaryPath, configs.LuxMainnetID, keysDir)
+	return NewConfigWithPreExistingKeys(binaryPath, configs.MainnetChainID, keysDir)
 }
 
 // NewTestnetConfigWithKeys creates a testnet config using pre-existing validator keys
@@ -512,7 +512,7 @@ func NewTestnetConfigWithKeys(binaryPath string, keysDir string) (network.Config
 	if keysDir == "" {
 		keysDir = DefaultKeysPath()
 	}
-	return NewConfigWithPreExistingKeys(binaryPath, configs.LuxTestnetID, keysDir)
+	return NewConfigWithPreExistingKeys(binaryPath, configs.TestnetChainID, keysDir)
 }
 
 // NewConfigFromMnemonic creates a network config by deriving validator keys from LUX_MNEMONIC.
@@ -641,14 +641,21 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 	}
 
 	// Configure node configs with derived keys
+	// Start with default flags from netConfig.Flags and add per-node overrides
 	netConfig.NodeConfigs = make([]node.Config, numNodes)
 	for i, vk := range validatorKeys {
 		port := 9630 + int(i)*2
+		// Copy default network flags to each node
+		nodeFlags := make(map[string]interface{})
+		for k, v := range netConfig.Flags {
+			nodeFlags[k] = v
+		}
+		// Add per-node specific flags
+		nodeFlags[config.HTTPPortKey] = port
+		nodeFlags[config.StakingPortKey] = port + 1
+
 		netConfig.NodeConfigs[i] = node.Config{
-			Flags: map[string]interface{}{
-				config.HTTPPortKey:    port,
-				config.StakingPortKey: port + 1,
-			},
+			Flags:              nodeFlags,
 			StakingKey:         string(vk.StakerKey),
 			StakingCert:        string(vk.StakerCert),
 			StakingSigningKey:  base64.StdEncoding.EncodeToString(vk.BLSSecretKey),
@@ -665,12 +672,12 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 
 // NewMainnetConfigFromMnemonic creates mainnet config from LUX_MNEMONIC
 func NewMainnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigFromMnemonic(binaryPath, configs.LuxMainnetID, numNodes)
+	return NewConfigFromMnemonic(binaryPath, configs.MainnetChainID, numNodes)
 }
 
 // NewTestnetConfigFromMnemonic creates testnet config from LUX_MNEMONIC
 func NewTestnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigFromMnemonic(binaryPath, configs.LuxTestnetID, numNodes)
+	return NewConfigFromMnemonic(binaryPath, configs.TestnetChainID, numNodes)
 }
 
 // NewLocalConfigFromMnemonic creates local network config from LUX_MNEMONIC

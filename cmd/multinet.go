@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/luxfi/constants"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/multinet"
 	"github.com/spf13/cobra"
@@ -108,13 +109,14 @@ func runStartMulti(cmd *cobra.Command, args []string) error {
 
 func loadDefaultNetworks(manager *multinet.MultiNetworkManager) error {
 	// Lux Mainnet configuration
+	// Network ID: 1 (P-Chain), Chain ID for EVM: 96369
 	mainnetConfig := multinet.NetworkConfig{
-		NetworkID:   96369,
+		NetworkID:   constants.MainnetID, // 1 (P-Chain network identifier)
 		Name:        "Lux Mainnet",
 		Type:        multinet.NetworkTypePrimary,
 		HTTPPort:    9630,
 		StakingPort: 9631,
-		DataDir:     "/tmp/multinetwork/mainnet",
+		DataDir:     "~/.lux/networks/mainnet",
 		Validators:  5,
 		ChainConfig: []multinet.ChainConfig{
 			{
@@ -127,20 +129,21 @@ func loadDefaultNetworks(manager *multinet.MultiNetworkManager) error {
 			},
 			{
 				ChainID: "2bXe2MhhAnXg6WGj6G8oDk55AKT1dMMsN72S8te7JdvzfZX1zM",
-				VMID:    "mgj786NP7uDwBCcq6YwThhaN8FLyybkCa4zBWTQbNgmK6k9A6", // EVM
+				VMID:    "mgj786NP7uDwBCcq6YwThhaN8FLyybkCa4zBWTQbNgmK6k9A6", // EVM (C-Chain ID: 96369)
 				IsEVM:   true,
 			},
 		},
 	}
 
 	// Lux Testnet configuration
+	// Network ID: 2 (P-Chain), Chain ID for EVM: 96368
 	testnetConfig := multinet.NetworkConfig{
-		NetworkID:   96368,
+		NetworkID:   constants.TestnetID, // 2 (P-Chain network identifier)
 		Name:        "Lux Testnet",
 		Type:        multinet.NetworkTypePrimary,
 		HTTPPort:    9620,
 		StakingPort: 9621,
-		DataDir:     "/tmp/multinetwork/testnet",
+		DataDir:     "~/.lux/networks/testnet",
 		Validators:  3,
 		ChainConfig: []multinet.ChainConfig{
 			{
@@ -153,33 +156,34 @@ func loadDefaultNetworks(manager *multinet.MultiNetworkManager) error {
 			},
 			{
 				ChainID: "2sdADEgBC3NjLM4inKc1hY1PQpCT3JVyGVJxdmcq6sqrDndjFG",
-				VMID:    "mgj786NP7uDwBCcq6YwThhaN8FLyybkCa4zBWTQbNgmK6k9A6", // EVM
+				VMID:    "mgj786NP7uDwBCcq6YwThhaN8FLyybkCa4zBWTQbNgmK6k9A6", // EVM (C-Chain ID: 96368)
 				IsEVM:   true,
 			},
 		},
 	}
 
-	// Zoo Chain on Mainnet
+	// Zoo Chain on Mainnet (L2 EVM on Lux)
+	// Zoo is an L2 EVM chain, NOT a P-Chain network
 	zooMainnetConfig := multinet.NetworkConfig{
-		NetworkID:   200200,
-		Name:        "Zoo Network (Mainnet Chain)",
+		NetworkID:   200200, // Zoo L2 EVM Chain ID
+		Name:        "Zoo Network (Mainnet L2)",
 		Type:        multinet.NetworkTypeChain,
-		ParentID:    96369,
-		HTTPPort:    0, // Uses parent network's port
-		StakingPort: 0, // Uses parent network's port
-		DataDir:     "/tmp/multinetwork/mainnet/chains/zoo",
+		ParentID:    constants.MainnetID, // Parent is Lux Mainnet (1)
+		HTTPPort:    0,                   // Uses parent network's port
+		StakingPort: 0,                   // Uses parent network's port
+		DataDir:     "~/.lux/networks/mainnet/chains/zoo",
 		Validators:  5,
 	}
 
 	// Hanzo Chain on Mainnet
 	hanzoMainnetConfig := multinet.NetworkConfig{
-		NetworkID:   36963,
+		NetworkID:   constants.QChainMainnetID, // 36963 (Q-Chain)
 		Name:        "Hanzo Network (Mainnet Chain)",
 		Type:        multinet.NetworkTypeChain,
-		ParentID:    96369,
+		ParentID:    constants.MainnetID, // Parent is Lux Mainnet (1)
 		HTTPPort:    0,
 		StakingPort: 0,
-		DataDir:     "/tmp/multinetwork/mainnet/chains/hanzo",
+		DataDir:     "~/.lux/networks/mainnet/chains/hanzo",
 		Validators:  5,
 	}
 
@@ -223,39 +227,41 @@ func loadNetworksFromFile(manager *multinet.MultiNetworkManager, path string) er
 
 func runConfigure(cmd *cobra.Command, args []string) error {
 	// Create default configuration
+	// Network IDs: 1 (mainnet), 2 (testnet), 3 (devnet)
+	// Chain IDs for EVM: 96369 (mainnet), 96368 (testnet), 96370 (devnet)
 	configs := []multinet.NetworkConfig{
 		{
-			NetworkID:   96369,
+			NetworkID:   constants.MainnetID, // 1
 			Name:        "Lux Mainnet",
 			Type:        multinet.NetworkTypePrimary,
 			HTTPPort:    9630,
 			StakingPort: 9631,
-			DataDir:     "/tmp/multinetwork/mainnet",
+			DataDir:     "~/.lux/networks/mainnet",
 			Validators:  5,
 		},
 		{
-			NetworkID:   96368,
+			NetworkID:   constants.TestnetID, // 2
 			Name:        "Lux Testnet",
 			Type:        multinet.NetworkTypePrimary,
 			HTTPPort:    9620,
 			StakingPort: 9621,
-			DataDir:     "/tmp/multinetwork/testnet",
+			DataDir:     "~/.lux/networks/testnet",
 			Validators:  3,
 		},
 		{
-			NetworkID:   200200,
+			NetworkID:   200200, // Zoo L2 Chain ID
 			Name:        "Zoo Network",
 			Type:        multinet.NetworkTypeChain,
-			ParentID:    96369,
-			DataDir:     "/tmp/multinetwork/mainnet/chains/zoo",
+			ParentID:    constants.MainnetID, // 1
+			DataDir:     "~/.lux/networks/mainnet/chains/zoo",
 			Validators:  5,
 		},
 		{
-			NetworkID:   36963,
+			NetworkID:   constants.QChainMainnetID, // 36963
 			Name:        "Hanzo Network",
 			Type:        multinet.NetworkTypeChain,
-			ParentID:    96369,
-			DataDir:     "/tmp/multinetwork/mainnet/chains/hanzo",
+			ParentID:    constants.MainnetID, // 1
+			DataDir:     "~/.lux/networks/mainnet/chains/hanzo",
 			Validators:  5,
 		},
 	}

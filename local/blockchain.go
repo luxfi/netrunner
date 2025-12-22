@@ -252,7 +252,9 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 			}
 
 			discovered := false
+			attemptCount := 0
 			for time.Now().Before(deadline) {
+				attemptCount++
 				// Try to query the chain RPC endpoint with eth_chainId - if it responds, the chain is discovered
 				chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", node.GetURL(), blockchainID)
 				// Use a proper JSON-RPC request body to ensure the EVM endpoint responds
@@ -271,27 +273,33 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 					// Check if we got a valid response (not a 404 or other error)
 					if resp.StatusCode == 200 {
 						discovered = true
-						ln.log.Debug("chain discovered on node",
+						ln.log.Info("chain discovered on node",
 							"node", nodeName,
 							"blockchain-id", blockchainID,
-							"status", resp.StatusCode,
+							"attempts", attemptCount,
 							"response", string(body),
 						)
 						break
 					}
-					ln.log.Debug("chain endpoint returned non-200",
-						"node", nodeName,
-						"blockchain-id", blockchainID,
-						"status", resp.StatusCode,
-						"response", string(body),
-					)
+					if attemptCount%10 == 0 {
+						ln.log.Warn("chain endpoint returned non-200",
+							"node", nodeName,
+							"blockchain-id", blockchainID,
+							"status", resp.StatusCode,
+							"attempts", attemptCount,
+							"response", string(body),
+						)
+					}
 				} else {
-					ln.log.Debug("chain not yet discovered, waiting",
-						"node", nodeName,
-						"blockchain-id", blockchainID,
-						"error", err.Error(),
-						"url", chainRPCURL,
-					)
+					if attemptCount%10 == 0 {
+						ln.log.Warn("chain not yet discovered, waiting",
+							"node", nodeName,
+							"blockchain-id", blockchainID,
+							"error", err.Error(),
+							"attempts", attemptCount,
+							"url", chainRPCURL,
+						)
+					}
 				}
 
 				select {
@@ -303,7 +311,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 			}
 
 			if !discovered {
-				return fmt.Errorf("chain %s not discovered on node %s after %v", blockchainID, nodeName, maxWait)
+				return fmt.Errorf("chain %s not discovered on node %s after %v (%d attempts)", blockchainID, nodeName, maxWait, attemptCount)
 			}
 		}
 	}
