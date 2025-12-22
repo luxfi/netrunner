@@ -10,17 +10,20 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/config v1.0.0
-	github.com/luxfi/consensus v1.22.35
-	github.com/luxfi/constants v1.2.3
-	github.com/luxfi/crypto v1.17.25
-	github.com/luxfi/genesis v1.5.7
-	github.com/luxfi/geth v1.16.57
-	github.com/luxfi/ids v1.2.4
+	github.com/luxfi/consensus v1.22.37
+	github.com/luxfi/constants v1.2.4
+	github.com/luxfi/crypto v1.17.26
+	github.com/luxfi/genesis v1.5.9
+	github.com/luxfi/geth v1.16.60
+	github.com/luxfi/go-bip32 v1.0.1
+	github.com/luxfi/go-bip39 v1.1.2
+	github.com/luxfi/ids v1.2.5
 	github.com/luxfi/keys v1.0.0
 	github.com/luxfi/log v1.1.26
-	github.com/luxfi/math v1.0.2
+	github.com/luxfi/math v1.1.1
 	github.com/luxfi/metric v1.4.8
-	github.com/luxfi/node v1.22.37
+	github.com/luxfi/node v1.22.40
+	github.com/luxfi/sdk v1.16.30
 	github.com/luxfi/units v1.0.0
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
@@ -99,17 +102,16 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/cache v1.0.0 // indirect
-	github.com/luxfi/database v1.2.12 // indirect
-	github.com/luxfi/go-bip32 v1.0.1 // indirect
-	github.com/luxfi/go-bip39 v1.1.2 // indirect
-	github.com/luxfi/ledger-lux-go v1.0.0 // indirect
+	github.com/luxfi/cache v1.1.0 // indirect
+	github.com/luxfi/database v1.2.14 // indirect
+	github.com/luxfi/evm v0.16.4 // indirect
+	github.com/luxfi/ledger-lux-go v1.0.2 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
-	github.com/luxfi/p2p v1.4.7 // indirect
+	github.com/luxfi/p2p v1.4.9 // indirect
 	github.com/luxfi/trace v0.1.4 // indirect
-	github.com/luxfi/utils v1.0.0 // indirect
-	github.com/luxfi/vm v1.0.0 // indirect
-	github.com/luxfi/warp v1.16.37 // indirect
+	github.com/luxfi/utils v1.1.0 // indirect
+	github.com/luxfi/vm v1.0.1 // indirect
+	github.com/luxfi/warp v1.16.38 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
@@ -163,3 +165,7 @@ require (
 replace github.com/luxfi/config => ../config
 
 replace github.com/luxfi/keys => ../keys
+
+replace github.com/luxfi/genesis => /Users/z/work/lux/genesis
+
+replace github.com/luxfi/sdk => /Users/z/work/lux/sdk
