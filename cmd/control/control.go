@@ -20,10 +20,9 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -39,7 +38,7 @@ var (
 	endpoint       string
 	dialTimeout    time.Duration
 	requestTimeout time.Duration
-	log            luxlog.Logger
+	logger log.Logger
 )
 
 // NOTE: Naming convention for node names is currently `node` + number, i.e. `node1,node2,node3,...node101`
@@ -116,18 +115,18 @@ func setLogs() error {
 			return err
 		}
 	}
-	lvl, err := luxlog.ToLevel(logLevel)
+	lvl, err := log.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
-		RotatingWriterConfig: luxlog.RotatingWriterConfig{
+	logFactory := log.NewFactoryWithConfig(log.Config{
+		RotatingWriterConfig: log.RotatingWriterConfig{
 			Directory: logDir,
 		},
 		DisplayLevel: lvl,
 		LogLevel:     lvl,
 	})
-	log, err = logFactory.Make(constants.LogNameControl)
+	logger, err = logFactory.Make(constants.LogNameControl)
 	return err
 }
 
@@ -155,7 +154,7 @@ func RPCVersionFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("version response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("version response: %+v"), resp)
 	return nil
 }
 
@@ -261,7 +260,7 @@ func startFunc(*cobra.Command, []string) error {
 	}
 
 	if globalNodeConfig != "" {
-		ux.Print(log, luxlog.Yellow.Wrap("global node config provided, will be applied to all nodes: %s"), globalNodeConfig)
+		ux.Print(logger, log.Yellow.Wrap("global node config provided, will be applied to all nodes: %s"), globalNodeConfig)
 		// validate it's valid JSON
 		var js json.RawMessage
 		if err := json.Unmarshal([]byte(globalNodeConfig), &js); err != nil {
@@ -319,7 +318,7 @@ func startFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("start response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("start response: %+v"), info)
 	return nil
 }
 
@@ -357,7 +356,7 @@ func createChainsFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("create-blockchains response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("create-blockchains response: %+v"), info)
 	return nil
 }
 
@@ -395,7 +394,7 @@ func createParticipantGroupsFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("create-chains response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("create-chains response: %+v"), info)
 	return nil
 }
 
@@ -453,7 +452,7 @@ func transformElasticChainsFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("elastic-chains response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("elastic-chains response: %+v"), info)
 	return nil
 }
 
@@ -481,7 +480,7 @@ func addPermissionlessValidatorFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("add-permissionless-validator response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("add-permissionless-validator response: %+v"), info)
 	return nil
 }
 
@@ -509,7 +508,7 @@ func removeChainValidatorFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("remove-chain-validator response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("remove-chain-validator response: %+v"), info)
 	return nil
 }
 
@@ -537,7 +536,7 @@ func healthFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("health response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("health response: %+v"), resp)
 	return nil
 }
 
@@ -565,7 +564,7 @@ func waitForHealthy(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("wait for healthy response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("wait for healthy response: %+v"), resp)
 	return nil
 }
 
@@ -593,7 +592,7 @@ func urisFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("URIs: %s"), uris)
+	ux.Print(logger, log.Green.Wrap("URIs: %s"), uris)
 	return nil
 }
 
@@ -621,7 +620,7 @@ func statusFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("status response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("status response: %+v"), resp)
 	return nil
 }
 
@@ -659,7 +658,7 @@ func streamStatusFunc(*cobra.Command, []string) error {
 	go func() {
 		select {
 		case sig := <-sigc:
-			log.Warn("received signal", zap.String("signal", sig.String()))
+			log.Warn("received signal", log.String("signal", sig.String()))
 		case <-ctx.Done():
 		}
 		cancel()
@@ -671,7 +670,7 @@ func streamStatusFunc(*cobra.Command, []string) error {
 		return err
 	}
 	for info := range ch {
-		ux.Print(log, luxlog.Cyan.Wrap("cluster info: %+v"), info)
+		ux.Print(logger, log.Cyan.Wrap("cluster info: %+v"), info)
 	}
 	cancel() // receiver channel is closed, so cancel goroutine
 	<-donec
@@ -704,7 +703,7 @@ func removeNodeFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("remove node response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("remove node response: %+v"), info)
 	return nil
 }
 
@@ -734,7 +733,7 @@ func pauseNodeFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("pause node response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("pause node response: %+v"), info)
 	return nil
 }
 
@@ -764,7 +763,7 @@ func resumeNodeFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("resume node response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("resume node response: %+v"), info)
 	return nil
 }
 
@@ -822,7 +821,7 @@ func addNodeFunc(_ *cobra.Command, args []string) error {
 	}
 
 	if addNodeConfig != "" {
-		ux.Print(log, luxlog.Yellow.Wrap("WARNING: overriding node configs with custom provided config %s"), addNodeConfig)
+		ux.Print(logger, log.Yellow.Wrap("WARNING: overriding node configs with custom provided config %s"), addNodeConfig)
 		// validate it's valid JSON
 		var js json.RawMessage
 		if err := json.Unmarshal([]byte(addNodeConfig), &js); err != nil {
@@ -865,7 +864,7 @@ func addNodeFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("add node response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("add node response: %+v"), info)
 	return nil
 }
 
@@ -957,7 +956,7 @@ func restartNodeFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("restart node response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("restart node response: %+v"), info)
 	return nil
 }
 
@@ -987,7 +986,7 @@ func attachPeerFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("attach peer response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("attach peer response: %+v"), resp)
 	return nil
 }
 
@@ -1056,7 +1055,7 @@ func sendOutboundMessageFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("send outbound message response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("send outbound message response: %+v"), resp)
 	return nil
 }
 
@@ -1084,7 +1083,7 @@ func stopFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("stop response: %+v"), info)
+	ux.Print(logger, log.Green.Wrap("stop response: %+v"), info)
 	return nil
 }
 
@@ -1112,7 +1111,7 @@ func saveSnapshotFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("save-snapshot response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("save-snapshot response: %+v"), resp)
 	return nil
 }
 
@@ -1205,7 +1204,7 @@ func loadSnapshotFunc(_ *cobra.Command, args []string) error {
 	}
 
 	if globalNodeConfig != "" {
-		ux.Print(log, luxlog.Yellow.Wrap("global node config provided, will be applied to all nodes: %s"), globalNodeConfig)
+		ux.Print(logger, log.Yellow.Wrap("global node config provided, will be applied to all nodes: %s"), globalNodeConfig)
 
 		// validate it's valid JSON
 		var js json.RawMessage
@@ -1222,7 +1221,7 @@ func loadSnapshotFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("load-snapshot response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("load-snapshot response: %+v"), resp)
 	return nil
 }
 
@@ -1250,7 +1249,7 @@ func removeSnapshotFunc(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("remove-snapshot response: %+v"), resp)
+	ux.Print(logger, log.Green.Wrap("remove-snapshot response: %+v"), resp)
 	return nil
 }
 
@@ -1277,7 +1276,7 @@ func getSnapshotNamesFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	ux.Print(log, luxlog.Green.Wrap("Snapshots: %s"), snapshotNames)
+	ux.Print(logger, log.Green.Wrap("Snapshots: %s"), snapshotNames)
 	return nil
 }
 
@@ -1288,7 +1287,7 @@ func newClient() (client.Client, error) {
 	return client.New(client.Config{
 		Endpoint:    endpoint,
 		DialTimeout: dialTimeout,
-	}, log)
+	}, logger)
 }
 
 func getAsyncContext() context.Context {

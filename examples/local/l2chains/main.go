@@ -15,9 +15,8 @@ import (
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/node/config"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
-	"go.uber.org/zap"
 )
 
 const (
@@ -91,15 +90,15 @@ var l2Chains = []L2Chain{
 }
 
 func shutdownOnSignal(
-	log luxlog.Logger,
+	logger log.Logger,
 	n network.Network,
 	signalChan chan os.Signal,
 	closedOnShutdownChan chan struct{},
 ) {
 	sig := <-signalChan
-	log.Info("got OS signal", zap.Stringer("signal", sig))
+	logger.Info("got OS signal", log.Stringer("signal", sig))
 	if err := n.Stop(context.Background()); err != nil {
-		log.Info("error stopping network", zap.Error(err))
+		logger.Info("error stopping network", log.Err(err))
 	}
 	signal.Reset()
 	close(signalChan)
@@ -107,35 +106,35 @@ func shutdownOnSignal(
 }
 
 func main() {
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
+	logFactory := log.NewFactoryWithConfig(log.Config{
 		DisplayLevel: level.Info,
 		LogLevel:     level.Debug,
 	})
-	log, err := logFactory.Make("l2chains")
+	logger, err := logFactory.Make("l2chains")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if err := run(log); err != nil {
-		log.Fatal("fatal error", zap.Error(err))
+	if err := run(logger); err != nil {
+		logger.Fatal("fatal error", log.Err(err))
 		os.Exit(1)
 	}
 }
 
-func run(log luxlog.Logger) error {
+func run(logger log.Logger) error {
 	luxdPath := getLuxdBinaryPath()
 	pluginPath := getPluginDir()
 	genesisPath := getGenesisDir()
 
-	log.Info("Configuration",
-		zap.String("luxd", luxdPath),
-		zap.String("plugins", pluginPath),
-		zap.String("genesis", genesisPath),
+	logger.Info("Configuration",
+		log.String("luxd", luxdPath),
+		log.String("plugins", pluginPath),
+		log.String("genesis", genesisPath),
 	)
 
 	// Create mainnet config for 5-node network
-	log.Info("Creating mainnet configuration...")
+	logger.Info("Creating mainnet configuration...")
 	netConfig, err := local.NewMainnetConfig(luxdPath, 5)
 	if err != nil {
 		return fmt.Errorf("failed to create mainnet config: %w", err)
@@ -151,14 +150,14 @@ func run(log luxlog.Logger) error {
 	}
 
 	// Create network
-	log.Info("Starting 5-node mainnet network...")
-	nw, err := local.NewNetwork(log, netConfig, "", "", true)
+	logger.Info("Starting 5-node mainnet network...")
+	nw, err := local.NewNetwork(logger, netConfig, "", "", true)
 	if err != nil {
 		return fmt.Errorf("failed to create network: %w", err)
 	}
 	defer func() {
 		if err := nw.Stop(context.Background()); err != nil {
-			log.Info("error stopping network", zap.Error(err))
+			logger.Info("error stopping network", log.Err(err))
 		}
 	}()
 
@@ -168,41 +167,41 @@ func run(log luxlog.Logger) error {
 	signal.Notify(signalsChan, syscall.SIGTERM)
 	closedOnShutdownCh := make(chan struct{})
 	go func() {
-		shutdownOnSignal(log, nw, signalsChan, closedOnShutdownCh)
+		shutdownOnSignal(logger, nw, signalsChan, closedOnShutdownCh)
 	}()
 
 	// Wait until the nodes in the network are ready
 	ctx, cancel := context.WithTimeout(context.Background(), healthyTimeout)
 	defer cancel()
-	log.Info("Waiting for all nodes to report healthy...")
+	logger.Info("Waiting for all nodes to report healthy...")
 	if err := nw.Healthy(ctx); err != nil {
 		return fmt.Errorf("network failed to become healthy: %w", err)
 	}
-	log.Info("All nodes healthy")
+	logger.Info("All nodes healthy")
 
 	// Get network info
 	nodes, err := nw.GetAllNodes()
 	if err != nil {
 		return fmt.Errorf("failed to get nodes: %w", err)
 	}
-	log.Info("Network ready", zap.Int("nodes", len(nodes)))
+	logger.Info("Network ready", log.Int("nodes", len(nodes)))
 
 	// Deploy L2 chains
 	for _, chain := range l2Chains {
 		genesisFile := filepath.Join(genesisPath, chain.GenesisFile)
-		log.Info("Deploying L2 chain...",
-			zap.String("name", chain.Name),
-			zap.Uint64("chainId", chain.ChainID),
-			zap.String("alias", chain.Alias),
-			zap.String("genesis", genesisFile),
+		logger.Info("Deploying L2 chain...",
+			log.String("name", chain.Name),
+			log.Uint64("chainId", chain.ChainID),
+			log.String("alias", chain.Alias),
+			log.String("genesis", genesisFile),
 		)
 
 		genesis, err := os.ReadFile(genesisFile)
 		if err != nil {
 			log.Error("Failed to read genesis file",
-				zap.String("chain", chain.Name),
-				zap.String("path", genesisFile),
-				zap.Error(err),
+				log.String("chain", chain.Name),
+				log.String("path", genesisFile),
+				log.Err(err),
 			)
 			continue
 		}
@@ -221,29 +220,29 @@ func run(log luxlog.Logger) error {
 		createCancel()
 		if err != nil {
 			log.Error("Failed to create chain",
-				zap.String("chain", chain.Name),
-				zap.String("error", err.Error()),
+				log.String("chain", chain.Name),
+				log.String("error", err.Error()),
 			)
 			continue
 		}
 
-		log.Info("L2 chain deployed successfully",
-			zap.String("name", chain.Name),
-			zap.String("blockchain-id", chainIDs[0].String()),
-			zap.String("alias", chain.Alias),
+		logger.Info("L2 chain deployed successfully",
+			log.String("name", chain.Name),
+			log.String("blockchain-id", chainIDs[0].String()),
+			log.String("alias", chain.Alias),
 		)
 	}
 
 	// Print connection info
-	log.Info("L2 chains deployed. Connect to any node:")
+	logger.Info("L2 chains deployed. Connect to any node:")
 	for name, node := range nodes {
-		log.Info("Node available",
-			zap.String("name", name),
-			zap.String("url", fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort())),
+		logger.Info("Node available",
+			log.String("name", name),
+			log.String("url", fmt.Sprintf("http://%s:%d", node.GetURL(), node.GetAPIPort())),
 		)
 	}
 
-	log.Info("Network running. Press CTRL+C to exit...")
+	logger.Info("Network running. Press CTRL+C to exit...")
 	<-closedOnShutdownCh
 	return nil
 }

@@ -5,11 +5,11 @@ package ux
 import (
 	"fmt"
 
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 )
 
 //nolint:govet // msg is intentionally a format string that may come from variables
-func Print(log luxlog.Logger, msg string, args ...interface{}) {
+func Print(logger log.Logger, msg string, args ...interface{}) {
 	fmtMsg := fmt.Sprintf(msg, args...)
 	log.Info(fmtMsg)
 }

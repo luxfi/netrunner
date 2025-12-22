@@ -23,7 +23,7 @@ import (
 	"github.com/luxfi/node/utils"
 	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"github.com/luxfi/metric"
 	"github.com/luxfi/node/version"
@@ -125,7 +125,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 	config := &peer.Config{
 		Metrics:              metrics,
 		MessageCreator:       mc,
-		Log:                  luxlog.NewNoOpLogger(),
+		Log:                  log.NewNoOpLogger(),
 		InboundMsgThrottler:  throttling.NewNoInboundThrottler(),
 		Network:              peer.TestNetwork,
 		Router:               router,
@@ -155,7 +155,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHand
 		}),
 		peer.NewBlockingMessageQueue(
 			config.Metrics,
-			luxlog.NewNoOpLogger(),
+			log.NewNoOpLogger(),
 			peerMsgQueueBufferSize,
 		),
 		false, // isIngress - this is an outbound connection

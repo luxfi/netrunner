@@ -11,9 +11,8 @@ import (
 
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
-	"go.uber.org/zap"
 )
 
 const (
@@ -27,15 +26,15 @@ var goPath = os.ExpandEnv("$GOPATH")
 // Closes [closedOnShutdownChan] amd [signalChan] when done shutting down network.
 // This function should only be called once.
 func shutdownOnSignal(
-	log luxlog.Logger,
+	logger log.Logger,
 	n network.Network,
 	signalChan chan os.Signal,
 	closedOnShutdownChan chan struct{},
 ) {
 	sig := <-signalChan
-	log.Info("got OS signal", zap.Stringer("signal", sig))
+	logger.Info("got OS signal", log.Stringer("signal", sig))
 	if err := n.Stop(context.Background()); err != nil {
-		log.Info("error stopping network", zap.Error(err))
+		logger.Info("error stopping network", log.Err(err))
 	}
 	signal.Reset()
 	close(signalChan)
@@ -48,11 +47,11 @@ func shutdownOnSignal(
 // The network runs until the user provides a SIGINT or SIGTERM.
 func main() {
 	// Create the logger
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
+	logFactory := log.NewFactoryWithConfig(log.Config{
 		DisplayLevel: level.Info,
 		LogLevel:     level.Debug,
 	})
-	log, err := logFactory.Make("main")
+	logger, err := logFactory.Make("main")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -61,21 +60,21 @@ func main() {
 		goPath = build.Default.GOPATH
 	}
 	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/luxfi/node/build/node")
-	if err := run(log, binaryPath); err != nil {
-		log.Fatal("fatal error", zap.Error(err))
+	if err := run(logger, binaryPath); err != nil {
+		logger.Fatal("fatal error", log.Err(err))
 		os.Exit(1)
 	}
 }
 
-func run(log luxlog.Logger, binaryPath string) error {
+func run(logger log.Logger, binaryPath string) error {
 	// Create the network
-	nw, err := local.NewDefaultNetwork(log, binaryPath, true)
+	nw, err := local.NewDefaultNetwork(logger, binaryPath, true)
 	if err != nil {
 		return err
 	}
 	defer func() { // Stop the network when this function returns
 		if err := nw.Stop(context.Background()); err != nil {
-			log.Info("error stopping network", zap.Error(err))
+			logger.Info("error stopping network", log.Err(err))
 		}
 	}()
 
@@ -85,18 +84,18 @@ func run(log luxlog.Logger, binaryPath string) error {
 	signal.Notify(signalsChan, syscall.SIGTERM)
 	closedOnShutdownCh := make(chan struct{})
 	go func() {
-		shutdownOnSignal(log, nw, signalsChan, closedOnShutdownCh)
+		shutdownOnSignal(logger, nw, signalsChan, closedOnShutdownCh)
 	}()
 
 	// Wait until the nodes in the network are ready
 	ctx, cancel := context.WithTimeout(context.Background(), healthyTimeout)
 	defer cancel()
-	log.Info("waiting for all nodes to report healthy...")
+	logger.Info("waiting for all nodes to report healthy...")
 	if err := nw.Healthy(ctx); err != nil {
 		return err
 	}
 
-	log.Info("All nodes healthy. Network will run until you CTRL + C to exit...")
+	logger.Info("All nodes healthy. Network will run until you CTRL + C to exit...")
 	// Wait until done shutting down network after SIGINT/SIGTERM
 	<-closedOnShutdownCh
 	return nil
