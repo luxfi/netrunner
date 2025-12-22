@@ -14,10 +14,9 @@ import (
 	"github.com/luxfi/netrunner/server"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -71,19 +70,19 @@ func serverFunc(*cobra.Command, []string) (err error) {
 		}
 	}
 
-	logLevel, err := luxlog.ToLevel(logLevel)
+	logLevel, err := log.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
 
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
-		RotatingWriterConfig: luxlog.RotatingWriterConfig{
+	logFactory := log.NewFactoryWithConfig(log.Config{
+		RotatingWriterConfig: log.RotatingWriterConfig{
 			Directory: logDir,
 		},
 		DisplayLevel: logLevel,
 		LogLevel:     logLevel,
 	})
-	log, err := logFactory.Make(constants.LogNameMain)
+	logger, err := logFactory.Make(constants.LogNameMain)
 	if err != nil {
 		return err
 	}
@@ -96,7 +95,7 @@ func serverFunc(*cobra.Command, []string) (err error) {
 		RedirectNodesOutput: !disableNodesOutput,
 		SnapshotsDir:        snapshotsDir,
 		LogLevel:            logLevel,
-	}, log)
+	}, logger)
 	if err != nil {
 		return err
 	}
@@ -115,13 +114,13 @@ func serverFunc(*cobra.Command, []string) (err error) {
 	select {
 	case sig := <-sigChan:
 		// Got a SIGINT or SIGTERM; stop the server and wait for it to finish.
-		log.Warn("signal received: closing server", zap.String("signal", sig.String()))
+		logger.Warn("signal received: closing server", log.String("signal", sig.String()))
 		cancel()
 		waitForServerStop := <-errChan
-		log.Warn("closed server", zap.Error(waitForServerStop))
+		logger.Warn("closed server", log.Err(waitForServerStop))
 	case serverClosed := <-errChan:
 		// The server stopped.
-		log.Warn("server closed", zap.Error(serverClosed))
+		logger.Warn("server closed", log.Err(serverClosed))
 	}
 	return nil
 }

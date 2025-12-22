@@ -31,7 +31,7 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/ids"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/metric"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -113,7 +113,7 @@ func init() {
 	flag.StringVar(
 		&logLevel,
 		"log-level",
-		luxlog.Info.String(),
+		log.Info.String(),
 		"log level",
 	)
 	flag.StringVar(
@@ -156,7 +156,7 @@ func init() {
 
 var (
 	cli client.Client
-	log luxlog.Logger
+	logger log.Logger
 )
 
 var _ = ginkgo.BeforeSuite(func() {
@@ -169,10 +169,10 @@ var _ = ginkgo.BeforeSuite(func() {
 		logDir, err = utils.MkDirWithTimestamp(clientRootDir)
 		gomega.Ω(err).Should(gomega.BeNil())
 	}
-	lvl, err := luxlog.ToLevel(logLevel)
+	lvl, err := log.ToLevel(logLevel)
 	gomega.Ω(err).Should(gomega.BeNil())
-	logFactory := luxlog.NewFactory(luxlog.Config{
-		RotatingWriterConfig: luxlog.RotatingWriterConfig{
+	logFactory := log.NewFactory(log.Config{
+		RotatingWriterConfig: log.RotatingWriterConfig{
 			Directory: logDir,
 		},
 		DisplayLevel: lvl,
@@ -194,13 +194,13 @@ var _ = ginkgo.BeforeSuite(func() {
 })
 
 var _ = ginkgo.AfterSuite(func() {
-	ux.Print(log, luxlog.Red.Wrap("shutting down cluster"))
+	ux.Print(log, log.Red.Wrap("shutting down cluster"))
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	_, err := cli.Stop(ctx)
 	cancel()
 	gomega.Ω(err).Should(gomega.BeNil())
 
-	ux.Print(log, luxlog.Red.Wrap("shutting down client"))
+	ux.Print(log, log.Red.Wrap("shutting down client"))
 	err = cli.Close()
 	gomega.Ω(err).Should(gomega.BeNil())
 })
@@ -211,7 +211,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		createdBlockchainID := ""
 		createdBlockchainID2 := ""
 		ginkgo.By("start with blockchain specs", func() {
-			ux.Print(log, luxlog.Green.Wrap("sending 'start' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("sending 'start' with the valid binary path: %s"), execPath1)
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			resp, err := cli.Start(ctx, execPath1,
 				client.WithPluginDir(filepath.Join(filepath.Dir(execPath1), "plugins")),
@@ -226,11 +226,11 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(len(resp.ChainIds)).Should(gomega.Equal(1))
 			createdBlockchainID = resp.ChainIds[0]
-			ux.Print(log, luxlog.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 
 		ginkgo.By("can create a blockchain with a new subnet id", func() {
-			ux.Print(log, luxlog.Blue.Wrap("can create a blockchain in a new subnet"))
+			ux.Print(log, log.Blue.Wrap("can create a blockchain in a new subnet"))
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
@@ -270,7 +270,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		})
 
 		ginkgo.By("can create a blockchain with an existing subnet id", func() {
-			ux.Print(log, luxlog.Blue.Wrap("can create a blockchain in an existing subnet"))
+			ux.Print(log, log.Blue.Wrap("can create a blockchain in an existing subnet"))
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
@@ -310,7 +310,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		})
 
 		ginkgo.By("can create a blockchain with an existing subnet id loaded from snapshot", func() {
-			ux.Print(log, luxlog.Blue.Wrap("can create a blockchain in an existing subnet"))
+			ux.Print(log, log.Blue.Wrap("can create a blockchain in an existing subnet"))
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			_, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
@@ -326,7 +326,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		})
 
 		ginkgo.By("can create a blockchain with new subnet id with some of existing participating nodes", func() {
-			ux.Print(log, luxlog.Blue.Wrap("can create a blockchain with new subnet id with some of existing participating nodes"))
+			ux.Print(log, log.Blue.Wrap("can create a blockchain with new subnet id with some of existing participating nodes"))
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
@@ -358,7 +358,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		})
 
 		ginkgo.By("can create a blockchain with new subnet id with some of existing participating nodes and a new node", func() {
-			ux.Print(log, luxlog.Blue.Wrap("can create a blockchain new subnet id with some of existing participating nodes and a new node"))
+			ux.Print(log, log.Blue.Wrap("can create a blockchain new subnet id with some of existing participating nodes and a new node"))
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
@@ -551,12 +551,12 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		})
 
 		ginkgo.By("calling start API with the valid binary path", func() {
-			ux.Print(log, luxlog.Green.Wrap("sending 'start' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("sending 'start' with the valid binary path: %s"), execPath1)
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			resp, err := cli.Start(ctx, execPath1)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 	})
 
@@ -572,7 +572,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		uris, err := cli.URIs(ctx)
 		cancel()
 		gomega.Ω(err).Should(gomega.BeNil())
-		ux.Print(log, luxlog.Blue.Wrap("URIs: %s"), uris)
+		ux.Print(log, log.Blue.Wrap("URIs: %s"), uris)
 	})
 
 	ginkgo.It("can fetch status", func() {
@@ -592,7 +592,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 		ch, err := cli.StreamStatus(ctx, 5*time.Second)
 		gomega.Ω(err).Should(gomega.BeNil())
 		for info := range ch {
-			ux.Print(log, luxlog.Green.Wrap("fetched info, node-names: %s"), info.NodeNames)
+			ux.Print(log, log.Green.Wrap("fetched info, node-names: %s"), info.NodeNames)
 			if info.Healthy {
 				break
 			}
@@ -605,7 +605,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.RemoveNode(ctx, "node5")
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully removed, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully removed, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 	})
 
@@ -615,7 +615,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.RestartNode(ctx, "node4", client.WithExecPath(execPath2))
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully restarted, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully restarted, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 	})
 
@@ -628,10 +628,10 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 
 			v, ok := resp.ClusterInfo.AttachedPeerInfos["node1"]
 			gomega.Ω(ok).Should(gomega.BeTrue())
-			ux.Print(log, luxlog.Green.Wrap("successfully attached peer, peers: %+v"), v.Peers)
+			ux.Print(log, log.Green.Wrap("successfully attached peer, peers: %+v"), v.Peers)
 
 			mc, err := message.NewCreator(
-				luxlog.NoLog{},
+				log.NoLog{},
 				metrics.NewRegistry(),
 				"",
 				luxd_constants.DefaultNetworkCompressionType,
@@ -659,38 +659,38 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 
 	ginkgo.It("can add a node", func() {
 		ginkgo.By("calling AddNode", func() {
-			ux.Print(log, luxlog.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			resp, err := cli.AddNode(ctx, newNodeName, execPath1)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 
 		ginkgo.By("calling AddNode with existing node name, should fail", func() {
-			ux.Print(log, luxlog.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			resp, err := cli.AddNode(ctx, newNodeName, execPath1)
 			cancel()
 			gomega.Ω(err.Error()).Should(gomega.ContainSubstring("repeated node name"))
 			gomega.Ω(resp).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("'add-node' failed as expected"))
+			ux.Print(log, log.Green.Wrap("'add-node' failed as expected"))
 		})
 	})
 
 	ginkgo.It("can start with custom config", func() {
 		ginkgo.By("stopping network first", func() {
-			ux.Print(log, luxlog.Red.Wrap("shutting down cluster"))
+			ux.Print(log, log.Red.Wrap("shutting down cluster"))
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			_, err := cli.Stop(ctx)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
 
-			ux.Print(log, luxlog.Red.Wrap("shutting down client"))
+			ux.Print(log, log.Red.Wrap("shutting down client"))
 			gomega.Ω(err).Should(gomega.BeNil())
 		})
 		ginkgo.By("calling start API with custom config", func() {
-			ux.Print(log, luxlog.Green.Wrap("sending 'start' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("sending 'start' with the valid binary path: %s"), execPath1)
 			opts := []client.OpOption{
 				client.WithNumNodes(numNodes),
 				client.WithCustomNodeConfigs(customNodeConfigs),
@@ -699,7 +699,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.Start(ctx, execPath1, opts...)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 		ginkgo.By("can wait for health", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -708,15 +708,15 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			gomega.Ω(err).Should(gomega.BeNil())
 		})
 		ginkgo.By("overrides num-nodes", func() {
-			ux.Print(log, luxlog.Green.Wrap("checking that given num-nodes %d have been overridden by custom configs: %d"), numNodes, len(customNodeConfigs))
+			ux.Print(log, log.Green.Wrap("checking that given num-nodes %d have been overridden by custom configs: %d"), numNodes, len(customNodeConfigs))
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			uris, err := cli.URIs(ctx)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(uris).Should(gomega.HaveLen(len(customNodeConfigs)))
-			ux.Print(log, luxlog.Green.Wrap("expected number of nodes up: %d"), len(customNodeConfigs))
+			ux.Print(log, log.Green.Wrap("expected number of nodes up: %d"), len(customNodeConfigs))
 
-			ux.Print(log, luxlog.Green.Wrap("checking correct admin APIs are enabled resp. disabled"))
+			ux.Print(log, log.Green.Wrap("checking correct admin APIs are enabled resp. disabled"))
 			// we have 7 nodes, 3 have the admin API enabled, the other 4 disabled
 			// therefore we expect exactly 4 calls to fail and exactly 3 to succeed.
 			ctx, cancel = context.WithTimeout(context.Background(), 15*time.Second)
@@ -755,12 +755,12 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 	})
 	ginkgo.It("can pause a node", func() {
 		ginkgo.By("calling PauseNode", func() {
-			ux.Print(log, luxlog.Green.Wrap("calling 'pause-node'"))
+			ux.Print(log, log.Green.Wrap("calling 'pause-node'"))
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			resp, err := cli.PauseNode(ctx, pausedNodeName)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully paused, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully paused, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 		ginkgo.By("can wait for health", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -780,7 +780,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.ResumeNode(ctx, pausedNodeName)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("successfully resumed %s, cluster node-names: %s"), "node1", resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully resumed %s, cluster node-names: %s"), "node1", resp.ClusterInfo.NodeNames)
 		})
 		ginkgo.By("can wait for health", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -799,7 +799,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 
 	ginkgo.It("can add primary validator with BLS Keys", func() {
 		ginkgo.By("calling AddNode", func() {
-			ux.Print(log, luxlog.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			resp, err := cli.AddNode(ctx, newNodeName2, execPath1)
 			cancel()
@@ -809,7 +809,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 					newNode2NodeID = nodeInfo.Id
 				}
 			}
-			ux.Print(log, luxlog.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
+			ux.Print(log, log.Green.Wrap("successfully started, node-names: %s"), resp.ClusterInfo.NodeNames)
 		})
 		ginkgo.By("can wait for health", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -891,13 +891,13 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			newSubnetID = response.SubnetIds[0]
 		})
 		ginkgo.By("calling AddNode with existing node name, should fail", func() {
-			ux.Print(log, luxlog.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
+			ux.Print(log, log.Green.Wrap("calling 'add-node' with the valid binary path: %s"), execPath1)
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			resp, err := cli.AddNode(ctx, newParticipantNode, execPath1)
 			cancel()
 			gomega.Ω(err.Error()).Should(gomega.ContainSubstring("repeated node name"))
 			gomega.Ω(resp).Should(gomega.BeNil())
-			ux.Print(log, luxlog.Green.Wrap("'add-node' failed as expected"))
+			ux.Print(log, log.Green.Wrap("'add-node' failed as expected"))
 		})
 		ginkgo.By("verify the newer subnet also has correct participants", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

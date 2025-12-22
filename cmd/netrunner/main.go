@@ -10,9 +10,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/cmd/netrunner/commands"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 var (
@@ -22,13 +23,8 @@ var (
 )
 
 func main() {
-	// Setup logger
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
-		os.Exit(1)
-	}
-	defer logger.Sync()
+	// Setup logger - use development logger for console output
+	logger := log.NewTestLogger(level.Info)
 
 	// Setup root command
 	rootCmd := &cobra.Command{
@@ -65,7 +61,7 @@ OP Stack, and more.`,
 
 	// Execute command
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		logger.Error("Command failed", zap.Error(err))
+		logger.Error("Command failed", log.Err(err))
 		os.Exit(1)
 	}
 }

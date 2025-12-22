@@ -61,7 +61,7 @@ type MultiNetworkManager struct {
 	txCoordinator *CrossChainTxCoordinator
 
 	// Logger
-	log log.Logger
+	logger log.Logger
 
 	// Context for lifecycle management
 	ctx    context.Context
@@ -153,7 +153,7 @@ const (
 )
 
 // NewMultiNetworkManager creates a new multi-network manager
-func NewMultiNetworkManager(log log.Logger, sharedDBPath string) (*MultiNetworkManager, error) {
+func NewMultiNetworkManager(logger log.Logger, sharedDBPath string) (*MultiNetworkManager, error) {
 	// Open shared BadgerDB for cross-chain ACID transactions
 	opts := badger.DefaultOptions(sharedDBPath)
 	opts.Logger = nil // Disable BadgerDB's internal logging
@@ -170,7 +170,7 @@ func NewMultiNetworkManager(log log.Logger, sharedDBPath string) (*MultiNetworkM
 		networks:          make(map[uint32]*NetworkInstance),
 		consensusManagers: make(map[uint32]*ConsensusManager),
 		txCoordinator:     NewCrossChainTxCoordinator(sharedDB),
-		log:               log,
+		logger: logger,
 		ctx:               ctx,
 		cancel:            cancel,
 	}, nil
@@ -212,7 +212,7 @@ func (m *MultiNetworkManager) AddNetwork(config NetworkConfig) error {
 	// Create transaction channel for this network
 	m.txCoordinator.txChannels[config.NetworkID] = make(chan *CrossChainTx, 100)
 
-	m.log.Info("Added network configuration",
+	m.logger.Info("Added network configuration",
 		"networkID", config.NetworkID,
 		"name", config.Name,
 		"type", config.Type,
@@ -260,7 +260,7 @@ func (m *MultiNetworkManager) StartNetwork(networkID uint32) error {
 
 	instance.Status = NetworkStatusRunning
 
-	m.log.Info("Started network",
+	m.logger.Info("Started network",
 		"networkID", networkID,
 		"name", instance.Config.Name,
 		"httpPort", instance.Config.HTTPPort,
@@ -302,7 +302,7 @@ func (m *MultiNetworkManager) StartAll() error {
 		}
 	}
 
-	m.log.Info("All networks started successfully")
+	m.logger.Info("All networks started successfully")
 	return nil
 }
 
@@ -312,7 +312,7 @@ func (m *MultiNetworkManager) runConsensus(networkID uint32) {
 	ticker := time.NewTicker(100 * time.Millisecond) // Fast consensus for testing
 	defer ticker.Stop()
 
-	m.log.Info("Starting consensus engine",
+	m.logger.Info("Starting consensus engine",
 		"networkID", networkID,
 		"type", consensus.Type,
 		"k", consensus.Params.K,
@@ -345,7 +345,7 @@ func (m *MultiNetworkManager) processCrossChainTxs(networkID uint32) {
 			// Process cross-chain transaction with ACID guarantees
 			err := m.processACIDTransaction(tx)
 			if err != nil {
-				m.log.Error("Failed to process cross-chain transaction",
+				m.logger.Error("Failed to process cross-chain transaction",
 					"txID", tx.ID,
 					"error", err,
 				)
@@ -437,7 +437,7 @@ func (m *MultiNetworkManager) SubmitCrossChainTx(tx *CrossChainTx) error {
 	// Send to source network's transaction channel
 	m.txCoordinator.txChannels[tx.SourceNet] <- tx
 
-	m.log.Info("Submitted cross-chain transaction",
+	m.logger.Info("Submitted cross-chain transaction",
 		"txID", tx.ID,
 		"source", tx.SourceNet,
 		"dest", tx.DestNet,
@@ -449,7 +449,7 @@ func (m *MultiNetworkManager) SubmitCrossChainTx(tx *CrossChainTx) error {
 
 // Shutdown gracefully shuts down all networks
 func (m *MultiNetworkManager) Shutdown() error {
-	m.log.Info("Shutting down multi-network manager")
+	m.logger.Info("Shutting down multi-network manager")
 
 	// Cancel context to stop all goroutines
 	m.cancel()
@@ -458,7 +458,7 @@ func (m *MultiNetworkManager) Shutdown() error {
 	m.mu.Lock()
 	for id, instance := range m.networks {
 		instance.Status = NetworkStatusStopping
-		m.log.Info("Stopping network", "networkID", id)
+		m.logger.Info("Stopping network", "networkID", id)
 		// Actual network shutdown would happen here
 		instance.Status = NetworkStatusStopped
 	}
@@ -469,6 +469,6 @@ func (m *MultiNetworkManager) Shutdown() error {
 		return fmt.Errorf("failed to close shared database: %w", err)
 	}
 
-	m.log.Info("Multi-network manager shutdown complete")
+	m.logger.Info("Multi-network manager shutdown complete")
 	return nil
 }
