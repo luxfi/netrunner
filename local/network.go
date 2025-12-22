@@ -17,7 +17,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/luxfi/crypto/bls"
@@ -967,7 +966,7 @@ func (ln *localNetwork) pauseNode(ctx context.Context, nodeName string) error {
 	if exitCode != 0 && exitCode != -1 && exitCode != 2 && exitCode != 130 && exitCode != 143 {
 		return fmt.Errorf("node %q exited with exit code: %d", nodeName, exitCode)
 	}
-	syscall.Sync()
+	syncFilesystem()
 	node.paused = true
 	return nil
 }
@@ -1092,7 +1091,7 @@ func (ln *localNetwork) restartNode(
 		if err := ln.removeNode(ctx, nodeName); err != nil {
 			return err
 		}
-		syscall.Sync()
+		syncFilesystem()
 
 		// Wait for ports to be released (TCP TIME_WAIT)
 		// This prevents "bind: address already in use" errors
