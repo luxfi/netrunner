@@ -9,21 +9,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	luxconfig "github.com/luxfi/config"
+	"github.com/luxfi/constants"
+	"github.com/luxfi/ids"
+	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/ids"
-	"github.com/luxfi/constants"
-	luxlog "github.com/luxfi/log"
 	dircopy "github.com/otiai10/copy"
 	"golang.org/x/exp/maps"
-)
-
-const (
-	deprecatedBuildDirKey           = "build-dir"
-	deprecatedWhitelistedChainsKey = "whitelisted-chains"
 )
 
 // NetworkState defines dynamic network information not available on chain db
@@ -32,34 +28,9 @@ type NetworkState struct {
 	ChainID2ElasticChainID map[string]string `json:"chainID2ElasticChainID"`
 }
 
-// snapshots generated using older ANR versions may contain deprecated luxd flags
-func fixDeprecatedLuxdFlags(flags map[string]interface{}) error {
-	if vIntf, ok := flags[deprecatedWhitelistedChainsKey]; ok {
-		v, ok := vIntf.(string)
-		if !ok {
-			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedWhitelistedChainsKey, vIntf)
-		}
-		if v != "" {
-			flags[config.TrackChainsKey] = v
-		}
-		delete(flags, deprecatedWhitelistedChainsKey)
-	}
-	if vIntf, ok := flags[deprecatedBuildDirKey]; ok {
-		v, ok := vIntf.(string)
-		if !ok {
-			return fmt.Errorf("expected %q to be of type string but got %T", deprecatedBuildDirKey, vIntf)
-		}
-		if v != "" {
-			flags[config.PluginDirKey] = filepath.Join(v, "plugins")
-		}
-		delete(flags, deprecatedBuildDirKey)
-	}
-	return nil
-}
-
 // NewNetwork returns a new network from the given snapshot
 func NewNetworkFromSnapshot(
-	log luxlog.Logger,
+	log log.Logger,
 	snapshotName string,
 	rootDir string,
 	snapshotsDir string,
@@ -76,7 +47,7 @@ func NewNetworkFromSnapshot(
 		api.NewAPIClient,
 		&nodeProcessCreator{
 			colorPicker: utils.NewColorPicker(),
-			log:         log,
+			logger:      log,
 			stdout:      os.Stdout,
 			stderr:      os.Stderr,
 		},
@@ -244,15 +215,6 @@ func (ln *localNetwork) loadSnapshot(
 	if err := json.Unmarshal(networkConfigJSON, &networkConfig); err != nil {
 		return fmt.Errorf("failure unmarshaling network config from snapshot: %w", err)
 	}
-	// fix deprecated luxd flags
-	if err := fixDeprecatedLuxdFlags(networkConfig.Flags); err != nil {
-		return err
-	}
-	for i := range networkConfig.NodeConfigs {
-		if err := fixDeprecatedLuxdFlags(networkConfig.NodeConfigs[i].Flags); err != nil {
-			return err
-		}
-	}
 	// add flags
 	for i := range networkConfig.NodeConfigs {
 		for k, v := range flags {
@@ -274,11 +236,13 @@ func (ln *localNetwork) loadSnapshot(
 			networkConfig.NodeConfigs[i].BinaryPath = binaryPath
 		}
 	}
-	// replace plugin dir
-	if pluginDir != "" {
-		for i := range networkConfig.NodeConfigs {
-			networkConfig.NodeConfigs[i].Flags[config.PluginDirKey] = pluginDir
-		}
+	// set plugin dir
+	resolvedPluginDir := pluginDir
+	if resolvedPluginDir == "" {
+		resolvedPluginDir = luxconfig.ResolvePluginDir()
+	}
+	for i := range networkConfig.NodeConfigs {
+		networkConfig.NodeConfigs[i].Flags[config.PluginDirKey] = resolvedPluginDir
 	}
 	// add chain configs and upgrade configs
 	for i := range networkConfig.NodeConfigs {
@@ -307,7 +271,7 @@ func (ln *localNetwork) loadSnapshot(
 		if !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("failure reading network state file from snapshot: %w", err)
 		}
-		ln.log.Warn("network state file not found on snapshot")
+		ln.logger.Warn("network state file not found on snapshot")
 	} else {
 		networkState := NetworkState{}
 		if err := json.Unmarshal(networkStateJSON, &networkState); err != nil {

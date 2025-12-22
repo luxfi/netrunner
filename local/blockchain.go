@@ -36,7 +36,6 @@ import (
 	"github.com/luxfi/math/set"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/log"
-	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/vms/platformvm"
 	"github.com/luxfi/node/vms/platformvm/signer"
 	"github.com/luxfi/node/vms/platformvm/txs"
@@ -101,7 +100,7 @@ func (ln *localNetwork) getNode() node.Node {
 func (ln *localNetwork) getClientURI() (string, error) { //nolint
 	node := ln.getNode()
 	clientURI := node.GetURL() // GetURL now returns full URL http://host:port
-	ln.log.Info("getClientURI",
+	ln.logger.Info("getClientURI",
 		"nodeName", node.GetName(),
 		"uri", clientURI)
 	return clientURI, nil
@@ -116,7 +115,7 @@ func (ln *localNetwork) CreateChains(
 
 	// Log the chain specs we're trying to create for debugging
 	for i, spec := range chainSpecs {
-		ln.log.Info("CreateChains: processing chain spec",
+		ln.logger.Info("CreateChains: processing chain spec",
 			"index", i,
 			"vmName", spec.VMName,
 			"hasGenesis", len(spec.Genesis) > 0,
@@ -126,7 +125,7 @@ func (ln *localNetwork) CreateChains(
 
 	chainInfos, err := ln.installCustomChains(ctx, chainSpecs)
 	if err != nil {
-		ln.log.Error("CreateChains: failed to install custom chains",
+		ln.logger.Error("CreateChains: failed to install custom chains",
 			"error", err.Error(),
 			"numChainSpecs", len(chainSpecs),
 		)
@@ -134,7 +133,7 @@ func (ln *localNetwork) CreateChains(
 	}
 
 	if err := ln.waitForCustomChainsReady(ctx, chainInfos); err != nil {
-		ln.log.Error("CreateChains: chains failed to become ready",
+		ln.logger.Error("CreateChains: chains failed to become ready",
 			"error", err.Error(),
 			"numChains", len(chainInfos),
 		)
@@ -143,14 +142,14 @@ func (ln *localNetwork) CreateChains(
 
 	// Wait for all nodes to discover the chains before aliasing
 	if err := ln.waitForChainsDiscoveredOnAllNodes(ctx, chainInfos); err != nil {
-		ln.log.Error("CreateChains: chains not discovered on all nodes",
+		ln.logger.Error("CreateChains: chains not discovered on all nodes",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("chains not discovered on all nodes: %w", err)
 	}
 
 	if err := ln.RegisterAliases(ctx, chainInfos, chainSpecs); err != nil {
-		ln.log.Error("CreateChains: failed to register aliases",
+		ln.logger.Error("CreateChains: failed to register aliases",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to register aliases: %w", err)
@@ -171,14 +170,14 @@ func (ln *localNetwork) RegisterAliases(
 	chainSpecs []network.ChainSpec,
 ) error {
 	fmt.Println()
-	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("registering blockchain aliases")))
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("registering blockchain aliases")))
 	for i, chainSpec := range chainSpecs {
 		if chainSpec.Alias == "" {
 			continue
 		}
 		blockchainAlias := chainSpec.Alias
 		chainID := chainInfos[i].blockchainID.String()
-		ln.log.Info("registering blockchain alias",
+		ln.logger.Info("registering blockchain alias",
 			"alias", blockchainAlias,
 			"chain-id", chainID)
 		for nodeName, node := range ln.nodes {
@@ -200,7 +199,7 @@ func (ln *localNetwork) RegisterAliases(
 					if delay > 5*time.Second {
 						delay = 5 * time.Second
 					}
-					ln.log.Debug("alias registration failed, retrying",
+					ln.logger.Debug("alias registration failed, retrying",
 						"node", nodeName,
 						"chain", chainID,
 						"attempt", attempt+1,
@@ -234,7 +233,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 	chainInfos []blockchainInfo,
 ) error {
 	fmt.Println()
-	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("waiting for chains to be discovered on all nodes...")))
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for chains to be discovered on all nodes...")))
 
 	maxWait := 2 * time.Minute
 	pollInterval := 2 * time.Second
@@ -242,7 +241,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 
 	for _, chainInfo := range chainInfos {
 		blockchainID := chainInfo.blockchainID.String()
-		ln.log.Info("waiting for chain discovery",
+		ln.logger.Info("waiting for chain discovery",
 			"blockchain-id", blockchainID,
 		)
 
@@ -273,7 +272,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 					// Check if we got a valid response (not a 404 or other error)
 					if resp.StatusCode == 200 {
 						discovered = true
-						ln.log.Info("chain discovered on node",
+						ln.logger.Info("chain discovered on node",
 							"node", nodeName,
 							"blockchain-id", blockchainID,
 							"attempts", attemptCount,
@@ -282,7 +281,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 						break
 					}
 					if attemptCount%10 == 0 {
-						ln.log.Warn("chain endpoint returned non-200",
+						ln.logger.Warn("chain endpoint returned non-200",
 							"node", nodeName,
 							"blockchain-id", blockchainID,
 							"status", resp.StatusCode,
@@ -292,7 +291,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 					}
 				} else {
 					if attemptCount%10 == 0 {
-						ln.log.Warn("chain not yet discovered, waiting",
+						ln.logger.Warn("chain not yet discovered, waiting",
 							"node", nodeName,
 							"blockchain-id", blockchainID,
 							"error", err.Error(),
@@ -316,7 +315,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 		}
 	}
 
-	ln.log.Info(luxlog.Green.Wrap("all chains discovered on all nodes"))
+	ln.logger.Info(log.Green.Wrap("all chains discovered on all nodes"))
 	return nil
 }
 
@@ -367,12 +366,12 @@ func (ln *localNetwork) installCustomChains(
 	chainSpecs []network.ChainSpec,
 ) ([]blockchainInfo, error) {
 	fmt.Println()
-	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("create and install custom chains")))
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("create and install custom chains")))
 
 	// Ensure nodes are healthy before proceeding (nodes may have been restarted by a prior
 	// CreateParticipantGroups call which restarts nodes to track chains)
 	if err := ln.healthy(ctx); err != nil {
-		ln.log.Error("installCustomChains: network not healthy before chain installation",
+		ln.logger.Error("installCustomChains: network not healthy before chain installation",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("network not healthy at start of installCustomChains: %w", err)
@@ -380,7 +379,7 @@ func (ln *localNetwork) installCustomChains(
 
 	clientURI, err := ln.getClientURI()
 	if err != nil {
-		ln.log.Error("installCustomChains: failed to get client URI",
+		ln.logger.Error("installCustomChains: failed to get client URI",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to get client URI: %w", err)
@@ -397,7 +396,7 @@ func (ln *localNetwork) installCustomChains(
 		if chainSpec.ChainID != nil {
 			chainID, err := ids.FromString(*chainSpec.ChainID)
 			if err != nil {
-				ln.log.Error("installCustomChains: invalid chain ID format",
+				ln.logger.Error("installCustomChains: invalid chain ID format",
 					"error", err.Error(),
 					"chainID", *chainSpec.ChainID,
 					"vmName", chainSpec.VMName,
@@ -410,7 +409,7 @@ func (ln *localNetwork) installCustomChains(
 
 	w, err := newWallet(ctx, clientURI, preloadTXs)
 	if err != nil {
-		ln.log.Error("installCustomChains: failed to create wallet",
+		ln.logger.Error("installCustomChains: failed to create wallet",
 			"error", err.Error(),
 			"clientURI", clientURI,
 		)
@@ -446,9 +445,9 @@ func (ln *localNetwork) installCustomChains(
 		for _, nodeName := range participantsSpec.Participants {
 			_, ok := ln.nodes[nodeName]
 			if !ok {
-				ln.log.Info(luxlog.Green.Wrap(fmt.Sprintf("adding new participant %s", nodeName)))
+				ln.logger.Info(log.Green.Wrap(fmt.Sprintf("adding new participant %s", nodeName)))
 				if _, err := ln.addNode(node.Config{Name: nodeName}); err != nil {
-					ln.log.Error("installCustomChains: failed to add participant node",
+					ln.logger.Error("installCustomChains: failed to add participant node",
 						"error", err.Error(),
 						"nodeName", nodeName,
 					)
@@ -458,7 +457,7 @@ func (ln *localNetwork) installCustomChains(
 		}
 	}
 	if err := ln.healthy(ctx); err != nil {
-		ln.log.Error("installCustomChains: network not healthy after adding nodes",
+		ln.logger.Error("installCustomChains: network not healthy after adding nodes",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("network not healthy after adding nodes: %w", err)
@@ -466,7 +465,7 @@ func (ln *localNetwork) installCustomChains(
 
 	// just ensure all nodes are primary validators (so can be chain validators)
 	if err := ln.addPrimaryValidators(ctx, platformCli, w); err != nil {
-		ln.log.Error("installCustomChains: failed to add primary validators",
+		ln.logger.Error("installCustomChains: failed to add primary validators",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to add primary validators: %w", err)
@@ -474,17 +473,17 @@ func (ln *localNetwork) installCustomChains(
 
 	// Ensure P-chain has liquid funds for chain creation
 	// Genesis allocations go to X-chain, so we may need to export/import to P-chain
-	if err := fundPChainFromXChain(ctx, w, ln.log); err != nil {
-		ln.log.Error("installCustomChains: failed to fund P-chain from X-chain",
+	if err := fundPChainFromXChain(ctx, w, ln.logger); err != nil {
+		ln.logger.Error("installCustomChains: failed to fund P-chain from X-chain",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to fund P-chain from X-chain: %w", err)
 	}
 
 	// create missing chains
-	chainIDs, err := createChains(ctx, uint32(len(participantsSpecs)), w, ln.log)
+	chainIDs, err := createChains(ctx, uint32(len(participantsSpecs)), w, ln.logger)
 	if err != nil {
-		ln.log.Error("installCustomChains: failed to create chains",
+		ln.logger.Error("installCustomChains: failed to create chains",
 			"error", err.Error(),
 			"numChains", len(participantsSpecs),
 		)
@@ -492,7 +491,7 @@ func (ln *localNetwork) installCustomChains(
 	}
 
 	if err := ln.setChainConfigFiles(chainIDs, participantsSpecs); err != nil {
-		ln.log.Error("installCustomChains: failed to set chain config files",
+		ln.logger.Error("installCustomChains: failed to set chain config files",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to set chain config files: %w", err)
@@ -510,30 +509,30 @@ func (ln *localNetwork) installCustomChains(
 
 	// wait for nodes to be primary validators before trying to add them as chain ones
 	if err = ln.waitPrimaryValidators(ctx, platformCli); err != nil {
-		ln.log.Error("installCustomChains: timeout waiting for primary validators",
+		ln.logger.Error("installCustomChains: timeout waiting for primary validators",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("timeout waiting for primary validators: %w", err)
 	}
 
 	if err = ln.addChainValidators(ctx, platformCli, w, chainIDs, participantsSpecs); err != nil {
-		ln.log.Error("installCustomChains: failed to add chain validators",
+		ln.logger.Error("installCustomChains: failed to add chain validators",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to add chain validators: %w", err)
 	}
 
-	blockchainTxs, err := createBlockchainTxs(ctx, chainSpecs, w, ln.log)
+	blockchainTxs, err := createBlockchainTxs(ctx, chainSpecs, w, ln.logger)
 	if err != nil {
-		ln.log.Error("installCustomChains: failed to create blockchain transactions",
+		ln.logger.Error("installCustomChains: failed to create blockchain transactions",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to create blockchain transactions: %w", err)
 	}
 
-	nodesToRestartForBlockchainConfigUpdate, err := ln.setBlockchainConfigFiles(ctx, chainSpecs, blockchainTxs, chainIDs, participantsSpecs, ln.log)
+	nodesToRestartForBlockchainConfigUpdate, err := ln.setBlockchainConfigFiles(ctx, chainSpecs, blockchainTxs, chainIDs, participantsSpecs, ln.logger)
 	if err != nil {
-		ln.log.Error("installCustomChains: failed to set blockchain config files",
+		ln.logger.Error("installCustomChains: failed to set blockchain config files",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("failed to set blockchain config files: %w", err)
@@ -542,7 +541,7 @@ func (ln *localNetwork) installCustomChains(
 	// First try to hot-reload VM plugins without restart
 	// This is the preferred path - no node restart needed
 	if err := ln.reloadVMPlugins(ctx); err != nil {
-		ln.log.Warn("VM hot-reload failed, will try restart path",
+		ln.logger.Warn("VM hot-reload failed, will try restart path",
 			"error", err.Error(),
 			"errorDetail", fmt.Sprintf("%+v", err),
 		)
@@ -551,11 +550,11 @@ func (ln *localNetwork) installCustomChains(
 	// Only restart if there are config file updates that require restart
 	// Skip restart for new chains - VMs are hot-loaded above
 	if len(nodesToRestartForBlockchainConfigUpdate) > 0 {
-		ln.log.Info("restarting nodes for config file updates",
+		ln.logger.Info("restarting nodes for config file updates",
 			"numNodesToRestart", len(nodesToRestartForBlockchainConfigUpdate),
 		)
 		if err := ln.restartNodes(ctx, chainIDs, participantsSpecs, nil, nil, nodesToRestartForBlockchainConfigUpdate); err != nil {
-			ln.log.Error("installCustomChains: failed to restart nodes for config update",
+			ln.logger.Error("installCustomChains: failed to restart nodes for config update",
 				"error", err.Error(),
 				"nodesToRestart", nodesToRestartForBlockchainConfigUpdate.List(),
 			)
@@ -563,7 +562,7 @@ func (ln *localNetwork) installCustomChains(
 		}
 		clientURI, err = ln.getClientURI()
 		if err != nil {
-			ln.log.Error("installCustomChains: failed to get client URI after restart",
+			ln.logger.Error("installCustomChains: failed to get client URI after restart",
 				"error", err.Error(),
 			)
 			return nil, fmt.Errorf("failed to get client URI after restart: %w", err)
@@ -571,7 +570,7 @@ func (ln *localNetwork) installCustomChains(
 		w.reload(clientURI)
 		// Reload VMs again after restart
 		if err := ln.reloadVMPlugins(ctx); err != nil {
-			ln.log.Error("installCustomChains: failed to reload VM plugins after restart",
+			ln.logger.Error("installCustomChains: failed to reload VM plugins after restart",
 				"error", err.Error(),
 				"errorDetail", fmt.Sprintf("%+v", err),
 			)
@@ -580,15 +579,15 @@ func (ln *localNetwork) installCustomChains(
 	}
 
 	if err = ln.waitChainValidators(ctx, platformCli, chainIDs, participantsSpecs); err != nil {
-		ln.log.Error("installCustomChains: timeout waiting for chain validators",
+		ln.logger.Error("installCustomChains: timeout waiting for chain validators",
 			"error", err.Error(),
 		)
 		return nil, fmt.Errorf("timeout waiting for chain validators: %w", err)
 	}
 
 	// create blockchain from txs before spending more utxos
-	if err := ln.createChains(ctx, chainSpecs, blockchainTxs, w, ln.log); err != nil {
-		ln.log.Error("installCustomChains: failed to create blockchains from transactions",
+	if err := ln.createChains(ctx, chainSpecs, blockchainTxs, w, ln.logger); err != nil {
+		ln.logger.Error("installCustomChains: failed to create blockchains from transactions",
 			"error", err.Error(),
 			"numChainSpecs", len(chainSpecs),
 		)
@@ -598,7 +597,7 @@ func (ln *localNetwork) installCustomChains(
 	// With track-all-chains=true, nodes auto-discover new chains via hot-load
 	// Reload VMs to ensure any new VMs are available
 	if err := ln.reloadVMPlugins(ctx); err != nil {
-		ln.log.Warn("VM hot-reload after chain creation failed (non-fatal)",
+		ln.logger.Warn("VM hot-reload after chain creation failed (non-fatal)",
 			"error", err.Error(),
 		)
 	}
@@ -607,7 +606,7 @@ func (ln *localNetwork) installCustomChains(
 	for i, chainSpec := range chainSpecs {
 		vmID, err := utils.VMID(chainSpec.VMName)
 		if err != nil {
-			ln.log.Error("installCustomChains: invalid VM name",
+			ln.logger.Error("installCustomChains: invalid VM name",
 				"error", err.Error(),
 				"vmName", chainSpec.VMName,
 			)
@@ -615,7 +614,7 @@ func (ln *localNetwork) installCustomChains(
 		}
 		chainID, err := ids.FromString(*chainSpec.ChainID)
 		if err != nil {
-			ln.log.Error("installCustomChains: invalid chain ID",
+			ln.logger.Error("installCustomChains: invalid chain ID",
 				"error", err.Error(),
 				"chainID", *chainSpec.ChainID,
 				"vmName", chainSpec.VMName,
@@ -640,7 +639,7 @@ func (ln *localNetwork) installChains(
 	participantsSpecs []network.ParticipantsSpec,
 ) ([]ids.ID, error) {
 	fmt.Println()
-	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("create chains")))
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("create chains")))
 
 	clientURI, err := ln.getClientURI()
 	if err != nil {
@@ -667,7 +666,7 @@ func (ln *localNetwork) installChains(
 		for _, nodeName := range participantsSpec.Participants {
 			_, ok := ln.nodes[nodeName]
 			if !ok {
-				ln.log.Info(luxlog.Green.Wrap(fmt.Sprintf("adding new participant %s", nodeName)))
+				ln.logger.Info(log.Green.Wrap(fmt.Sprintf("adding new participant %s", nodeName)))
 				if _, err := ln.addNode(node.Config{Name: nodeName}); err != nil {
 					return nil, err
 				}
@@ -683,7 +682,7 @@ func (ln *localNetwork) installChains(
 		return nil, err
 	}
 
-	chainIDs, err := createChains(ctx, uint32(len(participantsSpecs)), w, ln.log)
+	chainIDs, err := createChains(ctx, uint32(len(participantsSpecs)), w, ln.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -706,7 +705,7 @@ func (ln *localNetwork) installChains(
 	}
 
 	// Wait for nodes to be healthy after restart before querying P-Chain
-	ln.log.Info("waiting for nodes to be healthy after restart...")
+	ln.logger.Info("waiting for nodes to be healthy after restart...")
 	if err := ln.healthy(ctx); err != nil {
 		return nil, fmt.Errorf("nodes not healthy after restart: %w", err)
 	}
@@ -754,7 +753,7 @@ func (ln *localNetwork) waitForCustomChainsReady(
 	chainInfos []blockchainInfo,
 ) error {
 	fmt.Println()
-	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("waiting for custom chains to report healthy...")))
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for custom chains to report healthy...")))
 
 	if err := ln.healthy(ctx); err != nil {
 		return err
@@ -763,7 +762,7 @@ func (ln *localNetwork) waitForCustomChainsReady(
 	// Log chain info for debugging - skip log file check as Lux node
 	// doesn't create per-chain log files. Health check above is sufficient.
 	for _, chainInfo := range chainInfos {
-		ln.log.Info("custom chain ready",
+		ln.logger.Info("custom chain ready",
 			"vm-ID", chainInfo.vmID.String(),
 			"chain-ID", chainInfo.chainID.String(),
 			"blockchain-ID", chainInfo.blockchainID.String(),
@@ -771,10 +770,10 @@ func (ln *localNetwork) waitForCustomChainsReady(
 	}
 
 	fmt.Println()
-	ln.log.Info(luxlog.Green.Wrap("all custom chains are running!!!"))
+	ln.logger.Info(log.Green.Wrap("all custom chains are running!!!"))
 
 	fmt.Println()
-	ln.log.Info(luxlog.Green.Wrap(luxlog.Bold.Wrap("all custom chains are ready on RPC server-side -- network-runner RPC client can poll and query the cluster status")))
+	ln.logger.Info(log.Green.Wrap(log.Bold.Wrap("all custom chains are ready on RPC server-side -- network-runner RPC client can poll and query the cluster status")))
 
 	return nil
 }
@@ -793,7 +792,7 @@ func (ln *localNetwork) restartNodes(
 			"remove validator specs can be supplied at one time")
 	}
 	fmt.Println()
-	ln.log.Info(luxlog.Blue.Wrap(luxlog.Bold.Wrap("restarting network")))
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("restarting network")))
 
 	nodeNames := maps.Keys(ln.nodes)
 	sort.Strings(nodeNames)
@@ -866,9 +865,9 @@ func (ln *localNetwork) restartNodes(
 		}
 
 		if removeValidatorSpecs != nil {
-			ln.log.Info(luxlog.Green.Wrap(fmt.Sprintf("restarting node %s to stop tracking chains %s", nodeName, tracked)))
+			ln.logger.Info(log.Green.Wrap(fmt.Sprintf("restarting node %s to stop tracking chains %s", nodeName, tracked)))
 		} else {
-			ln.log.Info(luxlog.Green.Wrap(fmt.Sprintf("restarting node %s to track chains %s", nodeName, tracked)))
+			ln.logger.Info(log.Green.Wrap(fmt.Sprintf("restarting node %s to track chains %s", nodeName, tracked)))
 		}
 
 		if err := ln.restartNode(ctx, nodeName, "", "", "", nil, nil, nil); err != nil {
@@ -1044,7 +1043,7 @@ func (ln *localNetwork) addPrimaryValidators(
 	platformCli *platformvm.Client,
 	w *wallet,
 ) error {
-	ln.log.Info(luxlog.Green.Wrap("adding the nodes as primary network validators"))
+	ln.logger.Info(log.Green.Wrap("adding the nodes as primary network validators"))
 	// ref. https://docs.lux.network/build/node-apis/p-chain/#platformgetcurrentvalidators
 	// Use different variable name to avoid shadowing outer context
 	apiCtx, cancel := createDefaultCtx(ctx)
@@ -1115,7 +1114,7 @@ func (ln *localNetwork) addPrimaryValidators(
 		if err != nil {
 			return fmt.Errorf("P-Wallet Tx Error %s %w, node ID %s", "IssueAddPermissionlessValidatorTx", err, nodeID.String())
 		}
-		ln.log.Info("added node as primary chain validator", "node-name", nodeName, "node-ID", nodeID.String(), "tx-ID", tx.ID().String())
+		ln.logger.Info("added node as primary chain validator", "node-name", nodeName, "node-ID", nodeID.String(), "tx-ID", tx.ID().String())
 	}
 	return nil
 }
@@ -1191,7 +1190,7 @@ func importPChainFromXChain(ctx context.Context, w *wallet, owner *secp256k1fx.O
 // fundPChainFromXChain ensures the wallet has liquid P-chain funds for chain creation.
 // With direct P-chain genesis allocations, this may not need to do anything.
 // Falls back to X->P export/import if P-chain has insufficient funds.
-func fundPChainFromXChain(ctx context.Context, w *wallet, log luxlog.Logger) error {
+func fundPChainFromXChain(ctx context.Context, w *wallet, logger log.Logger) error {
 	// Amount needed for chain operations (1 LUX should be plenty for fees)
 	const requiredAmount = uint64(1_000_000_000) // 1 LUX in nLUX
 
@@ -1214,7 +1213,7 @@ func fundPChainFromXChain(ctx context.Context, w *wallet, log luxlog.Logger) err
 		log.Info("P-chain balance check", "balance", pBalance, "required", requiredAmount)
 		fmt.Printf("💰 P-chain balance: %d nLUX (need %d)\n", pBalance, requiredAmount)
 		if pBalance >= requiredAmount {
-			log.Info(luxlog.Green.Wrap("P-chain already has sufficient funds, skipping X->P transfer"))
+			log.Info(log.Green.Wrap("P-chain already has sufficient funds, skipping X->P transfer"))
 			fmt.Printf("✅ P-chain already funded, no transfer needed\n")
 			return nil
 		}
@@ -1237,7 +1236,7 @@ func fundPChainFromXChain(ctx context.Context, w *wallet, log luxlog.Logger) err
 		Addrs:     []ids.ShortID{w.addr},
 	}
 
-	log.Info(luxlog.Green.Wrap("funding P-chain from X-chain for chain creation"))
+	log.Info(log.Green.Wrap("funding P-chain from X-chain for chain creation"))
 	fmt.Printf("💰 Exporting %d nLUX from X-chain to P-chain for address %s\n", requiredAmount, w.addr.String())
 
 	// Export LUX from X-chain to P-chain
@@ -1259,7 +1258,7 @@ func (ln *localNetwork) removeChainValidators(
 	ctx context.Context,
 	removeParticipantsSpecs []network.RemoveChainValidatorSpec,
 ) error {
-	ln.log.Info("removing chain validator tx")
+	ln.logger.Info("removing chain validator tx")
 	removeParticipantsSpecIDs := make([]ids.ID, len(removeParticipantsSpecs))
 	clientURI, err := ln.getClientURI()
 	if err != nil {
@@ -1279,7 +1278,7 @@ func (ln *localNetwork) removeChainValidators(
 	if err != nil {
 		return err
 	}
-	ln.log.Info(luxlog.Green.Wrap("removing the nodes as chain validators"))
+	ln.logger.Info(log.Green.Wrap("removing the nodes as chain validators"))
 	for i, participantsSpec := range removeParticipantsSpecs {
 		chainID, err := ids.FromString(participantsSpec.ChainID)
 		if err != nil {
@@ -1318,7 +1317,7 @@ func (ln *localNetwork) removeChainValidators(
 			if err != nil {
 				return fmt.Errorf("P-Wallet Tx Error %s %w, node ID %s, chainID %s", "IssueRemoveChainValidatorTx", err, nodeID.String(), chainID.String())
 			}
-			ln.log.Info("removed node as chain validator",
+			ln.logger.Info("removed node as chain validator",
 				"node-name", nodeName,
 				"node-ID", nodeID.String(),
 				"chain-ID", chainID.String(),
@@ -1334,7 +1333,7 @@ func (ln *localNetwork) addPermissionlessValidators(
 	ctx context.Context,
 	validatorSpecs []network.PermissionlessValidatorSpec,
 ) error {
-	ln.log.Info("adding permissionless validator tx")
+	ln.logger.Info("adding permissionless validator tx")
 	clientURI, err := ln.getClientURI()
 	if err != nil {
 		return err
@@ -1363,7 +1362,7 @@ func (ln *localNetwork) addPermissionlessValidators(
 	for _, validatorSpec := range validatorSpecs {
 		_, ok := ln.nodes[validatorSpec.NodeName]
 		if !ok {
-			ln.log.Info(log.Green.Wrap(fmt.Sprintf("adding new participant %s", validatorSpec.NodeName)))
+			ln.logger.Info(log.Green.Wrap(fmt.Sprintf("adding new participant %s", validatorSpec.NodeName)))
 			if _, err := ln.addNode(node.Config{Name: validatorSpec.NodeName}); err != nil {
 				return err
 			}
@@ -1396,7 +1395,7 @@ func (ln *localNetwork) addPermissionlessValidators(
 	}
 
 	for _, validatorSpec := range validatorSpecs {
-		ln.log.Info(luxlog.Green.Wrap("adding permissionless validator"), "node ", validatorSpec.NodeName)
+		ln.logger.Info(log.Green.Wrap("adding permissionless validator"), "node ", validatorSpec.NodeName)
 		// Use different variable name to avoid shadowing outer context
 		txCtx, txCancel := createDefaultCtx(ctx)
 		validatorNodeID := ln.nodes[validatorSpec.NodeName].nodeID
@@ -1445,7 +1444,7 @@ func (ln *localNetwork) addPermissionlessValidators(
 		if err != nil {
 			return err
 		}
-		ln.log.Info("Validator successfully added as permissionless validator", "TX ID", tx.ID().String())
+		ln.logger.Info("Validator successfully added as permissionless validator", "TX ID", tx.ID().String())
 	}
 	return ln.restartNodes(ctx, nil, nil, validatorSpecs, nil, nil)
 }
@@ -1454,7 +1453,7 @@ func (ln *localNetwork) transformToElasticChains(
 	ctx context.Context,
 	elasticParticipantsSpecs []network.ElasticChainSpec,
 ) ([]ids.ID, []ids.ID, error) {
-	ln.log.Info("transforming elastic chain tx")
+	ln.logger.Info("transforming elastic chain tx")
 	elasticChainIDs := make([]ids.ID, len(elasticParticipantsSpecs))
 	assetIDs := make([]ids.ID, len(elasticParticipantsSpecs))
 	clientURI, err := ln.getClientURI()
@@ -1480,14 +1479,14 @@ func (ln *localNetwork) transformToElasticChains(
 	}
 
 	for i, elasticParticipantsSpec := range elasticParticipantsSpecs {
-		ln.log.Info(luxlog.Green.Wrap("transforming elastic chain"), "chain ID", *elasticParticipantsSpec.ChainID)
+		ln.logger.Info(log.Green.Wrap("transforming elastic chain"), "chain ID", *elasticParticipantsSpec.ChainID)
 
 		chainAssetID, err := getXChainAssetID(ctx, w, elasticParticipantsSpec.AssetName, elasticParticipantsSpec.AssetSymbol, elasticParticipantsSpec.MaxSupply)
 		if err != nil {
 			return nil, nil, err
 		}
 		assetIDs[i] = chainAssetID
-		ln.log.Info("created asset ID", "asset-ID", chainAssetID.String())
+		ln.logger.Info("created asset ID", "asset-ID", chainAssetID.String())
 		owner := &secp256k1fx.OutputOwners{
 			Threshold: 1,
 			Addrs: []ids.ShortID{
@@ -1498,12 +1497,12 @@ func (ln *localNetwork) transformToElasticChains(
 		if err != nil {
 			return nil, nil, err
 		}
-		ln.log.Info("exported asset to P-Chain")
+		ln.logger.Info("exported asset to P-Chain")
 		err = importPChainFromXChain(ctx, w, owner, w.xChainID)
 		if err != nil {
 			return nil, nil, err
 		}
-		ln.log.Info("imported asset from X-Chain")
+		ln.logger.Info("imported asset from X-Chain")
 		chainID, err := ids.FromString(*elasticParticipantsSpec.ChainID)
 		if err != nil {
 			return nil, nil, err
@@ -1522,7 +1521,7 @@ func (ln *localNetwork) transformToElasticChains(
 		if err != nil {
 			return nil, nil, err
 		}
-		ln.log.Info("Chain transformed into elastic chain", "TX ID", transformChainTx.ID().String())
+		ln.logger.Info("Chain transformed into elastic chain", "TX ID", transformChainTx.ID().String())
 		elasticChainIDs[i] = transformChainTx.ID()
 		ln.chainID2ElasticChainID[chainID] = transformChainTx.ID()
 	}
@@ -1541,10 +1540,10 @@ func createChains(
 	ctx context.Context,
 	numChains uint32,
 	w *wallet,
-	log luxlog.Logger,
+	logger log.Logger,
 ) ([]ids.ID, error) {
 	fmt.Println()
-	log.Info(luxlog.Green.Wrap("creating chains"), "num-chains", numChains)
+	log.Info(log.Green.Wrap("creating chains"), "num-chains", numChains)
 	chainIDs := make([]ids.ID, numChains)
 	for i := uint32(0); i < numChains; i++ {
 		log.Info("creating chain tx")
@@ -1580,32 +1579,32 @@ func (ln *localNetwork) addChainValidators(
 	chainIDs []ids.ID,
 	participantsSpecs []network.ParticipantsSpec,
 ) error {
-	ln.log.Info(luxlog.Green.Wrap("adding the nodes as chain validators"))
+	ln.logger.Info(log.Green.Wrap("adding the nodes as chain validators"))
 	for i, chainID := range chainIDs {
-		ln.log.Info("getting primary validators for chain", "index", i, "chain-ID", chainID.String())
+		ln.logger.Info("getting primary validators for chain", "index", i, "chain-ID", chainID.String())
 		// Use different variable name to avoid shadowing outer context
 		apiCtx1, cancel1 := createDefaultCtx(ctx)
 		vs, err := platformCli.GetCurrentValidators(apiCtx1, constants.PrimaryNetworkID, nil)
 		cancel1()
 		if err != nil {
-			ln.log.Error("failed to get primary validators", "error", err.Error())
+			ln.logger.Error("failed to get primary validators", "error", err.Error())
 			return fmt.Errorf("failed to get primary validators: %w", err)
 		}
-		ln.log.Info("got primary validators", "count", len(vs))
+		ln.logger.Info("got primary validators", "count", len(vs))
 		primaryValidatorsEndtime := make(map[ids.NodeID]time.Time)
 		for _, v := range vs {
 			primaryValidatorsEndtime[v.NodeID] = time.Unix(int64(v.EndTime), 0)
 		}
-		ln.log.Info("getting current validators for chain", "chain-ID", chainID.String())
+		ln.logger.Info("getting current validators for chain", "chain-ID", chainID.String())
 		// Use different variable name to avoid shadowing outer context
 		apiCtx2, cancel2 := createDefaultCtx(ctx)
 		vs, err = platformCli.GetCurrentValidators(apiCtx2, chainID, nil)
 		cancel2()
 		if err != nil {
-			ln.log.Error("failed to get current validators for chain", "chain-ID", chainID.String(), "error", err.Error())
+			ln.logger.Error("failed to get current validators for chain", "chain-ID", chainID.String(), "error", err.Error())
 			return fmt.Errorf("failed to get current validators for chain %s: %w", chainID.String(), err)
 		}
-		ln.log.Info("got current validators for chain", "chain-ID", chainID.String(), "count", len(vs))
+		ln.logger.Info("got current validators for chain", "chain-ID", chainID.String(), "count", len(vs))
 		chainValidators := set.Set[ids.NodeID]{}
 		for _, v := range vs {
 			chainValidators.Add(v.NodeID)
@@ -1640,7 +1639,7 @@ func (ln *localNetwork) addChainValidators(
 			if err != nil {
 				return fmt.Errorf("P-Wallet Tx Error %s %w, node ID %s, chainID %s", "IssueAddChainValidatorTx", err, nodeID.String(), chainID.String())
 			}
-			ln.log.Info("added node as a chain validator to chain",
+			ln.logger.Info("added node as a chain validator to chain",
 				"node-name", nodeName,
 				"node-ID", nodeID.String(),
 				"chain-ID", chainID.String(),
@@ -1656,7 +1655,7 @@ func (ln *localNetwork) waitPrimaryValidators(
 	ctx context.Context,
 	platformCli *platformvm.Client,
 ) error {
-	ln.log.Info(luxlog.Green.Wrap("waiting for the nodes to become primary validators"))
+	ln.logger.Info(log.Green.Wrap("waiting for the nodes to become primary validators"))
 	for {
 		ready := true
 		// Use a different variable name to avoid shadowing the outer context
@@ -1696,7 +1695,7 @@ func (ln *localNetwork) waitChainValidators(
 	chainIDs []ids.ID,
 	participantsSpecs []network.ParticipantsSpec,
 ) error {
-	ln.log.Info(luxlog.Green.Wrap("waiting for the nodes to become chain validators"))
+	ln.logger.Info(log.Green.Wrap("waiting for the nodes to become chain validators"))
 	for {
 		ready := true
 		for i, chainID := range chainIDs {
@@ -1743,7 +1742,7 @@ func (ln *localNetwork) waitChainValidators(
 func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 	// Use unified config to resolve plugin directory for diagnostics
 	pluginDir := luxconfig.ResolvePluginDir()
-	ln.log.Info(luxlog.Green.Wrap("reloading plugin binaries"),
+	ln.logger.Info(log.Green.Wrap("reloading plugin binaries"),
 		"pluginDir", pluginDir,
 	)
 
@@ -1761,7 +1760,7 @@ func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 		loadedVMs, failedVMs, err := adminCli.LoadVMs(apiCtx)
 		cancel()
 		if err != nil {
-			ln.log.Error("reloadVMPlugins: failed to load VMs on node",
+			ln.logger.Error("reloadVMPlugins: failed to load VMs on node",
 				"error", err.Error(),
 				"nodeName", nodeName,
 				"nodeURI", uri,
@@ -1772,7 +1771,7 @@ func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 		if len(failedVMs) > 0 {
 			// Log detailed information about each failed VM
 			for vmID, vmErr := range failedVMs {
-				ln.log.Error("reloadVMPlugins: VM failed to load",
+				ln.logger.Error("reloadVMPlugins: VM failed to load",
 					"vmID", vmID,
 					"error", vmErr,
 					"nodeName", nodeName,
@@ -1783,7 +1782,7 @@ func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 			return fmt.Errorf("%d VMs failed to load on node %s: %v (plugin dir: %s)", len(failedVMs), nodeName, failedVMs, pluginDir)
 		}
 		if len(loadedVMs) > 0 {
-			ln.log.Info("reloadVMPlugins: successfully loaded VMs",
+			ln.logger.Info("reloadVMPlugins: successfully loaded VMs",
 				"nodeName", nodeName,
 				"loadedVMs", loadedVMs,
 				"pluginDir", pluginDir,
@@ -1853,7 +1852,7 @@ func (ln *localNetwork) verifyVMsAvailable(ctx context.Context, vmIDs []ids.ID) 
 			}
 
 			if !available {
-				ln.log.Error("verifyVMsAvailable: VM not available after retries",
+				ln.logger.Error("verifyVMsAvailable: VM not available after retries",
 					"vmID", vmID.String(),
 					"nodeName", nodeName,
 					"nodeURI", uri,
@@ -1864,14 +1863,14 @@ func (ln *localNetwork) verifyVMsAvailable(ctx context.Context, vmIDs []ids.ID) 
 					vmID.String(), nodeName, maxRetries, lastErr)
 			}
 
-			ln.log.Debug("verifyVMsAvailable: VM verified available",
+			ln.logger.Debug("verifyVMsAvailable: VM verified available",
 				"vmID", vmID.String(),
 				"nodeName", nodeName,
 			)
 		}
 	}
 
-	ln.log.Info("verifyVMsAvailable: all VMs verified available on all nodes",
+	ln.logger.Info("verifyVMsAvailable: all VMs verified available on all nodes",
 		"numVMs", len(vmIDs),
 	)
 	return nil
@@ -1881,10 +1880,10 @@ func createBlockchainTxs(
 	ctx context.Context,
 	chainSpecs []network.ChainSpec,
 	w *wallet,
-	log luxlog.Logger,
+	logger log.Logger,
 ) ([]*txs.Tx, error) {
 	fmt.Println()
-	log.Info(luxlog.Green.Wrap("creating tx for each custom chain"))
+	log.Info(log.Green.Wrap("creating tx for each custom chain"))
 	blockchainTxs := make([]*txs.Tx, len(chainSpecs))
 	for i, chainSpec := range chainSpecs {
 		vmName := chainSpec.VMName
@@ -1956,10 +1955,10 @@ func (ln *localNetwork) setBlockchainConfigFiles(
 	blockchainTxs []*txs.Tx,
 	chainIDs []ids.ID,
 	participantsSpecs []network.ParticipantsSpec,
-	log luxlog.Logger,
+	logger log.Logger,
 ) (set.Set[string], error) {
 	fmt.Println()
-	log.Info(luxlog.Green.Wrap("creating config files for each custom chain"))
+	log.Info(log.Green.Wrap("creating config files for each custom chain"))
 	nodesToRestart := set.Set[string]{}
 	for i, chainSpec := range chainSpecs {
 		// get chain participants
@@ -2037,10 +2036,10 @@ func (ln *localNetwork) createChains(
 	chainSpecs []network.ChainSpec,
 	blockchainTxs []*txs.Tx,
 	w *wallet,
-	log luxlog.Logger,
+	logger log.Logger,
 ) error {
 	fmt.Println()
-	log.Info(luxlog.Green.Wrap("creating each custom chain"))
+	log.Info(log.Green.Wrap("creating each custom chain"))
 
 	// Get platform client to check tx status
 	clientURI, err := ln.getClientURI()

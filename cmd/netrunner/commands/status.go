@@ -4,16 +4,16 @@
 package commands
 
 import (
+	"github.com/luxfi/log"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // NewStatusCmd creates the status command
-func NewStatusCmd(logger *zap.Logger) *cobra.Command {
+func NewStatusCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show overall system status",

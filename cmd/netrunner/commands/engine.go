@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"github.com/luxfi/log"
 	"context"
 	"fmt"
 	"os"
@@ -16,11 +17,10 @@ import (
 	_ "github.com/luxfi/netrunner/engines/geth"
 	_ "github.com/luxfi/netrunner/engines/lux"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // NewEngineCmd creates the engine management command
-func NewEngineCmd(logger *zap.Logger) *cobra.Command {
+func NewEngineCmd(logger log.Logger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "engine",
 		Short: "Manage individual consensus engines",
@@ -38,7 +38,7 @@ func NewEngineCmd(logger *zap.Logger) *cobra.Command {
 	return cmd
 }
 
-func newEngineStartCmd(logger *zap.Logger) *cobra.Command {
+func newEngineStartCmd(logger log.Logger) *cobra.Command {
 	var (
 		engineType  string
 		networkID   uint32
@@ -97,9 +97,9 @@ func newEngineStartCmd(logger *zap.Logger) *cobra.Command {
 			// Start the engine
 			ctx := cmd.Context()
 			logger.Info("Starting engine", 
-				zap.String("name", name),
-				zap.String("type", engineType),
-				zap.Uint32("network_id", networkID))
+				log.String("name", name),
+				log.String("type", engineType),
+				log.Uint32("network_id", networkID))
 			
 			if err := engine.Start(ctx, config); err != nil {
 				return fmt.Errorf("failed to start engine: %w", err)
@@ -117,8 +117,8 @@ func newEngineStartCmd(logger *zap.Logger) *cobra.Command {
 					health, err := engine.Health(ctx)
 					if err == nil && health.Healthy {
 						logger.Info("Engine is healthy", 
-							zap.String("name", name),
-							zap.String("version", health.Version))
+							log.String("name", name),
+							log.String("version", health.Version))
 						
 						fmt.Printf("✅ Engine '%s' started successfully\n", name)
 						fmt.Printf("  Type: %s\n", engineType)
@@ -160,7 +160,7 @@ func newEngineStartCmd(logger *zap.Logger) *cobra.Command {
 	return cmd
 }
 
-func newEngineStopCmd(logger *zap.Logger) *cobra.Command {
+func newEngineStopCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop [name]",
 		Short: "Stop a running engine",
@@ -176,7 +176,7 @@ func newEngineStopCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newEngineStatusCmd(logger *zap.Logger) *cobra.Command {
+func newEngineStatusCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status [name]",
 		Short: "Get status of an engine",
@@ -192,7 +192,7 @@ func newEngineStatusCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newEngineListCmd(logger *zap.Logger) *cobra.Command {
+func newEngineListCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List all available engine types",
@@ -215,7 +215,7 @@ func newEngineListCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newEngineTestCmd(logger *zap.Logger) *cobra.Command {
+func newEngineTestCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "test [type]",
 		Short: "Test an engine type",
@@ -257,8 +257,8 @@ func newEngineTestCmd(logger *zap.Logger) *cobra.Command {
 			// Start engine
 			ctx := cmd.Context()
 			logger.Info("Starting test engine", 
-				zap.String("type", engineType),
-				zap.String("name", name))
+				log.String("type", engineType),
+				log.String("name", name))
 			
 			if err := engine.Start(ctx, config); err != nil {
 				return fmt.Errorf("failed to start engine: %w", err)
@@ -268,7 +268,7 @@ func newEngineTestCmd(logger *zap.Logger) *cobra.Command {
 			defer func() {
 				logger.Info("Cleaning up test engine")
 				if err := engine.Stop(context.Background()); err != nil {
-					logger.Error("Failed to stop engine", zap.Error(err))
+					logger.Error("Failed to stop engine", log.Err(err))
 				}
 				os.RemoveAll(config.DataDir)
 			}()

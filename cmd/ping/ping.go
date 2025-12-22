@@ -10,7 +10,7 @@ import (
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
 )
@@ -38,16 +38,16 @@ func NewCommand() *cobra.Command {
 }
 
 func pingFunc(*cobra.Command, []string) error {
-	lvl, err := luxlog.ToLevel(logLevel)
+	lvl, err := log.ToLevel(logLevel)
 	if err != nil {
 		return err
 	}
-	lcfg := luxlog.Config{
+	lcfg := log.Config{
 		DisplayLevel: lvl,
 		LogLevel:     level.Off,
 	}
-	logFactory := luxlog.NewFactoryWithConfig(lcfg)
-	log, err := logFactory.Make(constants.LogNameControl)
+	logFactory := log.NewFactoryWithConfig(lcfg)
+	logger, err := logFactory.Make(constants.LogNameControl)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func pingFunc(*cobra.Command, []string) error {
 	cli, err := client.New(client.Config{
 		Endpoint:    endpoint,
 		DialTimeout: dialTimeout,
-	}, log)
+	}, logger)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func pingFunc(*cobra.Command, []string) error {
 		return err
 	}
 
-	logString := "ping response: " + luxlog.Green.Wrap("%s")
-	ux.Print(log, logString, resp)
+	logString := "ping response: " + log.Green.Wrap("%s")
+	ux.Print(logger, logString, resp)
 	return nil
 }
