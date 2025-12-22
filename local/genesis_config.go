@@ -549,12 +549,19 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 	var err error
 
 	// Try to load existing keys in order: node0, node1, ..., node{n-1}
+	// Keys must have EC private key (not just TLS certs) to be considered valid
 	validatorKeys = make([]*keys.ValidatorKey, numNodes)
 	allExist := true
 	for i := uint32(0); i < numNodes; i++ {
 		name := fmt.Sprintf("node%d", i)
 		vk, err := ks.Load(name)
 		if err != nil || vk == nil {
+			allExist = false
+			break
+		}
+		// Verify EC key exists - LoadFromDir auto-generates TLS certs but not EC keys
+		if len(vk.ECPrivateKey) == 0 {
+			fmt.Printf("   %s: missing EC private key, will re-derive from mnemonic\n", name)
 			allExist = false
 			break
 		}

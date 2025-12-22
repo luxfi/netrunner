@@ -31,10 +31,9 @@ import (
 	"github.com/luxfi/consensus/core"
 	"github.com/luxfi/node/network/router"
 	"github.com/luxfi/ids"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -56,7 +55,8 @@ const (
 	// bootstrapping of staking validators in mainnet configuration
 	waitForHealthyTimeout = 10 * time.Minute
 
-	networkRootDirPrefix   = "network"
+	// runDirPrefix is used for timestamped run directories within each network
+	runDirPrefix           = "run"
 	TimeParseLayout        = "2006-01-02 15:04:05"
 	StakingMinimumLeadTime = 25 * time.Second
 )
@@ -76,29 +76,40 @@ var (
 	ErrNoValidatorSpec        = errors.New("no validator spec was provided")
 )
 
-// ensureNetworkDataDir reuses an existing network directory if one exists with node data,
-// otherwise creates a new timestamped directory. This allows restarting a network with
-// persistent state while still tracking when each network was first started.
-func ensureNetworkDataDir(baseDir, prefix string) (string, error) {
-	// Look for existing network directories with node data
-	entries, err := os.ReadDir(baseDir)
+// ensureNetworkRunDir ensures a run directory exists within a network's runs directory.
+// Directory structure: <baseDir>/networks/<networkName>/runs/<runID>/
+// If an existing run with node data exists, it will be reused (for persistence).
+// Otherwise, a new timestamped run directory is created.
+// Returns the full path to the run directory (e.g., ~/.lux/networks/mainnet/runs/run_20251222_102823/)
+func ensureNetworkRunDir(baseDir, networkName string) (string, error) {
+	// Create the network-centric path: <baseDir>/networks/<networkName>/runs/
+	networkDir := filepath.Join(baseDir, constants.NetworksDir, networkName)
+	runsDir := filepath.Join(networkDir, constants.RunsDir)
+
+	// Ensure the runs directory exists
+	if err := os.MkdirAll(runsDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create runs directory %s: %w", runsDir, err)
+	}
+
+	// Look for existing run directories with node data
+	entries, err := os.ReadDir(runsDir)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
 
-	// Find the most recent network directory that has node data
-	var latestNetworkDir string
+	// Find the most recent run directory that has node data
+	var latestRunDir string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
-		if !strings.HasPrefix(name, prefix+"_") {
+		if !strings.HasPrefix(name, runDirPrefix+"_") {
 			continue
 		}
 		// Check if this directory has node subdirectories
-		networkPath := filepath.Join(baseDir, name)
-		nodeEntries, _ := os.ReadDir(networkPath)
+		runPath := filepath.Join(runsDir, name)
+		nodeEntries, _ := os.ReadDir(runPath)
 		hasNodes := false
 		for _, nodeEntry := range nodeEntries {
 			if nodeEntry.IsDir() && strings.HasPrefix(nodeEntry.Name(), "node") {
@@ -108,19 +119,38 @@ func ensureNetworkDataDir(baseDir, prefix string) (string, error) {
 		}
 		if hasNodes {
 			// Timestamps sort lexicographically, so later entries are more recent
-			if latestNetworkDir == "" || name > filepath.Base(latestNetworkDir) {
-				latestNetworkDir = networkPath
+			if latestRunDir == "" || name > filepath.Base(latestRunDir) {
+				latestRunDir = runPath
 			}
 		}
 	}
 
-	if latestNetworkDir != "" {
-		// Reuse existing network directory
-		return latestNetworkDir, nil
+	if latestRunDir != "" {
+		// Reuse existing run directory for persistence
+		return latestRunDir, nil
 	}
 
-	// No existing network with nodes, create new timestamped directory
-	return utils.MkDirWithTimestamp(filepath.Join(baseDir, prefix))
+	// No existing run with nodes, create new timestamped run directory
+	return utils.MkDirWithTimestamp(filepath.Join(runsDir, runDirPrefix))
+}
+
+// getNetworkNameFromRootDir extracts network name from root data dir path.
+// It expects paths like ~/.lux/runs/mainnet or ~/.lux/networks/mainnet.
+// Falls back to "local" if no network name can be determined.
+func getNetworkNameFromRootDir(rootDir string) string {
+	// Check if path contains known network names
+	base := filepath.Base(rootDir)
+	switch base {
+	case "mainnet", "testnet", "local":
+		return base
+	}
+	// Check parent for network type
+	parent := filepath.Base(filepath.Dir(rootDir))
+	switch parent {
+	case "mainnet", "testnet", "local":
+		return parent
+	}
+	return "local" // Default to local network
 }
 
 type Config struct {
@@ -131,7 +161,7 @@ type Config struct {
 	DialTimeout         time.Duration
 	RedirectNodesOutput bool
 	SnapshotsDir        string
-	LogLevel            luxlog.Level
+	LogLevel            log.Level
 }
 
 type Server interface {
@@ -142,7 +172,7 @@ type server struct {
 	mu *sync.RWMutex
 
 	cfg Config
-	log luxlog.Logger
+	logger log.Logger
 
 	rootCtx    context.Context
 	rootCancel context.CancelFunc
@@ -175,7 +205,7 @@ func IsServerError(err error, serverError error) bool {
 	return status.Code() == codes.Unknown && status.Message() == serverError.Error()
 }
 
-func New(cfg Config, log luxlog.Logger) (Server, error) {
+func New(cfg Config, logger log.Logger) (Server, error) {
 	if cfg.Port == "" || cfg.GwPort == "" {
 		return nil, ErrInvalidPort
 	}
@@ -187,7 +217,7 @@ func New(cfg Config, log luxlog.Logger) (Server, error) {
 
 	s := &server{
 		cfg:        cfg,
-		log:        log,
+		logger: logger,
 		closed:     make(chan struct{}),
 		ln:         listener,
 		gRPCServer: grpc.NewServer(),
@@ -214,17 +244,17 @@ func (s *server) Run(rootCtx context.Context) (err error) {
 
 	gRPCErrChan := make(chan error)
 	go func() {
-		s.log.Info("serving gRPC server", zap.String("port", s.cfg.Port))
+		s.logger.Info("serving gRPC server", log.String("port", s.cfg.Port))
 		gRPCErrChan <- s.gRPCServer.Serve(s.ln)
 	}()
 
 	gwErrChan := make(chan error)
 	if s.cfg.GwDisabled {
-		s.log.Info("gRPC gateway server is disabled")
+		s.logger.Info("gRPC gateway server is disabled")
 	} else {
 		// Set up gRPC gateway to allow for HTTP requests to [s.gRPCServer].
 		go func() {
-			s.log.Info("dialing gRPC server for gRPC gateway", zap.String("port", s.cfg.Port))
+			s.logger.Info("dialing gRPC server for gRPC gateway", log.String("port", s.cfg.Port))
 			ctx, cancel := context.WithTimeout(rootCtx, s.cfg.DialTimeout)
 			gwConn, err := grpc.DialContext(
 				ctx,
@@ -248,39 +278,39 @@ func (s *server) Run(rootCtx context.Context) (err error) {
 				return
 			}
 
-			s.log.Info("serving gRPC gateway", zap.String("port", s.cfg.GwPort))
+			s.logger.Info("serving gRPC gateway", log.String("port", s.cfg.GwPort))
 			gwErrChan <- s.gwServer.ListenAndServe()
 		}()
 	}
 
 	select {
 	case <-rootCtx.Done():
-		s.log.Warn("root context is done")
+		s.logger.Warn("root context is done")
 
 		if !s.cfg.GwDisabled {
-			s.log.Warn("closed gRPC gateway server", zap.Error(s.gwServer.Close()))
+			s.logger.Warn("closed gRPC gateway server", log.Err(s.gwServer.Close()))
 			<-gwErrChan
 		}
 
 		s.gRPCServer.Stop()
-		s.log.Warn("closed gRPC server")
+		s.logger.Warn("closed gRPC server")
 		<-gRPCErrChan // Wait for [s.gRPCServer.Serve] to return.
-		s.log.Warn("gRPC terminated")
+		s.logger.Warn("gRPC terminated")
 
 	case err = <-gRPCErrChan:
-		s.log.Warn("gRPC server failed", zap.Error(err))
+		s.logger.Warn("gRPC server failed", log.Err(err))
 
 		// [s.grpcServer] is already stopped.
 		if !s.cfg.GwDisabled {
-			s.log.Warn("closed gRPC gateway server", zap.Error(s.gwServer.Close()))
+			s.logger.Warn("closed gRPC gateway server", log.Err(s.gwServer.Close()))
 			<-gwErrChan
 		}
 
 	case err = <-gwErrChan: // if disabled, this will never be selected
 		// [s.gwServer] is already closed.
-		s.log.Warn("gRPC gateway server failed", zap.Error(err))
+		s.logger.Warn("gRPC gateway server failed", log.Err(err))
 		s.gRPCServer.Stop()
-		s.log.Warn("closed gRPC server")
+		s.logger.Warn("closed gRPC server")
 		<-gRPCErrChan // Wait for [s.gRPCServer.Serve] to return.
 	}
 
@@ -291,7 +321,7 @@ func (s *server) Run(rootCtx context.Context) (err error) {
 	if s.network != nil {
 		// Close the network.
 		s.stopAndRemoveNetwork(nil)
-		s.log.Warn("network stopped")
+		s.logger.Warn("network stopped")
 	}
 
 	s.rootCancel()
@@ -299,12 +329,12 @@ func (s *server) Run(rootCtx context.Context) (err error) {
 }
 
 func (s *server) Ping(context.Context, *rpcpb.PingRequest) (*rpcpb.PingResponse, error) {
-	s.log.Debug("received ping request")
+	s.logger.Debug("received ping request")
 	return &rpcpb.PingResponse{Pid: int32(os.Getpid())}, nil
 }
 
 func (s *server) RPCVersion(context.Context, *rpcpb.RPCVersionRequest) (*rpcpb.RPCVersionResponse, error) {
-	s.log.Debug("RPCVersion")
+	s.logger.Debug("RPCVersion")
 
 	return &rpcpb.RPCVersionResponse{Version: RPCVersion}, nil
 }
@@ -334,9 +364,9 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	pluginDir := req.GetPluginDir()
 	chainSpecs := []network.ChainSpec{}
 	if len(req.GetBlockchainSpecs()) > 0 {
-		s.log.Info("plugin-dir:", zap.String("plugin-dir", pluginDir))
+		s.logger.Info("plugin-dir:", log.String("plugin-dir", pluginDir))
 		for _, spec := range req.GetBlockchainSpecs() {
-			chainSpec, err := getNetworkChainSpec(s.log, spec, true, pluginDir)
+			chainSpec, err := getNetworkChainSpec(s.logger, spec, true, pluginDir)
 			if err != nil {
 				return nil, err
 			}
@@ -355,21 +385,36 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 		err               error
 	)
 
+	// Determine base directory and network name for network-centric structure
+	var baseDir, networkName string
 	if len(rootDataDir) == 0 {
-		rootDataDir = filepath.Join(os.TempDir(), constants.RootDirPrefix)
-		err = os.MkdirAll(rootDataDir, os.ModePerm)
-		if err != nil {
-			return nil, err
+		// Default to ~/.lux for the base
+		homeDir, _ := os.UserHomeDir()
+		baseDir = filepath.Join(homeDir, ".lux")
+		networkName = "local" // Default network name
+	} else {
+		// Extract network name from provided path
+		networkName = getNetworkNameFromRootDir(rootDataDir)
+		baseDir = rootDataDir
+		// If path ends with network name, use parent as base
+		if filepath.Base(baseDir) == networkName {
+			baseDir = filepath.Dir(baseDir)
 		}
 	}
-	// Reuse existing network directory if it has node data, otherwise create new timestamped one
-	rootDataDir, err = ensureNetworkDataDir(rootDataDir, networkRootDirPrefix)
+
+	// Ensure base directory exists
+	if err = os.MkdirAll(baseDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	// Create/reuse run directory: <baseDir>/networks/<networkName>/runs/<runID>/
+	rootDataDir, err = ensureNetworkRunDir(baseDir, networkName)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(customNodeConfigs) > 0 {
-		s.log.Warn("custom node configs have been provided; ignoring the 'number-of-nodes' parameter and setting it to:", zap.Int("number-of-nodes", len(customNodeConfigs)))
+		s.logger.Warn("custom node configs have been provided; ignoring the 'number-of-nodes' parameter and setting it to:", log.Int("number-of-nodes", len(customNodeConfigs)))
 		numNodes = uint32(len(customNodeConfigs))
 	}
 
@@ -399,21 +444,21 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 		return nil, err
 	}
 
-	s.log.Info("starting",
-		zap.String("exec-path", execPath),
-		zap.Uint32("num-nodes", numNodes),
-		zap.String("track-chains", trackChains),
-		zap.Int32("pid", pid),
-		zap.String("root-data-dir", rootDataDir),
-		zap.String("plugin-dir", pluginDir),
-		zap.Any("chain-configs", req.ChainConfigs),
-		zap.String("global-node-config", globalNodeConfig),
+	s.logger.Info("starting",
+		log.String("exec-path", execPath),
+		log.Uint32("num-nodes", numNodes),
+		log.String("track-chains", trackChains),
+		log.Int32("pid", pid),
+		log.String("root-data-dir", rootDataDir),
+		log.String("plugin-dir", pluginDir),
+		log.Any("chain-configs", req.ChainConfigs),
+		log.String("global-node-config", globalNodeConfig),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
 	defer cancel()
 	if err := s.network.Start(ctx); err != nil {
-		s.log.Warn("start failed to complete", zap.Error(err))
+		s.logger.Warn("start failed to complete", log.Err(err))
 		s.stopAndRemoveNetwork(nil)
 		return nil, err
 	}
@@ -422,12 +467,12 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	defer cancel()
 	chainIDs, err := s.network.CreateChains(ctx, chainSpecs)
 	if err != nil {
-		s.log.Error("network never became healthy", zap.Error(err))
+		s.logger.Error("network never became healthy", log.Err(err))
 		s.stopAndRemoveNetwork(err)
 		return nil, err
 	}
 	s.updateClusterInfo()
-	s.log.Info("network healthy")
+	s.logger.Info("network healthy")
 
 	strChainIDs := []string{}
 	for _, chainID := range chainIDs {
@@ -464,7 +509,7 @@ func (s *server) updateClusterInfo() {
 // - network operation terminates with error
 // - network operation terminates successfully by setting CustomChainsHealthy
 func (s *server) WaitForHealthy(ctx context.Context, _ *rpcpb.WaitForHealthyRequest) (*rpcpb.WaitForHealthyResponse, error) {
-	s.log.Debug("WaitForHealthy")
+	s.logger.Debug("WaitForHealthy")
 
 	ctx, cancel := context.WithTimeout(ctx, waitForHealthyTimeout)
 	defer cancel()
@@ -518,35 +563,35 @@ func (s *server) CreateBlockchains(
 	defer s.mu.Unlock()
 
 	if s.network == nil {
-		s.log.Error("CreateBlockchains: network not bootstrapped")
+		s.logger.Error("CreateBlockchains: network not bootstrapped")
 		return nil, ErrNotBootstrapped
 	}
 
 	// Log the incoming request for debugging
-	s.log.Info("CreateBlockchains: received request",
-		zap.Int("numBlockchainSpecs", len(req.GetBlockchainSpecs())),
+	s.logger.Info("CreateBlockchains: received request",
+		log.Int("numBlockchainSpecs", len(req.GetBlockchainSpecs())),
 	)
 
 	if len(req.GetBlockchainSpecs()) == 0 {
-		s.log.Error("CreateBlockchains: no blockchain specs provided")
+		s.logger.Error("CreateBlockchains: no blockchain specs provided")
 		return nil, ErrNoChainSpec
 	}
 
 	// Log details of each blockchain spec being processed
 	chainSpecs := []network.ChainSpec{}
 	for i, spec := range req.GetBlockchainSpecs() {
-		s.log.Info("CreateBlockchains: processing blockchain spec",
-			zap.Int("index", i),
-			zap.String("vmName", spec.GetVmName()),
-			zap.Bool("hasGenesis", spec.GetGenesis() != ""),
-			zap.Bool("hasChainId", spec.GetChainId() != ""),
+		s.logger.Info("CreateBlockchains: processing blockchain spec",
+			log.Int("index", i),
+			log.String("vmName", spec.GetVmName()),
+			log.Bool("hasGenesis", spec.GetGenesis() != ""),
+			log.Bool("hasChainId", spec.GetChainId() != ""),
 		)
-		chainSpec, err := getNetworkChainSpec(s.log, spec, false, s.network.pluginDir)
+		chainSpec, err := getNetworkChainSpec(s.logger, spec, false, s.network.pluginDir)
 		if err != nil {
-			s.log.Error("CreateBlockchains: failed to parse blockchain spec",
-				zap.Error(err),
-				zap.Int("specIndex", i),
-				zap.String("vmName", spec.GetVmName()),
+			s.logger.Error("CreateBlockchains: failed to parse blockchain spec",
+				log.Err(err),
+				log.Int("specIndex", i),
+				log.String("vmName", spec.GetVmName()),
 			)
 			return nil, fmt.Errorf("failed to parse blockchain spec %d (VM=%s): %w", i, spec.GetVmName(), err)
 		}
@@ -560,10 +605,10 @@ func (s *server) CreateBlockchains(
 
 	for _, chainSpec := range chainSpecs {
 		if chainSpec.ChainID != nil && !chainsSet.Contains(*chainSpec.ChainID) {
-			s.log.Error("CreateBlockchains: chain ID does not exist",
-				zap.String("chainID", *chainSpec.ChainID),
-				zap.String("vmName", chainSpec.VMName),
-				zap.Strings("existingChains", chainIDsList),
+			s.logger.Error("CreateBlockchains: chain ID does not exist",
+				log.String("chainID", *chainSpec.ChainID),
+				log.String("vmName", chainSpec.VMName),
+				log.Strings("existingChains", chainIDsList),
 			)
 			return nil, fmt.Errorf("chain id %q does not exist", *chainSpec.ChainID)
 		}
@@ -572,9 +617,9 @@ func (s *server) CreateBlockchains(
 	s.clusterInfo.Healthy = false
 	s.clusterInfo.CustomChainsHealthy = false
 
-	s.log.Info("CreateBlockchains: starting chain creation",
-		zap.Int("numChains", len(chainSpecs)),
-		zap.Duration("timeout", waitForHealthyTimeout),
+	s.logger.Info("CreateBlockchains: starting chain creation",
+		log.Int("numChains", len(chainSpecs)),
+		log.Duration("timeout", waitForHealthyTimeout),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
@@ -586,12 +631,12 @@ func (s *server) CreateBlockchains(
 		for i, spec := range chainSpecs {
 			vmNames[i] = spec.VMName
 		}
-		s.log.Error("CreateBlockchains: failed to create blockchains",
-			zap.Error(err),
-			zap.String("errorDetail", fmt.Sprintf("%+v", err)),
-			zap.Strings("vmNames", vmNames),
-			zap.Int("numChainSpecs", len(chainSpecs)),
-			zap.String("pluginDir", s.network.pluginDir),
+		s.logger.Error("CreateBlockchains: failed to create blockchains",
+			log.Err(err),
+			log.String("errorDetail", fmt.Sprintf("%+v", err)),
+			log.Strings("vmNames", vmNames),
+			log.Int("numChainSpecs", len(chainSpecs)),
+			log.String("pluginDir", s.network.pluginDir),
 		)
 		// Also print to stdout for immediate visibility
 		fmt.Printf("ERROR: CreateBlockchains failed: %v\n", err)
@@ -602,8 +647,8 @@ func (s *server) CreateBlockchains(
 		return nil, fmt.Errorf("CreateBlockchains failed for VMs %v: %w", vmNames, err)
 	}
 	s.updateClusterInfo()
-	s.log.Info("CreateBlockchains: custom chains created successfully",
-		zap.Int("numChains", len(chainIDs)),
+	s.logger.Info("CreateBlockchains: custom chains created successfully",
+		log.Int("numChains", len(chainIDs)),
 	)
 
 	strChainIDs := []string{}
@@ -629,7 +674,7 @@ func (s *server) AddPermissionlessValidator(
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("AddPermissionlessValidator")
+	s.logger.Debug("AddPermissionlessValidator")
 
 	if len(req.GetValidatorSpec()) == 0 {
 		return nil, ErrNoValidatorSpec
@@ -666,11 +711,11 @@ func (s *server) AddPermissionlessValidator(
 	s.updateClusterInfo()
 
 	if err != nil {
-		s.log.Error("failed to add permissionless validator", zap.Error(err))
+		s.logger.Error("failed to add permissionless validator", log.Err(err))
 		return nil, err
 	}
 
-	s.log.Info("successfully added permissionless validator")
+	s.logger.Info("successfully added permissionless validator")
 
 	clusterInfo, err := deepCopy(s.clusterInfo)
 	if err != nil {
@@ -690,7 +735,7 @@ func (s *server) RemoveChainValidator(
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("RemoveChainValidator")
+	s.logger.Debug("RemoveChainValidator")
 
 	if len(req.GetValidatorSpec()) == 0 {
 		return nil, ErrNoValidatorSpec
@@ -724,11 +769,11 @@ func (s *server) RemoveChainValidator(
 	s.updateClusterInfo()
 
 	if err != nil {
-		s.log.Error("failed to remove chain validator", zap.Error(err))
+		s.logger.Error("failed to remove chain validator", log.Err(err))
 		return nil, err
 	}
 
-	s.log.Info("successfully removed chain validator")
+	s.logger.Info("successfully removed chain validator")
 
 	clusterInfo, err := deepCopy(s.clusterInfo)
 	if err != nil {
@@ -748,7 +793,7 @@ func (s *server) TransformElasticChains(
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("TransformElasticChain")
+	s.logger.Debug("TransformElasticChain")
 
 	if len(req.GetElasticChainSpec()) == 0 {
 		return nil, ErrNoElasticChainSpec
@@ -782,11 +827,11 @@ func (s *server) TransformElasticChains(
 	s.updateClusterInfo()
 
 	if err != nil {
-		s.log.Error("failed to transform chain into elastic chain", zap.Error(err))
+		s.logger.Error("failed to transform chain into elastic chain", log.Err(err))
 		return nil, err
 	}
 
-	s.log.Info("chain transformed into elastic chain")
+	s.logger.Info("chain transformed into elastic chain")
 
 	strTXIDs := []string{}
 	for _, txID := range txIDs {
@@ -813,7 +858,7 @@ func (s *server) CreateChains(_ context.Context, req *rpcpb.CreateChainsRequest)
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Debug("CreateParticipantGroups", zap.Uint32("num-groups", uint32(len(req.GetChainSpecs()))))
+	s.logger.Debug("CreateParticipantGroups", log.Uint32("num-groups", uint32(len(req.GetChainSpecs()))))
 
 	participantsSpecs := []network.ParticipantsSpec{}
 	for _, spec := range req.GetChainSpecs() {
@@ -821,7 +866,7 @@ func (s *server) CreateChains(_ context.Context, req *rpcpb.CreateChainsRequest)
 		participantsSpecs = append(participantsSpecs, participantsSpec)
 	}
 
-	s.log.Info("waiting for local cluster readiness")
+	s.logger.Info("waiting for local cluster readiness")
 
 	s.clusterInfo.Healthy = false
 	s.clusterInfo.CustomChainsHealthy = false
@@ -830,7 +875,7 @@ func (s *server) CreateChains(_ context.Context, req *rpcpb.CreateChainsRequest)
 	defer cancel()
 	chainIDs, err := s.network.CreateParticipantGroups(ctx, participantsSpecs)
 	if err != nil {
-		s.log.Error("failed to create chains", zap.Error(err))
+		s.logger.Error("failed to create chains", log.Err(err))
 		// Don't stop the entire network on chain creation failure - keep it running
 		// so user can retry or investigate. This makes the network more resilient.
 		// s.stopAndRemoveNetwork(err)  // Commented out for resilience
@@ -838,7 +883,7 @@ func (s *server) CreateChains(_ context.Context, req *rpcpb.CreateChainsRequest)
 	} else {
 		s.updateClusterInfo()
 	}
-	s.log.Info("chains created")
+	s.logger.Info("chains created")
 
 	strChainIDs := []string{}
 	for _, chainID := range chainIDs {
@@ -856,13 +901,13 @@ func (s *server) Health(ctx context.Context, _ *rpcpb.HealthRequest) (*rpcpb.Hea
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("Health")
+	s.logger.Debug("Health")
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
 	}
 
-	s.log.Info("waiting for local cluster readiness")
+	s.logger.Info("waiting for local cluster readiness")
 	if err := s.network.AwaitHealthyAndUpdateNetworkInfo(ctx); err != nil {
 		return nil, err
 	}
@@ -883,7 +928,7 @@ func (s *server) URIs(context.Context, *rpcpb.URIsRequest) (*rpcpb.URIsResponse,
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.log.Debug("URIs")
+	s.logger.Debug("URIs")
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -902,7 +947,7 @@ func (s *server) Status(context.Context, *rpcpb.StatusRequest) (*rpcpb.StatusRes
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.log.Debug("Status")
+	s.logger.Debug("Status")
 
 	if s.network == nil {
 		return &rpcpb.StatusResponse{}, ErrNotBootstrapped
@@ -913,11 +958,11 @@ func (s *server) Status(context.Context, *rpcpb.StatusRequest) (*rpcpb.StatusRes
 
 // Assumes [s.mu] is held.
 func (s *server) stopAndRemoveNetwork(err error) {
-	s.log.Info("removing network")
+	s.logger.Info("removing network")
 	select {
 	// cleanup of possible previous unchecked async err
 	case err := <-s.asyncErrCh:
-		s.log.Debug(fmt.Sprintf("async err %s not returned to user", err))
+		s.logger.Debug(fmt.Sprintf("async err %s not returned to user", err))
 	default:
 	}
 	if err != nil {
@@ -937,12 +982,12 @@ func (s *server) stopAndRemoveNetwork(err error) {
 
 // TODO document this
 func (s *server) StreamStatus(req *rpcpb.StreamStatusRequest, stream rpcpb.ControlService_StreamStatusServer) (err error) {
-	s.log.Debug("StreamStatus")
+	s.logger.Debug("StreamStatus")
 
 	interval := time.Duration(req.PushInterval)
 
 	// returns this method, then server closes the stream
-	s.log.Info("pushing status updates to the stream", zap.String("interval", interval.String()))
+	s.logger.Info("pushing status updates to the stream", log.String("interval", interval.String()))
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -955,9 +1000,9 @@ func (s *server) StreamStatus(req *rpcpb.StreamStatusRequest, stream rpcpb.Contr
 		err := s.recvLoop(stream)
 		if err != nil {
 			if isClientCanceled(stream.Context().Err(), err) {
-				s.log.Warn("failed to receive status request from gRPC stream due to client cancellation", zap.Error(err))
+				s.logger.Warn("failed to receive status request from gRPC stream due to client cancellation", log.Err(err))
 			} else {
-				s.log.Warn("failed to receive status request from gRPC stream", zap.Error(err))
+				s.logger.Warn("failed to receive status request from gRPC stream", log.Err(err))
 			}
 		}
 		errCh <- err
@@ -981,7 +1026,7 @@ func (s *server) StreamStatus(req *rpcpb.StreamStatusRequest, stream rpcpb.Contr
 
 // TODO document this
 func (s *server) sendLoop(stream rpcpb.ControlService_StreamStatusServer, interval time.Duration) {
-	s.log.Info("start status send loop")
+	s.logger.Info("start status send loop")
 
 	tc := time.NewTicker(1)
 	defer tc.Stop()
@@ -994,17 +1039,17 @@ func (s *server) sendLoop(stream rpcpb.ControlService_StreamStatusServer, interv
 			tc.Reset(interval)
 		}
 
-		s.log.Debug("sending cluster info")
+		s.logger.Debug("sending cluster info")
 
 		s.mu.RLock()
 		err := stream.Send(&rpcpb.StreamStatusResponse{ClusterInfo: s.clusterInfo})
 		s.mu.RUnlock()
 		if err != nil {
 			if isClientCanceled(stream.Context().Err(), err) {
-				s.log.Debug("client stream canceled", zap.Error(err))
+				s.logger.Debug("client stream canceled", log.Err(err))
 				return
 			}
-			s.log.Warn("failed to send an event", zap.Error(err))
+			s.logger.Warn("failed to send an event", log.Err(err))
 			return
 		}
 	}
@@ -1012,7 +1057,7 @@ func (s *server) sendLoop(stream rpcpb.ControlService_StreamStatusServer, interv
 
 // TODO document this
 func (s *server) recvLoop(stream rpcpb.ControlService_StreamStatusServer) error {
-	s.log.Info("start status receive loop")
+	s.logger.Info("start status receive loop")
 
 	for {
 		select {
@@ -1025,7 +1070,7 @@ func (s *server) recvLoop(stream rpcpb.ControlService_StreamStatusServer) error 
 		req := new(rpcpb.StatusRequest)
 		err := stream.RecvMsg(req)
 		if errors.Is(err, io.EOF) {
-			s.log.Debug("received EOF from client; returning to close the stream from server side")
+			s.logger.Debug("received EOF from client; returning to close the stream from server side")
 			return nil
 		}
 		if err != nil {
@@ -1038,7 +1083,7 @@ func (s *server) AddNode(_ context.Context, req *rpcpb.AddNodeRequest) (*rpcpb.A
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("AddNode", zap.String("name", req.Name))
+	s.logger.Debug("AddNode", log.String("name", req.Name))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1089,7 +1134,7 @@ func (s *server) RemoveNode(ctx context.Context, req *rpcpb.RemoveNodeRequest) (
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("RemoveNode", zap.String("name", req.Name))
+	s.logger.Debug("RemoveNode", log.String("name", req.Name))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1118,7 +1163,7 @@ func (s *server) RestartNode(ctx context.Context, req *rpcpb.RestartNodeRequest)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("RestartNode", zap.String("name", req.Name))
+	s.logger.Debug("RestartNode", log.String("name", req.Name))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1156,7 +1201,7 @@ func (s *server) PauseNode(ctx context.Context, req *rpcpb.PauseNodeRequest) (*r
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("PauseNode", zap.String("name", req.Name))
+	s.logger.Debug("PauseNode", log.String("name", req.Name))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1184,7 +1229,7 @@ func (s *server) ResumeNode(ctx context.Context, req *rpcpb.ResumeNodeRequest) (
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("ResumeNode", zap.String("name", req.Name))
+	s.logger.Debug("ResumeNode", log.String("name", req.Name))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1212,7 +1257,7 @@ func (s *server) Stop(context.Context, *rpcpb.StopRequest) (*rpcpb.StopResponse,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("Stop")
+	s.logger.Debug("Stop")
 
 	s.stopAndRemoveNetwork(nil)
 
@@ -1223,53 +1268,53 @@ var _ router.InboundHandler = &loggingInboundHandler{}
 
 type loggingInboundHandler struct {
 	nodeName string
-	log      luxlog.Logger
+	logger log.Logger
 }
 
 func (lh *loggingInboundHandler) HandleInbound(_ context.Context, msg message.InboundMessage) {
-	lh.log.Debug(
+	lh.logger.Debug(
 		"inbound handler received a message",
-		zap.String("message", msg.Op().String()),
-		zap.String("node-name", lh.nodeName),
+		log.String("message", msg.Op().String()),
+		log.String("node-name", lh.nodeName),
 	)
 }
 
 func (lh *loggingInboundHandler) AppRequest(ctx context.Context, nodeID ids.NodeID, requestID uint32, deadline time.Time, appRequestBytes []byte) error {
-	lh.log.Debug(
+	lh.logger.Debug(
 		"AppRequest received",
-		zap.String("node-name", lh.nodeName),
-		zap.Stringer("nodeID", nodeID),
-		zap.Uint32("requestID", requestID),
+		log.String("node-name", lh.nodeName),
+		log.Stringer("nodeID", nodeID),
+		log.Uint32("requestID", requestID),
 	)
 	return nil
 }
 
 func (lh *loggingInboundHandler) AppRequestFailed(ctx context.Context, nodeID ids.NodeID, requestID uint32, appErr *core.AppError) error {
-	lh.log.Debug(
+	lh.logger.Debug(
 		"AppRequestFailed received",
-		zap.String("node-name", lh.nodeName),
-		zap.Stringer("nodeID", nodeID),
-		zap.Uint32("requestID", requestID),
+		log.String("node-name", lh.nodeName),
+		log.Stringer("nodeID", nodeID),
+		log.Uint32("requestID", requestID),
 	)
 	return nil
 }
 
 func (lh *loggingInboundHandler) AppResponse(ctx context.Context, nodeID ids.NodeID, requestID uint32, appResponseBytes []byte) error {
-	lh.log.Debug(
+	lh.logger.Debug(
 		"AppResponse received",
-		zap.String("node-name", lh.nodeName),
-		zap.Stringer("nodeID", nodeID),
-		zap.Uint32("requestID", requestID),
+		log.String("node-name", lh.nodeName),
+		log.Stringer("nodeID", nodeID),
+		log.Uint32("requestID", requestID),
 	)
 	return nil
 }
 
 func (lh *loggingInboundHandler) AppGossip(ctx context.Context, nodeID ids.NodeID, appGossipBytes []byte) error {
-	lh.log.Debug(
+	lh.logger.Debug(
 		"AppGossip received",
-		zap.String("node-name", lh.nodeName),
-		zap.Stringer("nodeID", nodeID),
-		zap.Int("gossipSize", len(appGossipBytes)),
+		log.String("node-name", lh.nodeName),
+		log.Stringer("nodeID", nodeID),
+		log.Int("gossipSize", len(appGossipBytes)),
 	)
 	return nil
 }
@@ -1278,7 +1323,7 @@ func (s *server) AttachPeer(ctx context.Context, req *rpcpb.AttachPeerRequest) (
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("AttachPeer")
+	s.logger.Debug("AttachPeer")
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1289,14 +1334,14 @@ func (s *server) AttachPeer(ctx context.Context, req *rpcpb.AttachPeerRequest) (
 		return nil, err
 	}
 
-	loggingHandler := &loggingInboundHandler{nodeName: req.NodeName, log: s.log}
+	loggingHandler := &loggingInboundHandler{nodeName: req.NodeName, logger: s.logger}
 	newPeer, err := node.AttachPeer(ctx, loggingHandler)
 	if err != nil {
 		return nil, err
 	}
 
 	newPeerID := newPeer.ID().String()
-	s.log.Debug("new peer is attached to", zap.String("peer-ID", newPeerID), zap.String("node-name", node.GetName()))
+	s.logger.Debug("new peer is attached to", log.String("peer-ID", newPeerID), log.String("node-name", node.GetName()))
 
 	if s.clusterInfo.AttachedPeerInfos == nil {
 		s.clusterInfo.AttachedPeerInfos = make(map[string]*rpcpb.ListOfAttachedPeerInfo)
@@ -1321,7 +1366,7 @@ func (s *server) SendOutboundMessage(ctx context.Context, req *rpcpb.SendOutboun
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("SendOutboundMessage")
+	s.logger.Debug("SendOutboundMessage")
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1340,7 +1385,7 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Debug("LoadSnapshot")
+	s.logger.Debug("LoadSnapshot")
 
 	if s.network != nil {
 		return nil, ErrAlreadyBootstrapped
@@ -1348,21 +1393,37 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 
 	var err error
 	rootDataDir := req.GetRootDataDir()
+
+	// Determine base directory and network name for network-centric structure
+	var baseDir, networkName string
 	if len(rootDataDir) == 0 {
-		rootDataDir = filepath.Join(os.TempDir(), constants.RootDirPrefix)
-		err = os.MkdirAll(rootDataDir, os.ModePerm)
-		if err != nil {
-			return nil, err
+		// Default to ~/.lux for the base
+		homeDir, _ := os.UserHomeDir()
+		baseDir = filepath.Join(homeDir, ".lux")
+		networkName = "local" // Default network name
+	} else {
+		// Extract network name from provided path
+		networkName = getNetworkNameFromRootDir(rootDataDir)
+		baseDir = rootDataDir
+		// If path ends with network name, use parent as base
+		if filepath.Base(baseDir) == networkName {
+			baseDir = filepath.Dir(baseDir)
 		}
 	}
-	// Reuse existing network directory if it has node data, otherwise create new timestamped one
-	rootDataDir, err = ensureNetworkDataDir(rootDataDir, networkRootDirPrefix)
+
+	// Ensure base directory exists
+	if err = os.MkdirAll(baseDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	// Create/reuse run directory: <baseDir>/networks/<networkName>/runs/<runID>/
+	rootDataDir, err = ensureNetworkRunDir(baseDir, networkName)
 	if err != nil {
 		return nil, err
 	}
 
 	pid := int32(os.Getpid())
-	s.log.Info("starting", zap.Int32("pid", pid), zap.String("root-data-dir", rootDataDir))
+	s.logger.Info("starting", log.Int32("pid", pid), log.String("network", networkName), log.String("root-data-dir", rootDataDir))
 
 	s.network, err = newLocalNetwork(localNetworkOptions{
 		execPath:            req.GetExecPath(),
@@ -1386,7 +1447,7 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 
 	// blocking load snapshot to soon get not found snapshot errors
 	if err := s.network.LoadSnapshot(req.SnapshotName); err != nil {
-		s.log.Warn("snapshot load failed to complete", zap.Error(err))
+		s.logger.Warn("snapshot load failed to complete", log.Err(err))
 		s.stopAndRemoveNetwork(nil)
 		return nil, err
 	}
@@ -1395,12 +1456,12 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 	defer cancel()
 	err = s.network.AwaitHealthyAndUpdateNetworkInfo(ctx)
 	if err != nil {
-		s.log.Warn("snapshot load failed to complete. stopping network and cleaning up network", zap.Error(err))
+		s.logger.Warn("snapshot load failed to complete. stopping network and cleaning up network", log.Err(err))
 		s.stopAndRemoveNetwork(err)
 		return nil, err
 	}
 	s.updateClusterInfo()
-	s.log.Info("network healthy")
+	s.logger.Info("network healthy")
 
 	clusterInfo, err := deepCopy(s.clusterInfo)
 	if err != nil {
@@ -1413,7 +1474,7 @@ func (s *server) SaveSnapshot(ctx context.Context, req *rpcpb.SaveSnapshotReques
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Info("SaveSnapshot", zap.String("snapshot-name", req.SnapshotName))
+	s.logger.Info("SaveSnapshot", log.String("snapshot-name", req.SnapshotName))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1421,7 +1482,7 @@ func (s *server) SaveSnapshot(ctx context.Context, req *rpcpb.SaveSnapshotReques
 
 	snapshotPath, err := s.network.nw.SaveSnapshot(ctx, req.SnapshotName)
 	if err != nil {
-		s.log.Warn("snapshot save failed to complete", zap.Error(err))
+		s.logger.Warn("snapshot save failed to complete", log.Err(err))
 		return nil, err
 	}
 
@@ -1434,14 +1495,14 @@ func (s *server) RemoveSnapshot(_ context.Context, req *rpcpb.RemoveSnapshotRequ
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.log.Info("RemoveSnapshot", zap.String("snapshot-name", req.SnapshotName))
+	s.logger.Info("RemoveSnapshot", log.String("snapshot-name", req.SnapshotName))
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
 	}
 
 	if err := s.network.nw.RemoveSnapshot(req.SnapshotName); err != nil {
-		s.log.Warn("snapshot remove failed to complete", zap.Error(err))
+		s.logger.Warn("snapshot remove failed to complete", log.Err(err))
 		return nil, err
 	}
 	return &rpcpb.RemoveSnapshotResponse{}, nil
@@ -1451,7 +1512,7 @@ func (s *server) GetSnapshotNames(context.Context, *rpcpb.GetSnapshotNamesReques
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	s.log.Info("GetSnapshotNames")
+	s.logger.Info("GetSnapshotNames")
 
 	if s.network == nil {
 		return nil, ErrNotBootstrapped
@@ -1561,7 +1622,7 @@ func getRemoveChainValidatorSpec(
 }
 
 func getNetworkChainSpec(
-	log luxlog.Logger,
+	logger log.Logger,
 	spec *rpcpb.BlockchainSpec,
 	isNewEmptyNetwork bool,
 	pluginDir string,
@@ -1571,10 +1632,10 @@ func getNetworkChainSpec(
 	}
 
 	vmName := spec.VmName
-	log.Info("checking custom chain's VM ID before installation", zap.String("id", vmName))
+	logger.Info("checking custom chain's VM ID before installation", log.String("id", vmName))
 	vmID, err := utils.VMID(vmName)
 	if err != nil {
-		log.Warn("failed to convert VM name to VM ID", zap.String("vm-name", vmName), zap.Error(err))
+		logger.Warn("failed to convert VM name to VM ID", log.String("vm-name", vmName), log.Err(err))
 		return network.ChainSpec{}, ErrInvalidVMName
 	}
 

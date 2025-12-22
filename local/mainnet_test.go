@@ -14,7 +14,7 @@ import (
 
 	"github.com/luxfi/genesis/configs"
 	"github.com/luxfi/netrunner/local"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
 	"github.com/stretchr/testify/require"
 )
@@ -108,7 +108,7 @@ func TestMainnetFiveNodeNetwork(t *testing.T) {
 	}
 
 	// Create logger
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
+	logFactory := log.NewFactoryWithConfig(log.Config{
 		DisplayLevel: level.Info,
 		LogLevel:     level.Debug,
 	})
@@ -155,7 +155,7 @@ func TestMainnetConsensusValidation(t *testing.T) {
 	}
 
 	// Create logger
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
+	logFactory := log.NewFactoryWithConfig(log.Config{
 		DisplayLevel: level.Info,
 		LogLevel:     level.Debug,
 	})

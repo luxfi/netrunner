@@ -13,9 +13,8 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/staking"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
-	"go.uber.org/zap"
 )
 
 const (
@@ -30,15 +29,15 @@ var goPath = os.ExpandEnv("$GOPATH")
 // Closes [closedOnShutdownChan] amd [signalChan] when done shutting down network.
 // This function should only be called once.
 func shutdownOnSignal(
-	log luxlog.Logger,
+	logger log.Logger,
 	n network.Network,
 	signalChan chan os.Signal,
 	closedOnShutdownChan chan struct{},
 ) {
 	sig := <-signalChan
-	log.Info("got OS signal", zap.Stringer("signal", sig))
+	logger.Info("got OS signal", log.Stringer("signal", sig))
 	if err := n.Stop(context.Background()); err != nil {
-		log.Info("error stopping network", zap.Error(err))
+		logger.Info("error stopping network", log.Err(err))
 	}
 	signal.Reset()
 	close(signalChan)
@@ -56,31 +55,31 @@ func shutdownOnSignal(
 // The network runs until the user provides a SIGINT or SIGTERM.
 func main() {
 	// Create the logger
-	logFactory := luxlog.NewFactoryWithConfig(luxlog.Config{
+	logFactory := log.NewFactoryWithConfig(log.Config{
 		DisplayLevel: level.Info,
 		LogLevel:     level.Debug,
 	})
-	log, err := logFactory.Make("main")
+	logger, err := logFactory.Make("main")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	binaryPath := fmt.Sprintf("%s%s", goPath, "/src/github.com/luxfi/node/build/node")
-	if err := run(log, binaryPath); err != nil {
-		log.Fatal("fatal error", zap.Error(err))
+	if err := run(logger, binaryPath); err != nil {
+		logger.Fatal("fatal error", log.Err(err))
 		os.Exit(1)
 	}
 }
 
-func run(log luxlog.Logger, binaryPath string) error {
+func run(logger log.Logger, binaryPath string) error {
 	// Create the network
-	nw, err := local.NewDefaultNetwork(log, binaryPath, true)
+	nw, err := local.NewDefaultNetwork(logger, binaryPath, true)
 	if err != nil {
 		return err
 	}
 	defer func() { // Stop the network when this function returns
 		if err := nw.Stop(context.Background()); err != nil {
-			log.Info("error stopping network", zap.Error(err))
+			logger.Info("error stopping network", log.Err(err))
 		}
 	}()
 
@@ -90,13 +89,13 @@ func run(log luxlog.Logger, binaryPath string) error {
 	signal.Notify(signalsChan, syscall.SIGTERM)
 	closedOnShutdownCh := make(chan struct{})
 	go func() {
-		shutdownOnSignal(log, nw, signalsChan, closedOnShutdownCh)
+		shutdownOnSignal(logger, nw, signalsChan, closedOnShutdownCh)
 	}()
 
 	// Wait until the nodes in the network are ready
 	ctx, cancel := context.WithTimeout(context.Background(), healthyTimeout)
 	defer cancel()
-	log.Info("waiting for all nodes to report healthy...")
+	logger.Info("waiting for all nodes to report healthy...")
 	if err := nw.Healthy(ctx); err != nil {
 		return err
 	}
@@ -106,7 +105,7 @@ func run(log luxlog.Logger, binaryPath string) error {
 	if err != nil {
 		return err
 	}
-	log.Info("current network's nodes", zap.Strings("nodes", nodeNames))
+	logger.Info("current network's nodes", log.Strings("nodes", nodeNames))
 
 	// Get one node
 	node1, err := nw.GetNode(nodeNames[0])
@@ -119,7 +118,7 @@ func run(log luxlog.Logger, binaryPath string) error {
 	if err != nil {
 		return err
 	}
-	log.Info("one node's ID is", zap.Stringer("nodeID", node1ID))
+	logger.Info("one node's ID is", log.Stringer("nodeID", node1ID))
 
 	// Add a new node with generated cert/key/nodeid
 	stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
@@ -134,7 +133,7 @@ func run(log luxlog.Logger, binaryPath string) error {
 		// The flags below would override the config in this node's config file,
 		// if it had one.
 		Flags: map[string]interface{}{
-			config.LogLevelKey: luxlog.Debug,
+			config.LogLevelKey: log.Debug,
 			config.HTTPHostKey: "0.0.0.0",
 		},
 	}
@@ -144,7 +143,7 @@ func run(log luxlog.Logger, binaryPath string) error {
 
 	// Remove one node
 	nodeToRemove := nodeNames[3]
-	log.Info("removing node", zap.String("name", nodeToRemove))
+	logger.Info("removing node", log.String("name", nodeToRemove))
 	removeNodeCtx, removeNodeCtxCancel := context.WithTimeout(context.Background(), removeNodeTimeout)
 	defer removeNodeCtxCancel()
 	if err := nw.RemoveNode(removeNodeCtx, nodeToRemove); err != nil {
@@ -154,7 +153,7 @@ func run(log luxlog.Logger, binaryPath string) error {
 	// Wait until the nodes in the updated network are ready
 	ctx, cancel = context.WithTimeout(context.Background(), healthyTimeout)
 	defer cancel()
-	log.Info("waiting for updated network to report healthy...")
+	logger.Info("waiting for updated network to report healthy...")
 	if err := nw.Healthy(ctx); err != nil {
 		return err
 	}
@@ -165,8 +164,8 @@ func run(log luxlog.Logger, binaryPath string) error {
 		return err
 	}
 	// Will have the new node but not the removed one
-	log.Info("updated network's nodes", zap.Strings("nodes", nodeNames))
-	log.Info("Network will run until you CTRL + C to exit...")
+	logger.Info("updated network's nodes", log.Strings("nodes", nodeNames))
+	logger.Info("Network will run until you CTRL + C to exit...")
 	// Wait until done shutting down network after SIGINT/SIGTERM
 	<-closedOnShutdownCh
 	return nil

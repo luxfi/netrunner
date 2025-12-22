@@ -4,14 +4,14 @@
 package commands
 
 import (
+	"github.com/luxfi/log"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // NewLogsCmd creates the logs command
-func NewLogsCmd(logger *zap.Logger) *cobra.Command {
+func NewLogsCmd(logger log.Logger) *cobra.Command {
 	var (
 		follow bool
 		tail   int

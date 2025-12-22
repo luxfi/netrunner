@@ -4,17 +4,17 @@
 package commands
 
 import (
+	"github.com/luxfi/log"
 	"context"
 	"fmt"
 	"time"
 
 	"github.com/luxfi/netrunner/engines"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // NewTestCmd creates the test command
-func NewTestCmd(logger *zap.Logger) *cobra.Command {
+func NewTestCmd(logger log.Logger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Run integration tests",
@@ -30,7 +30,7 @@ func NewTestCmd(logger *zap.Logger) *cobra.Command {
 	return cmd
 }
 
-func newTestAllCmd(logger *zap.Logger) *cobra.Command {
+func newTestAllCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "all",
 		Short: "Test all engine types",
@@ -86,7 +86,7 @@ func newTestAllCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newTestEngineCmd(logger *zap.Logger) *cobra.Command {
+func newTestEngineCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "engine [type]",
 		Short: "Test a specific engine type",
@@ -108,7 +108,7 @@ func newTestEngineCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newTestStackCmd(logger *zap.Logger) *cobra.Command {
+func newTestStackCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stack",
 		Short: "Test multi-engine stack deployment",
@@ -142,7 +142,7 @@ func newTestStackCmd(logger *zap.Logger) *cobra.Command {
 }
 
 // testEngine tests a single engine type
-func testEngine(ctx context.Context, logger *zap.Logger, engineType string) error {
+func testEngine(ctx context.Context, logger log.Logger, engineType string) error {
 	// Create test configuration
 	config := &engines.NodeConfig{
 		NetworkID:   99999,
@@ -188,7 +188,7 @@ func testEngine(ctx context.Context, logger *zap.Logger, engineType string) erro
 	// Defer cleanup
 	defer func() {
 		if err := engine.Stop(context.Background()); err != nil {
-			logger.Error("Failed to stop test engine", zap.Error(err))
+			logger.Error("Failed to stop test engine", log.Err(err))
 		}
 	}()
 	
@@ -223,13 +223,13 @@ func testEngine(ctx context.Context, logger *zap.Logger, engineType string) erro
 }
 
 // testSimpleStack tests a basic two-engine stack
-func testSimpleStack(ctx context.Context, logger *zap.Logger) error {
+func testSimpleStack(ctx context.Context, logger log.Logger) error {
 	// TODO: Implement simple stack test
 	return nil
 }
 
 // testDependencyStack tests dependency ordering
-func testDependencyStack(ctx context.Context, logger *zap.Logger) error {
+func testDependencyStack(ctx context.Context, logger log.Logger) error {
 	// TODO: Implement dependency stack test
 	return nil
 }

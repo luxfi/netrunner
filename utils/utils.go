@@ -12,7 +12,7 @@ import (
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/staking"
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 )
 
 const (
@@ -98,7 +98,7 @@ func MkDirWithTimestamp(dirPrefix string) (string, error) {
 }
 
 func VerifyChainHasCorrectParticipants(
-	log luxlog.Logger,
+	logger log.Logger,
 	chainParticipants []string,
 	cluster *rpcb.ClusterInfo,
 	chainID string,
@@ -117,14 +117,14 @@ func VerifyChainHasCorrectParticipants(
 				}
 			}
 			if !nodeIsInList {
-				ux.Print(log, "%s", luxlog.Red.Wrap(fmt.Sprintf("VerifyChainHasCorrectParticipants: %#v", cluster)))
-				ux.Print(log, "%s", luxlog.Red.Wrap(fmt.Sprintf("VerifyChainHasCorrectParticipants: node not in list chain %q node %q %v %v", chainID, node, chainParticipants, participatingNodeNames)))
+				ux.Print(logger, "%s", log.Red.Wrap(fmt.Sprintf("VerifyChainHasCorrectParticipants: %#v", cluster)))
+				ux.Print(logger, "%s", log.Red.Wrap(fmt.Sprintf("VerifyChainHasCorrectParticipants: node not in list chain %q node %q %v %v", chainID, node, chainParticipants, participatingNodeNames)))
 				return false
 			}
 		}
 		return true
 	} else {
-		ux.Print(log, "%s", luxlog.Red.Wrap("VerifyChainHasCorrectParticipants: cluster is nil"))
+		ux.Print(logger, "%s", log.Red.Wrap("VerifyChainHasCorrectParticipants: cluster is nil"))
 	}
 	return false
 }

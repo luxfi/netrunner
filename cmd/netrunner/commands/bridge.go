@@ -4,14 +4,14 @@
 package commands
 
 import (
+	"github.com/luxfi/log"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // NewBridgeCmd creates the bridge command
-func NewBridgeCmd(logger *zap.Logger) *cobra.Command {
+func NewBridgeCmd(logger log.Logger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bridge",
 		Short: "Manage cross-chain bridges",
@@ -26,7 +26,7 @@ func NewBridgeCmd(logger *zap.Logger) *cobra.Command {
 	return cmd
 }
 
-func newBridgeCreateCmd(logger *zap.Logger) *cobra.Command {
+func newBridgeCreateCmd(logger log.Logger) *cobra.Command {
 	var (
 		bridgeType string
 		source     string
@@ -47,7 +47,7 @@ func newBridgeCreateCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newBridgeStatusCmd(logger *zap.Logger) *cobra.Command {
+func newBridgeStatusCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status [bridge-id]",
 		Short: "Get bridge status",
@@ -65,7 +65,7 @@ func newBridgeStatusCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newBridgeStopCmd(logger *zap.Logger) *cobra.Command {
+func newBridgeStopCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop [bridge-id]",
 		Short: "Stop a bridge",

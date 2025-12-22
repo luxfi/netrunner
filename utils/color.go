@@ -6,24 +6,24 @@ import (
 	"io"
 	"sync"
 
-	luxlog "github.com/luxfi/log"
+	"github.com/luxfi/log"
 )
 
-var supportedColors = []luxlog.Color{
-	luxlog.Cyan,
-	luxlog.LightBlue,
-	luxlog.LightGray,
-	luxlog.LightGreen,
-	luxlog.LightPurple,
-	luxlog.LightCyan,
-	luxlog.Purple,
-	luxlog.Yellow,
+var supportedColors = []log.Color{
+	log.Cyan,
+	log.LightBlue,
+	log.LightGray,
+	log.LightGreen,
+	log.LightPurple,
+	log.LightCyan,
+	log.Purple,
+	log.Yellow,
 }
 
 // ColorPicker allows to assign a new color
 type ColorPicker interface {
 	// get the next color
-	NextColor() luxlog.Color
+	NextColor() log.Color
 }
 
 // colorPicker implements ColorPicker
@@ -39,7 +39,7 @@ func NewColorPicker() *colorPicker {
 
 // NextColor for a client. If all supportedColors have been assigned,
 // it starts over with the first color.
-func (c *colorPicker) NextColor() luxlog.Color {
+func (c *colorPicker) NextColor() log.Color {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -51,7 +51,7 @@ func (c *colorPicker) NextColor() luxlog.Color {
 // ColorAndPrepend reads each line from [reader], prepends it
 // with [prependText] and colors it with [color], and then prints the
 // prepended/colored line to [writer].
-func ColorAndPrepend(reader io.Reader, writer io.Writer, prependText string, color luxlog.Color) {
+func ColorAndPrepend(reader io.Reader, writer io.Writer, prependText string, color log.Color) {
 	scanner := bufio.NewScanner(reader)
 	go func(scanner *bufio.Scanner) {
 		// we should not need any go routine control here:

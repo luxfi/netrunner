@@ -19,12 +19,13 @@ import (
 	"sync"
 	"time"
 
+	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/crypto/bls"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
-	luxlog "github.com/luxfi/log"
-	"github.com/luxfi/math/set"
 	"github.com/luxfi/keys"
+	"github.com/luxfi/log"
+	"github.com/luxfi/math/set"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
@@ -37,7 +38,6 @@ import (
 	"github.com/luxfi/node/utils/beacon"
 	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/node/utils/wrappers"
-	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -84,7 +84,7 @@ var (
 // network keeps information uses for network management, and accessing all the nodes
 type localNetwork struct {
 	lock sync.RWMutex
-	log  luxlog.Logger
+	logger log.Logger
 	// This network's ID.
 	networkID uint32
 	// This network's genesis file.
@@ -303,7 +303,7 @@ func init() {
 // If len([dir]) == 0, files will be written underneath a new temporary directory.
 // Snapshots are saved to snapshotsDir, defaults to defaultSnapshotsDir if not given
 func NewNetwork(
-	log luxlog.Logger,
+	log log.Logger,
 	networkConfig network.Config,
 	rootDir string,
 	snapshotsDir string,
@@ -314,7 +314,7 @@ func NewNetwork(
 		api.NewAPIClient,
 		&nodeProcessCreator{
 			colorPicker: utils.NewColorPicker(),
-			log:         log,
+			logger:      log,
 			stdout:      os.Stdout,
 			stderr:      os.Stderr,
 		},
@@ -332,7 +332,7 @@ func NewNetwork(
 // [newAPIClientF] is used to create new API clients.
 // [nodeProcessCreator] is used to launch new node processes.
 func newNetwork(
-	log luxlog.Logger,
+	logger log.Logger,
 	newAPIClientF api.NewAPIClientF,
 	nodeProcessCreator NodeProcessCreator,
 	rootDir string,
@@ -365,7 +365,7 @@ func newNetwork(
 		nextNodeSuffix:           1,
 		nodes:                    map[string]*localNode{},
 		onStopCh:                 make(chan struct{}),
-		log:                      log,
+		logger: logger,
 		bootstraps:               beacon.NewSet(),
 		newAPIClientF:            newAPIClientF,
 		nodeProcessCreator:       nodeProcessCreator,
@@ -391,7 +391,7 @@ func newNetwork(
 // * NodeID-GWPcbFJZFfZreETSoWjPimr846mXEKCtu
 // * NodeID-P7oB2McjBGgW2NXXWVYjV8JEDFoW9xDE5
 func NewDefaultNetwork(
-	log luxlog.Logger,
+	log log.Logger,
 	binaryPath string,
 	reassignPortsIfUsed bool,
 ) (network.Network, error) {
@@ -529,7 +529,7 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 	if err := networkConfig.Validate(); err != nil {
 		return fmt.Errorf("config failed validation: %w", err)
 	}
-	ln.log.Info("creating network", zap.Int("node-num", len(networkConfig.NodeConfigs)))
+	ln.logger.Info("creating network", log.Int("node-num", len(networkConfig.NodeConfigs)))
 
 	ln.genesis = []byte(networkConfig.Genesis)
 
@@ -572,7 +572,7 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 		if _, err := ln.addNode(nodeConfig); err != nil {
 			if err := ln.stop(ctx); err != nil {
 				// Clean up nodes already created
-				ln.log.Debug("error stopping network", zap.Error(err))
+				ln.logger.Debug("error stopping network", log.Err(err))
 			}
 			return fmt.Errorf("error adding node %s: %w", nodeConfig.Name, err)
 		}
@@ -635,10 +635,10 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 	// it shouldn't happen that just one is empty, most probably both,
 	// but in any case if just one is empty it's unusable so we just assign a new one.
 	if nodeConfig.StakingCert == "" || nodeConfig.StakingKey == "" {
-		ln.log.Warn("staking cert/key empty, generating new ones",
-			zap.String("node", nodeConfig.Name),
-			zap.Int("certLen", len(nodeConfig.StakingCert)),
-			zap.Int("keyLen", len(nodeConfig.StakingKey)))
+		ln.logger.Warn("staking cert/key empty, generating new ones",
+			log.String("node", nodeConfig.Name),
+			log.Int("certLen", len(nodeConfig.StakingCert)),
+			log.Int("keyLen", len(nodeConfig.StakingKey)))
 		stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
 		if err != nil {
 			return nil, fmt.Errorf("couldn't generate staking Cert/Key: %w", err)
@@ -646,10 +646,10 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		nodeConfig.StakingCert = string(stakingCert)
 		nodeConfig.StakingKey = string(stakingKey)
 	} else {
-		ln.log.Info("using provided staking cert/key",
-			zap.String("node", nodeConfig.Name),
-			zap.Int("certLen", len(nodeConfig.StakingCert)),
-			zap.Int("keyLen", len(nodeConfig.StakingKey)))
+		ln.logger.Info("using provided staking cert/key",
+			log.String("node", nodeConfig.Name),
+			log.Int("certLen", len(nodeConfig.StakingCert)),
+			log.Int("keyLen", len(nodeConfig.StakingKey)))
 	}
 	if nodeConfig.StakingSigningKey == "" {
 		secretKey, err := bls.NewSecretKey()
@@ -667,7 +667,7 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 
 	isPausedNode := ln.isPausedNode(&nodeConfig)
 
-	nodeDir, err := makeNodeDir(ln.log, ln.rootDir, nodeConfig.Name)
+	nodeDir, err := makeNodeDir(ln.logger, ln.rootDir, nodeConfig.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -706,21 +706,21 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		)
 	}
 
-	ln.log.Info(
+	ln.logger.Info(
 		"adding node",
-		zap.String("node-name", nodeConfig.Name),
-		zap.String("node-dir", nodeData.dataDir),
-		zap.String("log-dir", nodeData.logsDir),
-		zap.String("db-dir", nodeData.dbDir),
-		zap.Uint16("p2p-port", nodeData.p2pPort),
-		zap.Uint16("api-port", nodeData.apiPort),
+		log.String("node-name", nodeConfig.Name),
+		log.String("node-dir", nodeData.dataDir),
+		log.String("log-dir", nodeData.logsDir),
+		log.String("db-dir", nodeData.dbDir),
+		log.Uint16("p2p-port", nodeData.p2pPort),
+		log.Uint16("api-port", nodeData.apiPort),
 	)
 
-	ln.log.Debug(
+	ln.logger.Debug(
 		"starting node",
-		zap.String("name", nodeConfig.Name),
-		zap.String("binaryPath", nodeConfig.BinaryPath),
-		zap.Strings("args", nodeData.args),
+		log.String("name", nodeConfig.Name),
+		log.String("binaryPath", nodeConfig.BinaryPath),
+		log.Strings("args", nodeData.args),
 	)
 
 	// Create a wrapper for this node so we can reference it later
@@ -763,7 +763,7 @@ func (ln *localNetwork) Healthy(ctx context.Context) error {
 }
 
 func (ln *localNetwork) healthy(ctx context.Context) error {
-	ln.log.Info("checking local network healthiness", zap.Int("num-of-nodes", len(ln.nodes)))
+	ln.logger.Info("checking local network healthiness", log.Int("num-of-nodes", len(ln.nodes)))
 
 	// Return unhealthy if the network is stopped
 	if ln.stopCalled() {
@@ -807,7 +807,7 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 				}
 				health, err := healthClient.Health(ctx, nil)
 				if err == nil && health.Healthy {
-					ln.log.Debug("node became healthy", zap.String("name", nodeName))
+					ln.logger.Debug("node became healthy", log.String("name", nodeName))
 					return nil
 				}
 				select {
@@ -887,12 +887,12 @@ func (ln *localNetwork) stop(ctx context.Context) error {
 	for nodeName := range ln.nodes {
 		stopCtx, stopCtxCancel := context.WithTimeout(ctx, stopTimeout)
 		if err := ln.removeNode(stopCtx, nodeName); err != nil {
-			ln.log.Error("error stopping node", zap.String("name", nodeName), zap.Error(err))
+			ln.logger.Error("error stopping node", log.String("name", nodeName), log.Err(err))
 			errs.Add(err)
 		}
 		stopCtxCancel()
 	}
-	ln.log.Info("done stopping network")
+	ln.logger.Info("done stopping network")
 	return errs.Err
 }
 
@@ -909,7 +909,7 @@ func (ln *localNetwork) RemoveNode(ctx context.Context, nodeName string) error {
 
 // Assumes [ln.lock] is held.
 func (ln *localNetwork) removeNode(ctx context.Context, nodeName string) error {
-	ln.log.Debug("removing node", zap.String("name", nodeName))
+	ln.logger.Debug("removing node", log.String("name", nodeName))
 	node, ok := ln.nodes[nodeName]
 	if !ok {
 		return fmt.Errorf("node %q not found", nodeName)
@@ -951,7 +951,7 @@ func (ln *localNetwork) PauseNode(ctx context.Context, nodeName string) error {
 
 // Assumes [ln.lock] is held.
 func (ln *localNetwork) pauseNode(ctx context.Context, nodeName string) error {
-	ln.log.Debug("pausing node", zap.String("name", nodeName))
+	ln.logger.Debug("pausing node", log.String("name", nodeName))
 	node, ok := ln.nodes[nodeName]
 	if !ok {
 		return fmt.Errorf("node %q not found", nodeName)
@@ -1208,8 +1208,8 @@ func (ln *localNetwork) buildArgs(
 		return buildArgsReturn{}, err
 	}
 
-	// pluginDir from all configs for node
-	pluginDir, err := getConfigEntry(nodeConfig.Flags, configFile, config.PluginDirKey, "")
+	// pluginDir from config, default from luxconfig
+	pluginDir, err := getConfigEntry(nodeConfig.Flags, configFile, config.PluginDirKey, luxconfig.ResolvePluginDir())
 	if err != nil {
 		return buildArgsReturn{}, err
 	}
@@ -1245,6 +1245,7 @@ func (ln *localNetwork) buildArgs(
 		config.DataDirKey:      dataDir,
 		config.DBPathKey:       dbDir,
 		config.LogsDirKey:      logsDir,
+		config.PluginDirKey:    pluginDir, // Always pass plugin dir for consistency
 		config.HTTPPortKey:     fmt.Sprintf("%d", apiPort),
 		config.StakingPortKey:  fmt.Sprintf("%d", p2pPort),
 		config.BootstrapIPsKey: ln.bootstraps.IPsArg(),
@@ -1271,7 +1272,7 @@ func (ln *localNetwork) buildArgs(
 	// Note these will overwrite existing flags if the same flag is given twice.
 	for flagName, flagVal := range nodeConfig.Flags {
 		if _, ok := warnFlags[flagName]; ok {
-			ln.log.Warn("A provided flag can create conflicts with the runner. The suggestion is to remove this flag", zap.String("flag-name", flagName))
+			ln.logger.Warn("A provided flag can create conflicts with the runner. The suggestion is to remove this flag", log.String("flag-name", flagName))
 		}
 		if portFlags.Contains(flagName) {
 			continue

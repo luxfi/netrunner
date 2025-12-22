@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"github.com/luxfi/log"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,11 +13,10 @@ import (
 
 	"github.com/luxfi/netrunner/orchestrator"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // NewStackCmd creates the stack management command
-func NewStackCmd(logger *zap.Logger) *cobra.Command {
+func NewStackCmd(logger log.Logger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stack",
 		Short: "Manage multi-engine stacks",
@@ -34,7 +34,7 @@ func NewStackCmd(logger *zap.Logger) *cobra.Command {
 	return cmd
 }
 
-func newStackDeployCmd(logger *zap.Logger) *cobra.Command {
+func newStackDeployCmd(logger log.Logger) *cobra.Command {
 	var (
 		manifestPath string
 		wait         bool
@@ -64,9 +64,9 @@ func newStackDeployCmd(logger *zap.Logger) *cobra.Command {
 			
 			ctx := cmd.Context()
 			logger.Info("Deploying stack", 
-				zap.String("name", stackName),
-				zap.String("manifest", manifestPath),
-				zap.Int("engines", len(manifest.Engines)))
+				log.String("name", stackName),
+				log.String("manifest", manifestPath),
+				log.Int("engines", len(manifest.Engines)))
 			
 			fmt.Printf("🚀 Deploying stack '%s' with %d engines...\n", stackName, len(manifest.Engines))
 			
@@ -158,18 +158,18 @@ func newStackDeployCmd(logger *zap.Logger) *cobra.Command {
 			// Save stack info
 			stackDir := filepath.Join(os.Getenv("HOME"), ".netrunner", "stacks", stackName)
 			if err := os.MkdirAll(stackDir, 0755); err != nil {
-				logger.Warn("Failed to create stack directory", zap.Error(err))
+				logger.Warn("Failed to create stack directory", log.Err(err))
 			} else {
 				// Save manifest copy
 				manifestCopy := filepath.Join(stackDir, "manifest.yaml")
 				if err := manifest.Save(manifestCopy); err != nil {
-					logger.Warn("Failed to save manifest copy", zap.Error(err))
+					logger.Warn("Failed to save manifest copy", log.Err(err))
 				}
 				
 				// Save host state
 				stateFile := filepath.Join(stackDir, "state.json")
 				if err := host.SaveState(stateFile); err != nil {
-					logger.Warn("Failed to save host state", zap.Error(err))
+					logger.Warn("Failed to save host state", log.Err(err))
 				}
 			}
 			
@@ -185,7 +185,7 @@ func newStackDeployCmd(logger *zap.Logger) *cobra.Command {
 	return cmd
 }
 
-func newStackDestroyCmd(logger *zap.Logger) *cobra.Command {
+func newStackDestroyCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "destroy [name]",
 		Short: "Destroy a deployed stack",
@@ -212,7 +212,7 @@ func newStackDestroyCmd(logger *zap.Logger) *cobra.Command {
 			
 			// Clean up stack directory
 			if err := os.RemoveAll(stackDir); err != nil {
-				logger.Warn("Failed to remove stack directory", zap.Error(err))
+				logger.Warn("Failed to remove stack directory", log.Err(err))
 			}
 			
 			fmt.Printf("✅ Stack '%s' destroyed\n", stackName)
@@ -221,7 +221,7 @@ func newStackDestroyCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newStackStatusCmd(logger *zap.Logger) *cobra.Command {
+func newStackStatusCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status [name]",
 		Short: "Get status of a deployed stack",
@@ -282,7 +282,7 @@ func newStackStatusCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newStackListCmd(logger *zap.Logger) *cobra.Command {
+func newStackListCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List all deployed stacks",
@@ -337,7 +337,7 @@ func newStackListCmd(logger *zap.Logger) *cobra.Command {
 	}
 }
 
-func newStackValidateCmd(logger *zap.Logger) *cobra.Command {
+func newStackValidateCmd(logger log.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate [manifest]",
 		Short: "Validate a stack manifest",
