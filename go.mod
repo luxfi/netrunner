@@ -16,11 +16,11 @@ require (
 	github.com/luxfi/genesis v1.5.10
 	github.com/luxfi/geth v1.16.60
 	github.com/luxfi/ids v1.2.5
-	github.com/luxfi/keys v1.0.2
+	github.com/luxfi/keys v1.0.3
 	github.com/luxfi/log v1.1.26
 	github.com/luxfi/math v1.1.1
 	github.com/luxfi/metric v1.4.8
-	github.com/luxfi/node v1.22.44
+	github.com/luxfi/node v1.22.45
 	github.com/luxfi/units v1.0.0
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
@@ -157,3 +157,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
+
+replace github.com/luxfi/genesis => /Users/z/work/lux/genesis
