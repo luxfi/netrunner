@@ -394,41 +394,56 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 		initialStakers[i] = staker
 	}
 
-	// Update genesis with initial stakers
+	// Update genesis with initial stakers (our validator NodeIDs)
 	genesis["initialStakers"] = initialStakers
 
-	// Generate P-Chain allocations from the loaded keys
-	allocBuilder := keys.NewAllocationBuilder(networkID, validatorKeys).
-		WithAmount(100 * keys.MegaLux).  // 100M LUX per validator
-		WithFeeAccount(0, 10*keys.MegaLux). // First validator gets extra for fees
-		WithImmediateUnlock()
-
-	keyAllocations, err := allocBuilder.Build()
-	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to build allocations: %w", err)
+	// Get original allocations BEFORE adding mnemonic - these are for validator staking
+	originalAllocs, ok := genesis["allocations"].([]interface{})
+	if !ok || len(originalAllocs) < int(numNodes) {
+		return network.Config{}, fmt.Errorf("genesis must have at least %d allocations for validators", numNodes)
 	}
 
-	// Convert P-Chain allocations to genesis format
-	pchainAllocs := make([]interface{}, len(keyAllocations.PChainAllocations))
-	for i, alloc := range keyAllocations.PChainAllocations {
-		unlockSchedule := make([]map[string]interface{}, len(alloc.UnlockSchedule))
-		for j, unlock := range alloc.UnlockSchedule {
-			unlockSchedule[j] = map[string]interface{}{
-				"amount":   unlock.Amount,
-				"locktime": unlock.Locktime,
-			}
+	// Use validator allocation addresses for initialStakedFunds (these will stake)
+	// Important: Do NOT include mnemonic address - those funds should be FREE balance
+	initialStakedFunds := make([]string, numNodes)
+	for i := uint32(0); i < numNodes; i++ {
+		alloc, ok := originalAllocs[i].(map[string]interface{})
+		if !ok {
+			return network.Config{}, fmt.Errorf("invalid allocation format at index %d", i)
 		}
-		pchainAllocs[i] = map[string]interface{}{
-			"ethAddr":        alloc.ETHAddr,
-			"luxAddr":        alloc.LUXAddr,
-			"initialAmount":  alloc.InitialAmount,
-			"unlockSchedule": unlockSchedule,
+		// luxAddr is the P-chain address (P-lux1...)
+		pchainAddr, ok := alloc["luxAddr"].(string)
+		if !ok {
+			return network.Config{}, fmt.Errorf("missing luxAddr in allocation %d", i)
 		}
+		initialStakedFunds[i] = pchainAddr
 	}
-	genesis["allocations"] = pchainAllocs
+	genesis["initialStakedFunds"] = initialStakedFunds
 
-	// Set initial staked funds
-	genesis["initialStakedFunds"] = keyAllocations.InitialStakedFunds
+	// Check for LUX_MNEMONIC and add mnemonic-derived allocation with FREE funds
+	// This enables subnet creation without needing the hardcoded treasury key
+	// IMPORTANT: Add this AFTER setting initialStakedFunds so mnemonic funds are NOT staked
+	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
+		fmt.Printf("🔑 LUX_MNEMONIC is set, adding mnemonic allocation to genesis\n")
+		mnemonicAlloc := map[string]interface{}{
+			"ethAddr": "0x0406d56943a38ad8398a738527f27e2cf01731a8",
+			"luxAddr": "P-lux1qsrd262r5w9dswv2wwzj0un79ncpwvdgkpqzqu",
+			"initialAmount": 0,
+			"unlockSchedule": []interface{}{
+				map[string]interface{}{
+					"amount":   100000000000000, // 100,000 LUX
+					"locktime": 0,
+				},
+			},
+		}
+
+		// Append mnemonic allocation (NOT included in initialStakedFunds, so will be FREE balance)
+		allocs := genesis["allocations"].([]interface{})
+		fmt.Printf("   Adding mnemonic allocation (NOT staked) to %d existing allocations\n", len(allocs))
+		genesis["allocations"] = append(allocs, mnemonicAlloc)
+	} else {
+		fmt.Printf("⚠️  LUX_MNEMONIC not set, skipping mnemonic allocation\n")
+	}
 
 	// Update start time to now
 	now := time.Now().Unix()
@@ -440,6 +455,13 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 		return network.Config{}, fmt.Errorf("failed to serialize updated genesis: %w", err)
 	}
 	netConfig.Genesis = string(updatedGenesis)
+
+	// Debug: write genesis to file for inspection
+	if err := os.WriteFile("/tmp/debug_genesis.json", updatedGenesis, 0644); err != nil {
+		fmt.Printf("Warning: could not write debug genesis: %v\n", err)
+	} else {
+		fmt.Printf("📄 Genesis written to /tmp/debug_genesis.json\n")
+	}
 
 	// Configure node configs with the loaded staking keys
 	netConfig.NodeConfigs = make([]node.Config, numNodes)

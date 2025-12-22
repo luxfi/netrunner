@@ -35,6 +35,7 @@ func init() {
 		server.NewCommand(),
 		ping.NewCommand(),
 		control.NewCommand(),
+		deploySubnetCmd,
 	)
 }
 
