@@ -29,7 +29,7 @@ import (
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/consensus/core"
-	"github.com/luxfi/node/network/router"
+	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
 	"github.com/luxfi/math/set"
@@ -55,8 +55,6 @@ const (
 	// bootstrapping of staking validators in mainnet configuration
 	waitForHealthyTimeout = 10 * time.Minute
 
-	// runDirPrefix is used for timestamped run directories within each network
-	runDirPrefix           = "run"
 	TimeParseLayout        = "2006-01-02 15:04:05"
 	StakingMinimumLeadTime = 25 * time.Second
 )
@@ -76,23 +74,22 @@ var (
 	ErrNoValidatorSpec        = errors.New("no validator spec was provided")
 )
 
-// ensureNetworkRunDir ensures a run directory exists within a network's runs directory.
-// Directory structure: <baseDir>/networks/<networkName>/runs/<runID>/
+// ensureNetworkRunDir ensures a run directory exists for the specified network.
+// Directory structure: <baseDir>/runs/<networkName>/run_<timestamp>/
 // If an existing run with node data exists, it will be reused (for persistence).
 // Otherwise, a new timestamped run directory is created.
-// Returns the full path to the run directory (e.g., ~/.lux/networks/mainnet/runs/run_20251222_102823/)
+// Returns the full path to the run directory (e.g., ~/.lux/runs/mainnet/run_20251222_102823/)
 func ensureNetworkRunDir(baseDir, networkName string) (string, error) {
-	// Create the network-centric path: <baseDir>/networks/<networkName>/runs/
-	networkDir := filepath.Join(baseDir, constants.NetworksDir, networkName)
-	runsDir := filepath.Join(networkDir, constants.RunsDir)
+	// Create flat path: <baseDir>/runs/<networkName>/
+	networkRunsDir := filepath.Join(baseDir, constants.RunsDir, networkName)
 
-	// Ensure the runs directory exists
-	if err := os.MkdirAll(runsDir, os.ModePerm); err != nil {
-		return "", fmt.Errorf("failed to create runs directory %s: %w", runsDir, err)
+	// Ensure the network runs directory exists
+	if err := os.MkdirAll(networkRunsDir, os.ModePerm); err != nil {
+		return "", fmt.Errorf("failed to create network runs directory %s: %w", networkRunsDir, err)
 	}
 
 	// Look for existing run directories with node data
-	entries, err := os.ReadDir(runsDir)
+	entries, err := os.ReadDir(networkRunsDir)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
@@ -104,11 +101,11 @@ func ensureNetworkRunDir(baseDir, networkName string) (string, error) {
 			continue
 		}
 		name := entry.Name()
-		if !strings.HasPrefix(name, runDirPrefix+"_") {
+		if !strings.HasPrefix(name, constants.RunDirPrefix+"_") {
 			continue
 		}
 		// Check if this directory has node subdirectories
-		runPath := filepath.Join(runsDir, name)
+		runPath := filepath.Join(networkRunsDir, name)
 		nodeEntries, _ := os.ReadDir(runPath)
 		hasNodes := false
 		for _, nodeEntry := range nodeEntries {
@@ -131,26 +128,26 @@ func ensureNetworkRunDir(baseDir, networkName string) (string, error) {
 	}
 
 	// No existing run with nodes, create new timestamped run directory
-	return utils.MkDirWithTimestamp(filepath.Join(runsDir, runDirPrefix))
+	return utils.MkDirWithTimestamp(filepath.Join(networkRunsDir, constants.RunDirPrefix))
 }
 
 // getNetworkNameFromRootDir extracts network name from root data dir path.
-// It expects paths like ~/.lux/runs/mainnet or ~/.lux/networks/mainnet.
-// Falls back to "local" if no network name can be determined.
+// It expects paths like ~/.lux/runs/mainnet/run_<timestamp> or ~/.lux/runs/mainnet.
+// Falls back to constants.DefaultNetwork if no network name can be determined.
 func getNetworkNameFromRootDir(rootDir string) string {
 	// Check if path contains known network names
 	base := filepath.Base(rootDir)
 	switch base {
-	case "mainnet", "testnet", "local":
+	case "mainnet", "testnet", "local", "devnet":
 		return base
 	}
-	// Check parent for network type
+	// Check parent for network type (for paths like ~/.lux/runs/mainnet/run_xxx)
 	parent := filepath.Base(filepath.Dir(rootDir))
 	switch parent {
-	case "mainnet", "testnet", "local":
+	case "mainnet", "testnet", "local", "devnet":
 		return parent
 	}
-	return "local" // Default to local network
+	return constants.DefaultNetwork
 }
 
 type Config struct {
@@ -386,31 +383,32 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	)
 
 	// Determine base directory and network name for network-centric structure
-	var baseDir, networkName string
+	var networkName string
 	if len(rootDataDir) == 0 {
 		// Default to ~/.lux for the base
 		homeDir, _ := os.UserHomeDir()
-		baseDir = filepath.Join(homeDir, ".lux")
-		networkName = "local" // Default network name
-	} else {
-		// Extract network name from provided path
-		networkName = getNetworkNameFromRootDir(rootDataDir)
-		baseDir = rootDataDir
-		// If path ends with network name, use parent as base
-		if filepath.Base(baseDir) == networkName {
-			baseDir = filepath.Dir(baseDir)
+		baseDir := filepath.Join(homeDir, ".lux")
+		networkName = constants.DefaultNetwork
+
+		// Ensure base directory exists
+		if err = os.MkdirAll(baseDir, os.ModePerm); err != nil {
+			return nil, err
 		}
-	}
 
-	// Ensure base directory exists
-	if err = os.MkdirAll(baseDir, os.ModePerm); err != nil {
-		return nil, err
-	}
+		// Create/reuse run directory: <baseDir>/runs/<networkName>/run_<timestamp>/
+		rootDataDir, err = ensureNetworkRunDir(baseDir, networkName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// CLI provided a specific rootDataDir - use it directly
+		// Trust the CLI to provide a properly structured path
+		networkName = getNetworkNameFromRootDir(rootDataDir)
 
-	// Create/reuse run directory: <baseDir>/networks/<networkName>/runs/<runID>/
-	rootDataDir, err = ensureNetworkRunDir(baseDir, networkName)
-	if err != nil {
-		return nil, err
+		// Ensure the provided directory exists
+		if err = os.MkdirAll(rootDataDir, os.ModePerm); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(customNodeConfigs) > 0 {
@@ -1264,7 +1262,7 @@ func (s *server) Stop(context.Context, *rpcpb.StopRequest) (*rpcpb.StopResponse,
 	return &rpcpb.StopResponse{ClusterInfo: s.clusterInfo}, nil
 }
 
-var _ router.InboundHandler = &loggingInboundHandler{}
+var _ peer.InboundHandler = &loggingInboundHandler{}
 
 type loggingInboundHandler struct {
 	nodeName string
@@ -1395,31 +1393,32 @@ func (s *server) LoadSnapshot(_ context.Context, req *rpcpb.LoadSnapshotRequest)
 	rootDataDir := req.GetRootDataDir()
 
 	// Determine base directory and network name for network-centric structure
-	var baseDir, networkName string
+	var networkName string
 	if len(rootDataDir) == 0 {
 		// Default to ~/.lux for the base
 		homeDir, _ := os.UserHomeDir()
-		baseDir = filepath.Join(homeDir, ".lux")
-		networkName = "local" // Default network name
-	} else {
-		// Extract network name from provided path
-		networkName = getNetworkNameFromRootDir(rootDataDir)
-		baseDir = rootDataDir
-		// If path ends with network name, use parent as base
-		if filepath.Base(baseDir) == networkName {
-			baseDir = filepath.Dir(baseDir)
+		baseDir := filepath.Join(homeDir, ".lux")
+		networkName = constants.DefaultNetwork
+
+		// Ensure base directory exists
+		if err = os.MkdirAll(baseDir, os.ModePerm); err != nil {
+			return nil, err
 		}
-	}
 
-	// Ensure base directory exists
-	if err = os.MkdirAll(baseDir, os.ModePerm); err != nil {
-		return nil, err
-	}
+		// Create/reuse run directory: <baseDir>/runs/<networkName>/run_<timestamp>/
+		rootDataDir, err = ensureNetworkRunDir(baseDir, networkName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// CLI provided a specific rootDataDir - use it directly
+		// Trust the CLI to provide a properly structured path
+		networkName = getNetworkNameFromRootDir(rootDataDir)
 
-	// Create/reuse run directory: <baseDir>/networks/<networkName>/runs/<runID>/
-	rootDataDir, err = ensureNetworkRunDir(baseDir, networkName)
-	if err != nil {
-		return nil, err
+		// Ensure the provided directory exists
+		if err = os.MkdirAll(rootDataDir, os.ModePerm); err != nil {
+			return nil, err
+		}
 	}
 
 	pid := int32(os.Getpid())

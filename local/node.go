@@ -17,7 +17,6 @@ import (
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/network/throttling"
 	"github.com/luxfi/node/network/tracker"
-	"github.com/luxfi/node/network/router"
 	"github.com/luxfi/consensus/validator" // package name is validators
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
@@ -87,7 +86,7 @@ func defaultGetConnFunc(ctx context.Context, node node.Node) (net.Conn, error) {
 }
 
 // AttachPeer: see Network
-func (node *localNode) AttachPeer(ctx context.Context, router router.InboundHandler) (peer.Peer, error) {
+func (node *localNode) AttachPeer(ctx context.Context, router peer.InboundHandler) (peer.Peer, error) {
 	tlsCert, err := staking.NewTLSCert()
 	if err != nil {
 		return nil, err

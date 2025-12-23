@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
