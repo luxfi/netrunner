@@ -25,7 +25,7 @@ import (
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/network/router"
+	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/log"
 	"github.com/luxfi/node/utils/rpc"
 	"github.com/stretchr/testify/mock"
@@ -44,7 +44,7 @@ var (
 	_ NodeProcessCreator    = &localTestFlagCheckProcessCreator{}
 	_ api.NewAPIClientF     = newMockAPISuccessful
 	_ api.NewAPIClientF     = newMockAPIUnhealthy
-	_ router.InboundHandler = &noOpInboundHandler{}
+	_ peer.InboundHandler = &noOpInboundHandler{}
 )
 
 type localTestSuccessfulNodeProcessCreator struct{}
