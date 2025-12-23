@@ -183,7 +183,9 @@ func (lc *localNetwork) createConfig() error {
 		if useMnemonic {
 			cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
 		} else {
-			cfg, err = local.NewTestnetConfig(lc.options.execPath, lc.options.numNodes)
+			// Use pre-existing keys from ~/.lux/keys if available
+			fmt.Printf("📦 Using NewTestnetConfigWithKeys (pre-existing keys from ~/.lux/keys)\n")
+			cfg, err = local.NewTestnetConfigWithKeys(lc.options.execPath, "")
 		}
 	default:
 		cfg, err = local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
