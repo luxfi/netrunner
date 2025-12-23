@@ -101,7 +101,7 @@ require (
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/utils v1.1.0 // indirect
 	github.com/luxfi/vm v1.0.1 // indirect
-	github.com/luxfi/warp v1.16.39 // indirect
+	github.com/luxfi/warp v1.18.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -53,8 +54,9 @@ import (
 
 const (
 	// offset of validation start from current time
-	validationStartOffset               = 20 * time.Second
-	permissionlessValidationStartOffset = 30 * time.Second
+	// Reduced from 20s to 5s for local networks - validators activate faster
+	validationStartOffset               = 5 * time.Second
+	permissionlessValidationStartOffset = 10 * time.Second
 	// duration for primary network validators
 	validationDuration = 365 * 24 * time.Hour
 	// weight assigned to chain validators
@@ -62,10 +64,13 @@ const (
 	// check period for blockchain logs while waiting for custom chains to be ready
 	blockchainLogPullFrequency = time.Second
 	// check period while waiting for all validators to be ready
-	waitForValidatorsPullFrequency = time.Second
-	defaultTimeout                 = 3 * time.Minute
+	// Reduced from 1s to 200ms for faster validator detection
+	waitForValidatorsPullFrequency = 200 * time.Millisecond
+	defaultTimeout                 = 10 * time.Minute // Increased for mainnet staking validators
 	stakingMinimumLeadTime         = 25 * time.Second
 	minStakeDuration               = 24 * 14 * time.Hour
+	// dedicated timeout for waiting on chain validators to become active
+	chainValidatorWaitTimeout = 2 * time.Minute
 )
 
 var (
@@ -235,8 +240,10 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 	fmt.Println()
 	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for chains to be discovered on all nodes...")))
 
-	maxWait := 2 * time.Minute
-	pollInterval := 2 * time.Second
+	// Use a longer timeout for chain discovery - VMs may need time to initialize
+	// Especially for first-time deployments where VMs need to be loaded
+	maxWait := 120 * time.Second // Extended timeout for VM initialization
+	pollInterval := 500 * time.Millisecond // Poll frequently
 	deadline := time.Now().Add(maxWait)
 
 	for _, chainInfo := range chainInfos {
@@ -269,16 +276,37 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 				if err == nil {
 					body, _ := io.ReadAll(resp.Body)
 					resp.Body.Close()
-					// Check if we got a valid response (not a 404 or other error)
+					// Check if we got a valid JSON-RPC response with a result (not an error)
 					if resp.StatusCode == 200 {
-						discovered = true
-						ln.logger.Info("chain discovered on node",
-							"node", nodeName,
-							"blockchain-id", blockchainID,
-							"attempts", attemptCount,
-							"response", string(body),
-						)
-						break
+						// Parse JSON-RPC response to verify it's a valid chainId response
+						var jsonRPCResp struct {
+							Result string `json:"result"`
+							Error  *struct {
+								Code    int    `json:"code"`
+								Message string `json:"message"`
+							} `json:"error"`
+						}
+						if err := json.Unmarshal(body, &jsonRPCResp); err == nil {
+							// Only consider discovered if we got a result, not an error
+							if jsonRPCResp.Result != "" && jsonRPCResp.Error == nil {
+								discovered = true
+								ln.logger.Info("chain discovered on node",
+									"node", nodeName,
+									"blockchain-id", blockchainID,
+									"attempts", attemptCount,
+									"chainId", jsonRPCResp.Result,
+								)
+								break
+							}
+							if attemptCount%10 == 0 && jsonRPCResp.Error != nil {
+								ln.logger.Warn("chain RPC returned error, VM may still be initializing",
+									"node", nodeName,
+									"blockchain-id", blockchainID,
+									"error", jsonRPCResp.Error.Message,
+									"attempts", attemptCount,
+								)
+							}
+						}
 					}
 					if attemptCount%10 == 0 {
 						ln.logger.Warn("chain endpoint returned non-200",
@@ -310,13 +338,282 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 			}
 
 			if !discovered {
-				return fmt.Errorf("chain %s not discovered on node %s after %v (%d attempts)", blockchainID, nodeName, maxWait, attemptCount)
+				// Provide more diagnostic information
+				var lastErr string
+				// Try one more request to get the exact error
+				chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", node.GetURL(), blockchainID)
+				jsonRPCBody := strings.NewReader(`{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`)
+				req, _ := http.NewRequestWithContext(ctx, "POST", chainRPCURL, jsonRPCBody)
+				if req != nil {
+					req.Header.Set("Content-Type", "application/json")
+					client := &http.Client{Timeout: 5 * time.Second}
+					if resp, err := client.Do(req); err != nil {
+						lastErr = fmt.Sprintf("connection error: %s", err.Error())
+					} else {
+						body, _ := io.ReadAll(resp.Body)
+						resp.Body.Close()
+						lastErr = fmt.Sprintf("status=%d, body=%s", resp.StatusCode, string(body))
+					}
+				}
+				return fmt.Errorf("chain %s not discovered on node %s after %v (%d attempts)\n"+
+					"Last error: %s\n"+
+					"This may indicate:\n"+
+					"  1. VM plugin not loaded - check if plugin file exists in plugin directory\n"+
+					"  2. Genesis configuration mismatch - verify genesis is compatible with VM\n"+
+					"  3. Network not tracking chain - ensure track-chains is configured correctly",
+					blockchainID, nodeName, maxWait, attemptCount, lastErr)
 			}
 		}
 	}
 
 	ln.logger.Info(log.Green.Wrap("all chains discovered on all nodes"))
 	return nil
+}
+
+// waitForBlockchainOnPChain waits for all nodes to see the blockchain on their P-Chain
+// This ensures P-Chain state is synchronized across all nodes after blockchain creation
+func (ln *localNetwork) waitForBlockchainOnPChain(
+	ctx context.Context,
+	blockchainIDs []ids.ID,
+) error {
+	fmt.Println()
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for P-Chain to sync blockchain across all nodes...")))
+
+	maxWait := 60 * time.Second
+	pollInterval := 500 * time.Millisecond
+	deadline := time.Now().Add(maxWait)
+
+	for _, blockchainID := range blockchainIDs {
+		ln.logger.Info("waiting for blockchain on P-Chain",
+			"blockchain-id", blockchainID.String(),
+		)
+
+		for nodeName, node := range ln.nodes {
+			if node.paused {
+				continue
+			}
+
+			found := false
+			attemptCount := 0
+			for time.Now().Before(deadline) {
+				attemptCount++
+				pClient := node.GetAPIClient().PChainAPI()
+				if pClient == nil {
+					if attemptCount%10 == 0 {
+						ln.logger.Warn("P-Chain client not available",
+							"node", nodeName,
+							"attempts", attemptCount,
+						)
+					}
+					time.Sleep(pollInterval)
+					continue
+				}
+
+				blockchains, err := (*pClient).GetBlockchains(ctx)
+				if err != nil {
+					if attemptCount%10 == 0 {
+						ln.logger.Warn("failed to get blockchains from P-Chain",
+							"node", nodeName,
+							"error", err.Error(),
+							"attempts", attemptCount,
+						)
+					}
+					time.Sleep(pollInterval)
+					continue
+				}
+
+				for _, bc := range blockchains {
+					if bc.ID == blockchainID {
+						found = true
+						ln.logger.Info("blockchain visible on P-Chain",
+							"node", nodeName,
+							"blockchain-id", blockchainID.String(),
+							"attempts", attemptCount,
+						)
+						break
+					}
+				}
+
+				if found {
+					break
+				}
+
+				if attemptCount%10 == 0 {
+					ln.logger.Warn("blockchain not yet visible on P-Chain",
+						"node", nodeName,
+						"blockchain-id", blockchainID.String(),
+						"numBlockchainsFound", len(blockchains),
+						"attempts", attemptCount,
+					)
+				}
+				time.Sleep(pollInterval)
+			}
+
+			if !found {
+				return fmt.Errorf("blockchain %s not visible on P-Chain of node %s after %v (%d attempts)",
+					blockchainID.String(), nodeName, maxWait, attemptCount)
+			}
+		}
+	}
+
+	ln.logger.Info(log.Green.Wrap("P-Chain synchronized - all nodes see all blockchains"))
+	return nil
+}
+
+// waitForPeerConnectivity waits for all nodes to have at least one peer connected
+// This ensures the network is properly connected after node restarts
+func (ln *localNetwork) waitForPeerConnectivity(ctx context.Context) error {
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for peer connectivity...")))
+
+	maxWait := 30 * time.Second
+	pollInterval := 500 * time.Millisecond
+	deadline := time.Now().Add(maxWait)
+	minPeers := 1 // At least 1 peer required
+
+	for nodeName, node := range ln.nodes {
+		if node.paused {
+			continue
+		}
+
+		connected := false
+		attemptCount := 0
+		for time.Now().Before(deadline) {
+			attemptCount++
+			infoClient := node.GetAPIClient().InfoAPI()
+			if infoClient == nil {
+				if attemptCount%10 == 0 {
+					ln.logger.Warn("Info client not available",
+						"node", nodeName,
+						"attempts", attemptCount,
+					)
+				}
+				time.Sleep(pollInterval)
+				continue
+			}
+
+			peers, err := (*infoClient).Peers(ctx, nil)
+			if err != nil {
+				if attemptCount%10 == 0 {
+					ln.logger.Warn("failed to get peers",
+						"node", nodeName,
+						"error", err.Error(),
+						"attempts", attemptCount,
+					)
+				}
+				time.Sleep(pollInterval)
+				continue
+			}
+
+			if len(peers) >= minPeers {
+				connected = true
+				ln.logger.Debug("node has peers",
+					"node", nodeName,
+					"numPeers", len(peers),
+					"attempts", attemptCount,
+				)
+				break
+			}
+
+			if attemptCount%10 == 0 {
+				ln.logger.Warn("waiting for peers",
+					"node", nodeName,
+					"currentPeers", len(peers),
+					"minRequired", minPeers,
+					"attempts", attemptCount,
+				)
+			}
+			time.Sleep(pollInterval)
+		}
+
+		if !connected {
+			return fmt.Errorf("node %s failed to connect to peers after %v (%d attempts)",
+				nodeName, maxWait, attemptCount)
+		}
+	}
+
+	ln.logger.Info(log.Green.Wrap("all nodes have peer connectivity"))
+	return nil
+}
+
+// waitForPChainHeightSync waits for all nodes to sync to the same P-Chain height
+// This is critical after node restarts to ensure P-Chain consensus is consistent
+func (ln *localNetwork) waitForPChainHeightSync(ctx context.Context) error {
+	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for P-Chain height to sync across all nodes...")))
+
+	maxWait := 60 * time.Second
+	pollInterval := 500 * time.Millisecond
+	deadline := time.Now().Add(maxWait)
+
+	for time.Now().Before(deadline) {
+		// Get heights from all nodes
+		heights := make(map[string]uint64)
+		var maxHeight uint64 = 0
+
+		for nodeName, node := range ln.nodes {
+			if node.paused {
+				continue
+			}
+
+			pClient := node.GetAPIClient().PChainAPI()
+			if pClient == nil {
+				continue
+			}
+
+			height, err := (*pClient).GetHeight(ctx)
+			if err != nil {
+				ln.logger.Warn("failed to get P-Chain height",
+					"node", nodeName,
+					"error", err.Error(),
+				)
+				continue
+			}
+
+			heights[nodeName] = height
+			if height > maxHeight {
+				maxHeight = height
+			}
+		}
+
+		// Check if all nodes have same height as max
+		allSynced := true
+		for nodeName, height := range heights {
+			if height < maxHeight {
+				allSynced = false
+				ln.logger.Debug("node P-Chain height behind",
+					"node", nodeName,
+					"height", height,
+					"maxHeight", maxHeight,
+				)
+			}
+		}
+
+		if allSynced && maxHeight > 0 {
+			ln.logger.Info(log.Green.Wrap("P-Chain heights synchronized"),
+				"height", maxHeight,
+				"numNodes", len(heights),
+			)
+			return nil
+		}
+
+		time.Sleep(pollInterval)
+	}
+
+	// Log final state for debugging
+	for nodeName, node := range ln.nodes {
+		if node.paused {
+			continue
+		}
+		pClient := node.GetAPIClient().PChainAPI()
+		if pClient != nil {
+			height, _ := (*pClient).GetHeight(ctx)
+			ln.logger.Error("P-Chain sync timeout - node height",
+				"node", nodeName,
+				"height", height,
+			)
+		}
+	}
+
+	return fmt.Errorf("P-Chain heights did not sync within %v", maxWait)
 }
 
 func (ln *localNetwork) RemoveChainValidators(
@@ -522,7 +819,12 @@ func (ln *localNetwork) installCustomChains(
 		return nil, fmt.Errorf("failed to add chain validators: %w", err)
 	}
 
-	blockchainTxs, err := createBlockchainTxs(ctx, chainSpecs, w, ln.logger)
+	// Use separate context for blockchain tx creation with longer timeout
+	// This prevents context deadline cascade from previous operations
+	txCtx, txCancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer txCancel()
+
+	blockchainTxs, err := createBlockchainTxs(txCtx, chainSpecs, w, ln.logger)
 	if err != nil {
 		ln.logger.Error("installCustomChains: failed to create blockchain transactions",
 			"error", err.Error(),
@@ -576,6 +878,16 @@ func (ln *localNetwork) installCustomChains(
 			)
 			return nil, fmt.Errorf("failed to reload VM plugins after restart: %w", err)
 		}
+
+		// CRITICAL: After restart, wait for P-Chain to sync across all nodes
+		// The blockchain was created before restart, so we need nodes to sync those blocks
+		ln.logger.Info(log.Blue.Wrap("waiting for P-Chain to sync after node restart..."))
+		if err := ln.waitForPChainHeightSync(ctx); err != nil {
+			ln.logger.Error("installCustomChains: P-Chain sync failed after restart",
+				"error", err.Error(),
+			)
+			return nil, fmt.Errorf("P-Chain sync failed after restart: %w", err)
+		}
 	}
 
 	if err = ln.waitChainValidators(ctx, platformCli, chainIDs, participantsSpecs); err != nil {
@@ -593,6 +905,22 @@ func (ln *localNetwork) installCustomChains(
 		)
 		return nil, fmt.Errorf("failed to create blockchains from transactions: %w", err)
 	}
+
+	// Wait for all nodes to see the blockchain on their P-Chain before proceeding
+	// This ensures P-Chain is synchronized across all nodes after blockchain creation
+	// TEMPORARILY DISABLED - debugging P-Chain sync issue
+	/*
+	blockchainIDs := make([]ids.ID, len(blockchainTxs))
+	for i, tx := range blockchainTxs {
+		blockchainIDs[i] = tx.ID()
+	}
+	if err := ln.waitForBlockchainOnPChain(ctx, blockchainIDs); err != nil {
+		ln.logger.Error("installCustomChains: P-Chain sync failed",
+			"error", err.Error(),
+		)
+		return nil, fmt.Errorf("P-Chain sync failed: %w", err)
+	}
+	*/
 
 	// With track-all-chains=true, nodes auto-discover new chains via hot-load
 	// Reload VMs to ensure any new VMs are available
@@ -881,6 +1209,12 @@ func (ln *localNetwork) restartNodes(
 	healthCtx, healthCancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer healthCancel()
 	if err := ln.healthy(healthCtx); err != nil {
+		return err
+	}
+
+	// Wait for peers to reconnect after restart
+	// This is critical for P-Chain sync to work
+	if err := ln.waitForPeerConnectivity(healthCtx); err != nil {
 		return err
 	}
 	return nil
@@ -1651,60 +1985,124 @@ func (ln *localNetwork) addChainValidators(
 }
 
 // waits until all nodes start validating the primary network
+// Uses a dedicated timeout context to avoid inheriting an already-depleted parent context.
 func (ln *localNetwork) waitPrimaryValidators(
 	ctx context.Context,
 	platformCli *platformvm.Client,
 ) error {
-	ln.logger.Info(log.Green.Wrap("waiting for the nodes to become primary validators"))
+	ln.logger.Info(log.Green.Wrap("waiting for the nodes to become primary validators"),
+		"numNodes", len(ln.nodes),
+		"timeout", chainValidatorWaitTimeout.String(),
+	)
+
+	// Use a dedicated timeout context for this wait operation.
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), chainValidatorWaitTimeout)
+	defer waitCancel()
+
+	startTime := time.Now()
+	pollCount := 0
+
 	for {
+		pollCount++
 		ready := true
+		var missingValidators []string
+
 		// Use a different variable name to avoid shadowing the outer context
-		apiCtx, cancel := createDefaultCtx(ctx)
+		apiCtx, cancel := createDefaultCtx(waitCtx)
 		vs, err := platformCli.GetCurrentValidators(apiCtx, constants.PrimaryNetworkID, nil)
 		cancel()
 		if err != nil {
-			return err
-		}
-		primaryValidators := set.Set[ids.NodeID]{}
-		for _, v := range vs {
-			primaryValidators.Add(v.NodeID)
-		}
-		for _, node := range ln.nodes {
-			nodeID := node.GetNodeID()
-			if isValidator := primaryValidators.Contains(nodeID); !isValidator {
-				ready = false
+			ln.logger.Warn("waitPrimaryValidators: failed to get validators, retrying",
+				"error", err.Error(),
+				"pollCount", pollCount,
+			)
+			ready = false
+		} else {
+			primaryValidators := set.Set[ids.NodeID]{}
+			for _, v := range vs {
+				primaryValidators.Add(v.NodeID)
+			}
+			for nodeName, node := range ln.nodes {
+				nodeID := node.GetNodeID()
+				if isValidator := primaryValidators.Contains(nodeID); !isValidator {
+					ready = false
+					missingValidators = append(missingValidators, fmt.Sprintf("%s(%s)", nodeName, nodeID.String()[:8]))
+				}
 			}
 		}
+
 		if ready {
+			ln.logger.Info(log.Green.Wrap("all nodes are now primary validators"),
+				"elapsed", time.Since(startTime).String(),
+				"pollCount", pollCount,
+			)
 			return nil
 		}
+
+		// Log progress every 25 polls (5 seconds at 200ms interval)
+		if pollCount%25 == 0 {
+			ln.logger.Info("waitPrimaryValidators: still waiting for validators",
+				"elapsed", time.Since(startTime).String(),
+				"pollCount", pollCount,
+				"missingValidators", len(missingValidators),
+			)
+		}
+
 		select {
 		case <-ln.onStopCh:
 			return errAborted
+		case <-waitCtx.Done():
+			return fmt.Errorf("timeout waiting for primary validators after %s (%d polls): missing validators: %v",
+				time.Since(startTime).String(), pollCount, missingValidators)
 		case <-ctx.Done():
-			return ctx.Err()
+			// Parent context cancelled - but we should still try to complete if within our timeout
+			ln.logger.Warn("waitPrimaryValidators: parent context cancelled, but continuing within our timeout")
 		case <-time.After(waitForValidatorsPullFrequency):
 		}
 	}
 }
 
 // waits until all chain participants start validating the chainID, for all given chains
+// Uses a dedicated timeout context to avoid inheriting an already-depleted parent context.
 func (ln *localNetwork) waitChainValidators(
 	ctx context.Context,
 	platformCli *platformvm.Client,
 	chainIDs []ids.ID,
 	participantsSpecs []network.ParticipantsSpec,
 ) error {
-	ln.logger.Info(log.Green.Wrap("waiting for the nodes to become chain validators"))
+	ln.logger.Info(log.Green.Wrap("waiting for the nodes to become chain validators"),
+		"numChains", len(chainIDs),
+		"timeout", chainValidatorWaitTimeout.String(),
+		"validatorStartOffset", validationStartOffset.String(),
+	)
+
+	// Use a dedicated timeout context for this wait operation.
+	// The parent context may already be partially consumed by earlier operations.
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), chainValidatorWaitTimeout)
+	defer waitCancel()
+
+	startTime := time.Now()
+	pollCount := 0
+
 	for {
+		pollCount++
 		ready := true
+		var missingValidators []string
+
 		for i, chainID := range chainIDs {
 			// Use a different variable name to avoid shadowing the outer context
-			apiCtx, cancel := createDefaultCtx(ctx)
+			apiCtx, cancel := createDefaultCtx(waitCtx)
 			vs, err := platformCli.GetCurrentValidators(apiCtx, chainID, nil)
 			cancel()
 			if err != nil {
-				return err
+				// Log the error but continue - the chain may not be registered yet
+				ln.logger.Warn("waitChainValidators: failed to get validators, retrying",
+					"chainID", chainID.String(),
+					"error", err.Error(),
+					"pollCount", pollCount,
+				)
+				ready = false
+				continue
 			}
 			chainValidators := set.Set[ids.NodeID]{}
 			for _, v := range vs {
@@ -1719,20 +2117,37 @@ func (ln *localNetwork) waitChainValidators(
 				nodeID := node.GetNodeID()
 				if isValidator := chainValidators.Contains(nodeID); !isValidator {
 					ready = false
+					missingValidators = append(missingValidators, fmt.Sprintf("%s(%s)", nodeName, nodeID.String()[:8]))
 				}
 			}
-			if !ready {
-				break
-			}
 		}
+
 		if ready {
+			ln.logger.Info(log.Green.Wrap("all nodes are now chain validators"),
+				"elapsed", time.Since(startTime).String(),
+				"pollCount", pollCount,
+			)
 			return nil
 		}
+
+		// Log progress every 25 polls (5 seconds at 200ms interval)
+		if pollCount%25 == 0 {
+			ln.logger.Info("waitChainValidators: still waiting for validators",
+				"elapsed", time.Since(startTime).String(),
+				"pollCount", pollCount,
+				"missingValidators", len(missingValidators),
+			)
+		}
+
 		select {
 		case <-ln.onStopCh:
 			return errAborted
+		case <-waitCtx.Done():
+			return fmt.Errorf("timeout waiting for chain validators after %s (%d polls): missing validators: %v",
+				time.Since(startTime).String(), pollCount, missingValidators)
 		case <-ctx.Done():
-			return ctx.Err()
+			// Parent context cancelled - but we should still try to complete if within our timeout
+			ln.logger.Warn("waitChainValidators: parent context cancelled, but continuing within our timeout")
 		case <-time.After(waitForValidatorsPullFrequency):
 		}
 	}

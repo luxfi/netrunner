@@ -11,7 +11,6 @@ import (
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/node/network/router"
 )
 
 // Node represents an Lux node
@@ -36,7 +35,7 @@ type Node interface {
 	// The test peer can be used to send messages to the node it's attached to.
 	// It's left to the caller to maintain a reference to the returned peer.
 	// The caller should call StartClose() on the peer when they're done with it.
-	AttachPeer(ctx context.Context, handler router.InboundHandler) (peer.Peer, error)
+	AttachPeer(ctx context.Context, handler peer.InboundHandler) (peer.Peer, error)
 	// Sends a message  from the attached peer to the node
 	SendOutboundMessage(ctx context.Context, peerID string, content []byte, op uint32) (bool, error)
 	// Return the state of the node process

@@ -10,10 +10,11 @@ const (
 	LogNameTest    = "test"
 	RootDirPrefix  = "network-runner-root-data"
 
-	// Network-centric directory structure constants
-	// Structure: ~/.lux/networks/<networkName>/runs/<runID>/node1/, node2/, ...
-	NetworksDir = "networks" // Top-level networks directory
-	RunsDir     = "runs"     // Runs subdirectory within each network
+	// Network run directory structure (flat, no nesting)
+	// Structure: ~/.lux/runs/<networkName>/run_<timestamp>/node1/, node2/, ...
+	RunsDir       = "runs"       // Top-level runs directory
+	RunDirPrefix  = "run"        // Prefix for timestamped run directories
+	DefaultNetwork = "local"     // Default network name
 
 	// Unified chain config directory (shared across all nodes)
 	// Structure: ~/.lux/chains/<chainName>/genesis.json, config.json, upgrade.json

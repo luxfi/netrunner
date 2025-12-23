@@ -805,9 +805,12 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 				if healthClient == nil {
 					return fmt.Errorf("health client is nil for node %v", nodeName)
 				}
-				health, err := healthClient.Health(ctx, nil)
+				// Use Readiness instead of Health for local testnets
+				// Health fails on local networks due to "no inbound connections"
+				// which is expected behavior for isolated test networks
+				health, err := healthClient.Readiness(ctx, nil)
 				if err == nil && health.Healthy {
-					ln.logger.Debug("node became healthy", log.String("name", nodeName))
+					ln.logger.Debug("node became ready", log.String("name", nodeName))
 					return nil
 				}
 				select {
