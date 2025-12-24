@@ -92,7 +92,7 @@ func (*localTestFlagCheckProcessCreator) GetNodeVersion(_ node.Config) (string, 
 }
 
 // Returns an API client where:
-// * The Health API's Health method always returns healthy
+// * The Health API's Readiness method always returns healthy
 // * The CChainEthAPI's Close method may be called
 // * Only the above 2 methods may be called
 // TODO have this method return an API Client that has all
@@ -100,7 +100,8 @@ func (*localTestFlagCheckProcessCreator) GetNodeVersion(_ node.Config) (string, 
 func newMockAPISuccessful(string, uint16) api.Client {
 	healthReply := &health.APIReply{Healthy: true}
 	healthClient := &healthmocks.Client{}
-	healthClient.On("Health", mock.Anything, mock.Anything).Return(healthReply, nil)
+	// Mock Readiness (used by local network health check)
+	healthClient.On("Readiness", mock.Anything, mock.Anything).Return(healthReply, nil)
 	// ethClient used when removing nodes, to close websocket connection
 	ethClient := &apimocks.EthClient{}
 	ethClient.On("Close").Return()
@@ -110,11 +111,12 @@ func newMockAPISuccessful(string, uint16) api.Client {
 	return client
 }
 
-// Returns an API client where the Health API's Health method always returns unhealthy
+// Returns an API client where the Health API's Readiness method always returns unhealthy
 func newMockAPIUnhealthy(string, uint16) api.Client {
 	healthReply := &health.APIReply{Healthy: false}
 	healthClient := &healthmocks.Client{}
-	healthClient.On("Health", mock.Anything, mock.Anything).Return(healthReply, nil)
+	// Mock Readiness (used by local network health check)
+	healthClient.On("Readiness", mock.Anything, mock.Anything).Return(healthReply, nil)
 	client := &apimocks.Client{}
 	client.On("HealthAPI").Return(healthClient)
 	return client
@@ -1292,13 +1294,14 @@ func TestRemoveBeacon(t *testing.T) {
 }
 
 // Returns an API client where:
-//   - The Health API's Health method always returns an error after the
+//   - The Health API's Readiness method always returns an error after the
 //     given context is cancelled.
 //   - The CChainEthAPI's Close method may be called
 //   - Only the above 2 methods may be called
 func newMockAPIHealthyBlocks(string, uint16) api.Client {
 	healthClient := &healthmocks.Client{}
-	healthClient.On("Health", mock.MatchedBy(func(_ context.Context) bool {
+	// Mock Readiness (used by local network health check)
+	healthClient.On("Readiness", mock.MatchedBy(func(_ context.Context) bool {
 		return true
 	}), mock.Anything, mock.Anything).Return(
 		func(ctx context.Context, _ []string, _ ...rpc.Option) *health.APIReply {
