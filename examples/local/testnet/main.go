@@ -110,16 +110,16 @@ func run(logger log.Logger, binaryPath string) error {
 		return fmt.Errorf("failed to create testnet config: %w", err)
 	}
 
-	// Override ports to avoid conflict with mainnet (use 9740-9749)
+	// Override ports to avoid conflict with mainnet (use 9640-9649)
 	// and update bootstrap IPs/ports accordingly
 	// IMPORTANT: Port values must be integers, not strings!
 	for i := range netConfig.NodeConfigs {
-		netConfig.NodeConfigs[i].Flags["http-port"] = 9740 + (i * 2)
-		netConfig.NodeConfigs[i].Flags["staking-port"] = 9741 + (i * 2)
+		netConfig.NodeConfigs[i].Flags["http-port"] = 9640 + (i * 2)
+		netConfig.NodeConfigs[i].Flags["staking-port"] = 9641 + (i * 2)
 
 		// Update bootstrap ports for non-beacon nodes
 		if !netConfig.NodeConfigs[i].IsBeacon {
-			netConfig.NodeConfigs[i].Flags["bootstrap-ips"] = "[::1]:9741"
+			netConfig.NodeConfigs[i].Flags["bootstrap-ips"] = "[::1]:9641"
 		}
 	}
 
@@ -174,7 +174,7 @@ func run(logger log.Logger, binaryPath string) error {
 			VMName:         "evm",
 			Genesis:        zooGenesis,
 			ChainConfig:    nil,
-			BlockchainName: "zoo-testnet",
+			BlockchainName: "zootest",
 		},
 	}
 
@@ -193,7 +193,7 @@ func run(logger log.Logger, binaryPath string) error {
 	logger.Info("Zoo TESTNET blockchain created!", "chainIDs", chainIDStrs)
 	fmt.Printf("\n✅ Zoo TESTNET blockchain created successfully!\n")
 	fmt.Printf("   Chain ID: %s\n", chainIDs[0])
-	fmt.Printf("   RPC: http://localhost:9740/ext/bc/zoo-testnet/rpc\n\n")
+	fmt.Printf("   RPC: http://localhost:9640/ext/bc/zootest/rpc\n\n")
 
 	logger.Info("TESTNET will run until you CTRL + C to exit...")
 	<-closedOnShutdownCh
