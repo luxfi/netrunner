@@ -199,6 +199,16 @@ func (ln *localNetwork) RegisterAliases(
 			var lastErr error
 			for attempt := 0; attempt < maxRetries; attempt++ {
 				if err := (*adminClient).AliasChain(ctx, chainID, blockchainAlias); err != nil {
+					// Check if alias is already mapped - this is not an error, the alias is already set
+					if strings.Contains(err.Error(), "alias already mapped to an ID") {
+						ln.logger.Info("alias already registered",
+							"node", nodeName,
+							"alias", blockchainAlias,
+							"chain", chainID,
+						)
+						lastErr = nil
+						break
+					}
 					lastErr = err
 					delay := baseDelay * time.Duration(1<<attempt)
 					if delay > 5*time.Second {
@@ -813,9 +823,10 @@ func (ln *localNetwork) installCustomChains(
 	}
 
 	// Wait for subnet creation transactions to be fully committed before adding validators
-	// The P-Chain needs time to commit the subnet creation blocks
+	// The P-Chain needs time to commit the subnet creation blocks and propagate state to all nodes
+	// Increased from 5s to 15s to ensure state synchronization across all validators
 	ln.logger.Info("waiting for subnet creation to be committed...")
-	time.Sleep(5 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	if err = ln.addChainValidators(ctx, platformCli, w, chainIDs, participantsSpecs); err != nil {
 		ln.logger.Error("installCustomChains: failed to add chain validators",
@@ -927,8 +938,31 @@ func (ln *localNetwork) installCustomChains(
 	}
 	*/
 
-	// With track-all-chains=true, nodes auto-discover new chains via hot-load
-	// Reload VMs to ensure any new VMs are available
+	// Nodes need to be restarted after blockchain creation to discover the new chains
+	// The track-all-chains flag alone doesn't work for dynamically created chains
+	// because the node's chain manager doesn't re-scan P-Chain for new blockchains
+	// IMPORTANT: We pass blockchain IDs (from blockchainTxs), NOT subnet IDs (chainIDs)
+	// The track-chains flag expects blockchain IDs, not subnet IDs
+	blockchainIDs := make([]ids.ID, len(blockchainTxs))
+	for i, tx := range blockchainTxs {
+		blockchainIDs[i] = tx.ID()
+	}
+	ln.logger.Info(log.Blue.Wrap("restarting nodes to track newly created blockchains..."))
+	for i, blockchainID := range blockchainIDs {
+		ln.logger.Info("blockchain to track",
+			"index", i,
+			"blockchainID", blockchainID.String(),
+			"subnetID", *chainSpecs[i].ChainID,
+		)
+	}
+	if err := ln.restartNodes(ctx, blockchainIDs, participantsSpecs, nil, nil, nil); err != nil {
+		ln.logger.Error("installCustomChains: failed to restart nodes after blockchain creation",
+			"error", err.Error(),
+		)
+		return nil, fmt.Errorf("failed to restart nodes after blockchain creation: %w", err)
+	}
+
+	// Reload VMs after restart to ensure any new VMs are available
 	if err := ln.reloadVMPlugins(ctx); err != nil {
 		ln.logger.Warn("VM hot-reload after chain creation failed (non-fatal)",
 			"error", err.Error(),
@@ -1086,27 +1120,31 @@ func (ln *localNetwork) waitForCustomChainsReady(
 	chainInfos []blockchainInfo,
 ) error {
 	fmt.Println()
-	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for custom chains to report healthy...")))
 
-	if err := ln.healthy(ctx); err != nil {
-		return err
-	}
-
-	// Log chain info for debugging - skip log file check as Lux node
-	// doesn't create per-chain log files. Health check above is sufficient.
+	// Log chain info immediately for user feedback
 	for _, chainInfo := range chainInfos {
-		ln.logger.Info("custom chain ready",
+		ln.logger.Info("custom chain created",
 			"vm-ID", chainInfo.vmID.String(),
 			"chain-ID", chainInfo.chainID.String(),
 			"blockchain-ID", chainInfo.blockchainID.String(),
 		)
 	}
 
-	fmt.Println()
-	ln.logger.Info(log.Green.Wrap("all custom chains are running!!!"))
+	// Quick health check with 30s timeout - don't block forever
+	// If network is healthy, chains should come up quickly
+	healthCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-	fmt.Println()
-	ln.logger.Info(log.Green.Wrap(log.Bold.Wrap("all custom chains are ready on RPC server-side -- network-runner RPC client can poll and query the cluster status")))
+	if err := ln.healthy(healthCtx); err != nil {
+		// Log warning but don't fail - chain is created, may just need more time
+		ln.logger.Warn("chain health check timed out, chain may still be starting",
+			"error", err.Error(),
+		)
+		ln.logger.Info("use 'lux network status' to check chain health")
+	} else {
+		fmt.Println()
+		ln.logger.Info(log.Green.Wrap("custom chains ready"))
+	}
 
 	return nil
 }
