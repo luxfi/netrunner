@@ -19,10 +19,6 @@ const (
 	operationTimeout = 5 * time.Minute
 )
 
-// Blocks until a signal is received on [signalChan], upon which
-// [n.Stop()] is called. If [signalChan] is closed, does nothing.
-// Closes [closedOnShutdownChan] and [signalChan] when done shutting down network.
-// This function should only be called once.
 func shutdownOnSignal(
 	logger log.Logger,
 	n network.Network,
@@ -39,9 +35,8 @@ func shutdownOnSignal(
 	close(closedOnShutdownChan)
 }
 
-// Zoo chain genesis configuration - uses the exact genesis from zoo-mainnet RLP export
-// Genesis hash expected: 0x7c548af47de27560779ccc67dda32a540944accc71dac3343da3b9cd18f14933
-func createZooGenesis() ([]byte, error) {
+// Zoo chain genesis for testnet (chain ID 200201)
+func createZooTestnetGenesis() ([]byte, error) {
 	zooGenesis := map[string]interface{}{
 		"alloc": map[string]interface{}{
 			"0200000000000000000000000000000000000005": map[string]interface{}{
@@ -57,7 +52,7 @@ func createZooGenesis() ([]byte, error) {
 		"config": map[string]interface{}{
 			"berlinBlock":         0,
 			"byzantiumBlock":      0,
-			"chainId":             200200,
+			"chainId":             200201, // Testnet chain ID
 			"constantinopleBlock": 0,
 			"eip150Block":         0,
 			"eip155Block":         0,
@@ -89,7 +84,6 @@ func createZooGenesis() ([]byte, error) {
 func main() {
 	logger := log.New()
 
-	// Check for LUX_BINARY_PATH env var or use default
 	binaryPath := os.Getenv("LUX_BINARY_PATH")
 	if binaryPath == "" {
 		home, _ := os.UserHomeDir()
@@ -97,39 +91,60 @@ func main() {
 	}
 
 	if err := run(logger, binaryPath); err != nil {
+		fmt.Printf("🔴 FATAL ERROR: %v\n", err)
 		logger.Crit("fatal error", log.Err(err))
 		os.Exit(1)
 	}
 }
 
 func run(logger log.Logger, binaryPath string) error {
-	// Check for LUX_MNEMONIC environment variable
 	mnemonic := os.Getenv("LUX_MNEMONIC")
 	if mnemonic == "" {
 		return fmt.Errorf("LUX_MNEMONIC environment variable must be set")
 	}
 
-	// Create the network config from mnemonic
-	// Use MAINNET network (ID 96369) with proper genesis
-	logger.Info("Creating MAINNET network config from mnemonic...")
-	netConfig, err := local.NewMainnetConfigFromMnemonic(binaryPath, 5)
+	// Create TESTNET network config (network ID 2)
+	logger.Info("Creating TESTNET network config from mnemonic...")
+	netConfig, err := local.NewTestnetConfigFromMnemonic(binaryPath, 5)
 	if err != nil {
-		return fmt.Errorf("failed to create mainnet config: %w", err)
+		return fmt.Errorf("failed to create testnet config: %w", err)
 	}
 
-	// Create the network
-	logger.Info("Starting local network with mnemonic-derived validators...")
-	nw, err := local.NewNetwork(logger, netConfig, "", "", true)
-	if err != nil {
-		return err
+	// Override ports to avoid conflict with mainnet (use 9740-9749)
+	// and update bootstrap IPs/ports accordingly
+	// IMPORTANT: Port values must be integers, not strings!
+	for i := range netConfig.NodeConfigs {
+		netConfig.NodeConfigs[i].Flags["http-port"] = 9740 + (i * 2)
+		netConfig.NodeConfigs[i].Flags["staking-port"] = 9741 + (i * 2)
+
+		// Update bootstrap ports for non-beacon nodes
+		if !netConfig.NodeConfigs[i].IsBeacon {
+			netConfig.NodeConfigs[i].Flags["bootstrap-ips"] = "[::1]:9741"
+		}
 	}
-	defer func() { // Stop the network when this function returns
+
+	// Use separate root directory for testnet
+	testnetRootDir := "/tmp/testnet-runner-root-data"
+
+	// Create the root directory if it doesn't exist
+	if err := os.MkdirAll(testnetRootDir, 0755); err != nil {
+		return fmt.Errorf("failed to create testnet root dir: %w", err)
+	}
+
+	logger.Info("Starting TESTNET local network with mnemonic-derived validators...")
+	logger.Info("Using root dir", "dir", testnetRootDir)
+	nw, err := local.NewNetwork(logger, netConfig, testnetRootDir, "", true)
+	if err != nil {
+		fmt.Printf("🔴 Network creation failed: %v\n", err)
+		logger.Error("Failed to create network", log.Err(err))
+		return fmt.Errorf("failed to create network: %w", err)
+	}
+	defer func() {
 		if err := nw.Stop(context.Background()); err != nil {
 			logger.Error("error stopping network", log.Err(err))
 		}
 	}()
 
-	// When we get a SIGINT or SIGTERM, stop the network and close [closedOnShutdownCh]
 	signalsChan := make(chan os.Signal, 1)
 	signal.Notify(signalsChan, syscall.SIGINT)
 	signal.Notify(signalsChan, syscall.SIGTERM)
@@ -138,7 +153,6 @@ func run(logger log.Logger, binaryPath string) error {
 		shutdownOnSignal(logger, nw, signalsChan, closedOnShutdownCh)
 	}()
 
-	// Wait until the nodes in the network are ready
 	ctx, cancel := context.WithTimeout(context.Background(), healthyTimeout)
 	defer cancel()
 	logger.Info("waiting for all nodes to report healthy...")
@@ -148,11 +162,11 @@ func run(logger log.Logger, binaryPath string) error {
 
 	logger.Info("All nodes healthy!")
 
-	// Create Zoo blockchain
-	logger.Info("Creating Zoo blockchain...")
-	zooGenesis, err := createZooGenesis()
+	// Create Zoo blockchain on testnet
+	logger.Info("Creating Zoo TESTNET blockchain...")
+	zooGenesis, err := createZooTestnetGenesis()
 	if err != nil {
-		return fmt.Errorf("failed to create zoo genesis: %w", err)
+		return fmt.Errorf("failed to create zoo testnet genesis: %w", err)
 	}
 
 	zooChainSpec := []network.ChainSpec{
@@ -160,7 +174,7 @@ func run(logger log.Logger, binaryPath string) error {
 			VMName:         "evm",
 			Genesis:        zooGenesis,
 			ChainConfig:    nil,
-			BlockchainName: "zoo",
+			BlockchainName: "zoo-testnet",
 		},
 	}
 
@@ -169,19 +183,19 @@ func run(logger log.Logger, binaryPath string) error {
 
 	chainIDs, err := nw.CreateChains(ctxOp, zooChainSpec)
 	if err != nil {
-		return fmt.Errorf("failed to create zoo chain: %w", err)
+		return fmt.Errorf("failed to create zoo testnet chain: %w", err)
 	}
 
 	chainIDStrs := make([]string, len(chainIDs))
 	for i, id := range chainIDs {
 		chainIDStrs[i] = id.String()
 	}
-	logger.Info("Zoo blockchain created!", "chainIDs", chainIDStrs)
-	fmt.Printf("\n✅ Zoo blockchain created successfully!\n")
-	fmt.Printf("   Chain ID: %s\n\n", chainIDs[0])
+	logger.Info("Zoo TESTNET blockchain created!", "chainIDs", chainIDStrs)
+	fmt.Printf("\n✅ Zoo TESTNET blockchain created successfully!\n")
+	fmt.Printf("   Chain ID: %s\n", chainIDs[0])
+	fmt.Printf("   RPC: http://localhost:9740/ext/bc/zoo-testnet/rpc\n\n")
 
-	logger.Info("Network will run until you CTRL + C to exit...")
-	// Wait until done shutting down network after SIGINT/SIGTERM
+	logger.Info("TESTNET will run until you CTRL + C to exit...")
 	<-closedOnShutdownCh
 	return nil
 }

@@ -812,6 +812,11 @@ func (ln *localNetwork) installCustomChains(
 		return nil, fmt.Errorf("timeout waiting for primary validators: %w", err)
 	}
 
+	// Wait for subnet creation transactions to be fully committed before adding validators
+	// The P-Chain needs time to commit the subnet creation blocks
+	ln.logger.Info("waiting for subnet creation to be committed...")
+	time.Sleep(5 * time.Second)
+
 	if err = ln.addChainValidators(ctx, platformCli, w, chainIDs, participantsSpecs); err != nil {
 		ln.logger.Error("installCustomChains: failed to add chain validators",
 			"error", err.Error(),
