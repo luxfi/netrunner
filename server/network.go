@@ -782,6 +782,10 @@ func (lc *localNetwork) generatePrometheusConf() error {
 			prometheusConf += "        - " + strings.TrimPrefix(nodeInfo.Uri, "http://") + "\n"
 		}
 	}
+	// Ensure parent directory exists
+	if err := os.MkdirAll(filepath.Dir(lc.prometheusConfPath), 0755); err != nil {
+		return err
+	}
 	file, err := os.Create(lc.prometheusConfPath)
 	if err != nil {
 		return err
