@@ -640,6 +640,9 @@ func (s *server) CreateBlockchains(
 		fmt.Printf("ERROR: CreateBlockchains failed: %v\n", err)
 		fmt.Printf("ERROR: VMs attempted: %v\n", vmNames)
 		fmt.Printf("ERROR: Plugin directory: %s\n", s.network.pluginDir)
+		// Reset health flags on failure so subsequent deployments can proceed.
+		// The network itself is still healthy, just this chain creation failed.
+		s.updateClusterInfo()
 		// Don't stop the entire network on chain creation failure - keep it running
 		// so user can retry or investigate. This makes the network more resilient.
 		return nil, fmt.Errorf("CreateBlockchains failed for VMs %v: %w", vmNames, err)
@@ -1687,9 +1690,12 @@ func getNetworkChainSpec(
 		Genesis:            genesisBytes,
 		ChainConfig:        chainConfigBytes,
 		NetworkUpgrade:     networkUpgradeBytes,
-		ChainID:           spec.ChainId,
-		Alias:    spec.BlockchainAlias,
+		ChainID:            spec.ChainId,
+		Alias:              spec.BlockchainAlias,
 		PerNodeChainConfig: perNodeChainConfig,
+		// Use BlockchainAlias as the blockchain name for the P-Chain transaction
+		// This allows multiple chains to use the same VM (e.g., multiple EVM chains)
+		BlockchainName:     spec.BlockchainAlias,
 	}
 
 	if spec.ChainSpec != nil {
