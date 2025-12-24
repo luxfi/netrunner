@@ -122,7 +122,7 @@ func NewGenesis(
 	genesisVdrs []ids.NodeID,
 ) ([]byte, error) {
 	switch networkID {
-	case constants.TestnetID, constants.MainnetID, constants.LocalID:
+	case constants.TestnetID, constants.MainnetID, constants.CustomID:
 		return nil, errors.New("network ID can't be mainnet, testnet or local network ID")
 	}
 	switch {

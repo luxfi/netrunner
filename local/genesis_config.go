@@ -54,8 +54,8 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 
 	// For local network (1337), use the genesis as-is since it already has stakers
 	// matching the pre-generated node keys
-	// Note: configs.LocalID is 1337, constants.LocalID is 31337 - use configs.LocalID
-	if networkID == configs.LocalID {
+	// Note: configs.CustomID is 1337 for custom local development network
+	if networkID == configs.CustomID {
 		netConfig.Genesis = string(genesisJSON)
 		// Handle node count for local network
 		if int(numNodes) > len(netConfig.NodeConfigs) {
@@ -332,7 +332,7 @@ func NewTestnetConfig(binaryPath string, numNodes uint32) (network.Config, error
 // NewLocalConfig creates a network config for local development (network ID 1337)
 // This is equivalent to NewDefaultConfigNNodes but uses the configs package.
 func NewLocalConfig(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigForNetwork(binaryPath, numNodes, configs.LocalID)
+	return NewConfigForNetwork(binaryPath, numNodes, configs.CustomID)
 }
 
 // NewConfigForNetworkWithCustomGenesis creates a network config with a custom genesis string.
@@ -641,7 +641,7 @@ func NewMainnetConfigWithKeys(binaryPath string, keysDir string) (network.Config
 	if keysDir == "" {
 		keysDir = DefaultKeysPath()
 	}
-	return NewConfigWithPreExistingKeys(binaryPath, configs.MainnetChainID, keysDir)
+	return NewConfigWithPreExistingKeys(binaryPath, constants.MainnetID, keysDir)
 }
 
 // NewTestnetConfigWithKeys creates a testnet config using pre-existing validator keys
@@ -649,7 +649,7 @@ func NewTestnetConfigWithKeys(binaryPath string, keysDir string) (network.Config
 	if keysDir == "" {
 		keysDir = DefaultKeysPath()
 	}
-	return NewConfigWithPreExistingKeys(binaryPath, configs.TestnetChainID, keysDir)
+	return NewConfigWithPreExistingKeys(binaryPath, constants.TestnetID, keysDir)
 }
 
 // validatorKeysDir returns the directory path for persisted validator keys
@@ -982,16 +982,16 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 
 // NewMainnetConfigFromMnemonic creates mainnet config from LUX_MNEMONIC
 func NewMainnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigFromMnemonic(binaryPath, configs.MainnetChainID, numNodes)
+	return NewConfigFromMnemonic(binaryPath, constants.MainnetID, numNodes)
 }
 
 // NewTestnetConfigFromMnemonic creates testnet config from LUX_MNEMONIC
 func NewTestnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigFromMnemonic(binaryPath, configs.TestnetChainID, numNodes)
+	return NewConfigFromMnemonic(binaryPath, constants.TestnetID, numNodes)
 }
 
 // NewLocalConfigFromMnemonic creates local network config from LUX_MNEMONIC
 // This uses network ID 1337 with "custom" HRP, which is simpler for testing
 func NewLocalConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigFromMnemonic(binaryPath, configs.LocalID, numNodes)
+	return NewConfigFromMnemonic(binaryPath, configs.CustomID, numNodes)
 }

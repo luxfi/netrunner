@@ -149,7 +149,7 @@ func (lc *localNetwork) createConfig() error {
 	// If so, use the appropriate genesis configuration
 	var cfg network.Config
 	var err error
-	networkID := luxd_constants.LocalID // default to local
+	networkID := luxd_constants.CustomID // default to local (1337)
 	if networkIDVal, ok := globalConfig["network-id"]; ok {
 		switch v := networkIDVal.(type) {
 		case float64:
@@ -171,7 +171,7 @@ func (lc *localNetwork) createConfig() error {
 	fmt.Printf("🔍 DEBUG: LUX_MNEMONIC set: %v (len=%d)\n", useMnemonic, len(mnemonic))
 
 	switch networkID {
-	case 96369: // LUX Mainnet
+	case luxd_constants.MainnetID: // LUX Mainnet (1)
 		if useMnemonic {
 			fmt.Printf("🔑 Using NewMainnetConfigFromMnemonic (mnemonic-derived keys)\n")
 			cfg, err = local.NewMainnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
@@ -179,7 +179,7 @@ func (lc *localNetwork) createConfig() error {
 			fmt.Printf("📦 Using NewMainnetConfig (embedded keys)\n")
 			cfg, err = local.NewMainnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
-	case 96368: // LUX Testnet
+	case luxd_constants.TestnetID: // LUX Testnet (2)
 		if useMnemonic {
 			cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
 		} else {
