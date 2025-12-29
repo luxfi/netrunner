@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/luxfi/constants"
+	"github.com/luxfi/const"
 	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
