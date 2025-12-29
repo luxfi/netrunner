@@ -10,8 +10,6 @@ replace github.com/luxfi/genesis => /Users/z/work/lux/genesis
 
 replace github.com/luxfi/sdk => /Users/z/work/lux/sdk
 
-replace github.com/luxfi/node => /Users/z/work/lux/node
-
 require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -19,8 +17,8 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/config v1.0.0
 	github.com/luxfi/consensus v1.22.46
-	github.com/luxfi/constants v1.3.0
-	github.com/luxfi/crypto v1.17.26
+	github.com/luxfi/constants v1.3.1
+	github.com/luxfi/crypto v1.17.27
 	github.com/luxfi/genesis v1.5.16
 	github.com/luxfi/geth v1.16.64
 	github.com/luxfi/go-bip39 v1.1.2
@@ -29,7 +27,7 @@ require (
 	github.com/luxfi/log v1.1.26
 	github.com/luxfi/math v1.2.0
 	github.com/luxfi/metric v1.4.8
-	github.com/luxfi/node v1.22.61
+	github.com/luxfi/node v1.22.72
 	github.com/luxfi/units v1.0.0
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
@@ -106,7 +104,7 @@ require (
 	github.com/luxfi/cache v1.1.0 // indirect
 	github.com/luxfi/database v1.2.17 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
-	github.com/luxfi/keychain v1.0.0 // indirect
+	github.com/luxfi/keychain v1.0.1 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
 	github.com/luxfi/p2p v1.18.2 // indirect
 	github.com/luxfi/sampler v1.0.0 // indirect
