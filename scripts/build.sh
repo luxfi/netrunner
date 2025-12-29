@@ -8,6 +8,8 @@ if ! [[ "$0" =~ scripts/build.sh ]]; then
 fi
 
 VERSION=`cat VERSION`
+COMMIT=`git rev-parse --short HEAD 2>/dev/null || echo "unknown"`
+BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
 if [ $# -eq 0 ] ; then
     OUTPUT="bin"
@@ -21,4 +23,8 @@ fi
 # to pass this flag to all child processes spawned by the shell.
 export CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 
-go build -v -ldflags="-X 'github.com/luxfi/netrunner/cmd.Version=$VERSION'" -o $OUTPUT/netrunner
+LDFLAGS="-X 'github.com/luxfi/netrunner/cmd.Version=$VERSION'"
+LDFLAGS="$LDFLAGS -X 'github.com/luxfi/netrunner/cmd.Commit=$COMMIT'"
+LDFLAGS="$LDFLAGS -X 'github.com/luxfi/netrunner/cmd.BuildDate=$BUILD_DATE'"
+
+go build -v -ldflags="$LDFLAGS" -o $OUTPUT/netrunner
