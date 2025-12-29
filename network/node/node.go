@@ -79,6 +79,8 @@ type Config struct {
 	ConfigFile string `json:"configFile"`
 	// May be nil.
 	ChainConfigFiles map[string]string `json:"chainConfigFiles"`
+	// May be nil. Genesis files for EVM chains (genesis.json)
+	GenesisConfigFiles map[string]string `json:"genesisConfigFiles"`
 	// May be nil.
 	UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
 	// May be nil. P-Chain chain (formerly subnet) config files.

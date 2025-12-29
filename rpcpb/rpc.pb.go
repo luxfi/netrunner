@@ -3796,7 +3796,7 @@ const file_rpcpb_rpc_proto_rawDesc = "" +
 	"\x18GetSnapshotNamesResponse\x12%\n" +
 	"\x0esnapshot_names\x18\x01 \x03(\tR\rsnapshotNames2S\n" +
 	"\vPingService\x12D\n" +
-	"\x04Ping\x12\x12.rpcpb.PingRequest\x1a\x13.rpcpb.PingResponse\"\x13\x82\xd3\xe4\x93\x02\r:\x01*\"\b/v1/ping2\xe7\x14\n" +
+	"\x04Ping\x12\x12.rpcpb.PingRequest\x1a\x13.rpcpb.PingResponse\"\x13\x82\xd3\xe4\x93\x02\r:\x01*\"\b/v1/ping2\xdb\x15\n" +
 	"\x0eControlService\x12d\n" +
 	"\n" +
 	"RPCVersion\x12\x18.rpcpb.RPCVersionRequest\x1a\x19.rpcpb.RPCVersionResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/control/rpcversion\x12P\n" +
@@ -3822,7 +3822,8 @@ const file_rpcpb_rpc_proto_rawDesc = "" +
 	"\n" +
 	"AttachPeer\x12\x18.rpcpb.AttachPeerRequest\x1a\x19.rpcpb.AttachPeerResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/control/attachpeer\x12\x88\x01\n" +
 	"\x13SendOutboundMessage\x12!.rpcpb.SendOutboundMessageRequest\x1a\".rpcpb.SendOutboundMessageResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/control/sendoutboundmessage\x12l\n" +
-	"\fSaveSnapshot\x12\x1a.rpcpb.SaveSnapshotRequest\x1a\x1b.rpcpb.SaveSnapshotResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/control/savesnapshot\x12l\n" +
+	"\fSaveSnapshot\x12\x1a.rpcpb.SaveSnapshotRequest\x1a\x1b.rpcpb.SaveSnapshotResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/control/savesnapshot\x12r\n" +
+	"\x0fSaveHotSnapshot\x12\x1a.rpcpb.SaveSnapshotRequest\x1a\x1b.rpcpb.SaveSnapshotResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/control/savehotsnapshot\x12l\n" +
 	"\fLoadSnapshot\x12\x1a.rpcpb.LoadSnapshotRequest\x1a\x1b.rpcpb.LoadSnapshotResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/control/loadsnapshot\x12t\n" +
 	"\x0eRemoveSnapshot\x12\x1c.rpcpb.RemoveSnapshotRequest\x1a\x1d.rpcpb.RemoveSnapshotResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/control/removesnapshot\x12|\n" +
 	"\x10GetSnapshotNames\x12\x1e.rpcpb.GetSnapshotNamesRequest\x1a\x1f.rpcpb.GetSnapshotNamesResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/control/getsnapshotnamesB\"Z github.com/luxfi/netrunner;rpcpbb\x06proto3"
@@ -3993,36 +3994,38 @@ var file_rpcpb_rpc_proto_depIdxs = []int32{
 	50, // 68: rpcpb.ControlService.AttachPeer:input_type -> rpcpb.AttachPeerRequest
 	52, // 69: rpcpb.ControlService.SendOutboundMessage:input_type -> rpcpb.SendOutboundMessageRequest
 	54, // 70: rpcpb.ControlService.SaveSnapshot:input_type -> rpcpb.SaveSnapshotRequest
-	56, // 71: rpcpb.ControlService.LoadSnapshot:input_type -> rpcpb.LoadSnapshotRequest
-	58, // 72: rpcpb.ControlService.RemoveSnapshot:input_type -> rpcpb.RemoveSnapshotRequest
-	60, // 73: rpcpb.ControlService.GetSnapshotNames:input_type -> rpcpb.GetSnapshotNamesRequest
-	1,  // 74: rpcpb.PingService.Ping:output_type -> rpcpb.PingResponse
-	11, // 75: rpcpb.ControlService.RPCVersion:output_type -> rpcpb.RPCVersionResponse
-	12, // 76: rpcpb.ControlService.Start:output_type -> rpcpb.StartResponse
-	25, // 77: rpcpb.ControlService.CreateBlockchains:output_type -> rpcpb.CreateBlockchainsResponse
-	16, // 78: rpcpb.ControlService.TransformElasticChains:output_type -> rpcpb.TransformElasticChainsResponse
-	19, // 79: rpcpb.ControlService.AddPermissionlessValidator:output_type -> rpcpb.AddPermissionlessValidatorResponse
-	22, // 80: rpcpb.ControlService.RemoveChainValidator:output_type -> rpcpb.RemoveChainValidatorResponse
-	27, // 81: rpcpb.ControlService.CreateChains:output_type -> rpcpb.CreateChainsResponse
-	29, // 82: rpcpb.ControlService.Health:output_type -> rpcpb.HealthResponse
-	31, // 83: rpcpb.ControlService.URIs:output_type -> rpcpb.URIsResponse
-	33, // 84: rpcpb.ControlService.WaitForHealthy:output_type -> rpcpb.WaitForHealthyResponse
-	35, // 85: rpcpb.ControlService.Status:output_type -> rpcpb.StatusResponse
-	37, // 86: rpcpb.ControlService.StreamStatus:output_type -> rpcpb.StreamStatusResponse
-	41, // 87: rpcpb.ControlService.RemoveNode:output_type -> rpcpb.RemoveNodeResponse
-	47, // 88: rpcpb.ControlService.AddNode:output_type -> rpcpb.AddNodeResponse
-	39, // 89: rpcpb.ControlService.RestartNode:output_type -> rpcpb.RestartNodeResponse
-	43, // 90: rpcpb.ControlService.PauseNode:output_type -> rpcpb.PauseNodeResponse
-	45, // 91: rpcpb.ControlService.ResumeNode:output_type -> rpcpb.ResumeNodeResponse
-	49, // 92: rpcpb.ControlService.Stop:output_type -> rpcpb.StopResponse
-	51, // 93: rpcpb.ControlService.AttachPeer:output_type -> rpcpb.AttachPeerResponse
-	53, // 94: rpcpb.ControlService.SendOutboundMessage:output_type -> rpcpb.SendOutboundMessageResponse
-	55, // 95: rpcpb.ControlService.SaveSnapshot:output_type -> rpcpb.SaveSnapshotResponse
-	57, // 96: rpcpb.ControlService.LoadSnapshot:output_type -> rpcpb.LoadSnapshotResponse
-	59, // 97: rpcpb.ControlService.RemoveSnapshot:output_type -> rpcpb.RemoveSnapshotResponse
-	61, // 98: rpcpb.ControlService.GetSnapshotNames:output_type -> rpcpb.GetSnapshotNamesResponse
-	74, // [74:99] is the sub-list for method output_type
-	49, // [49:74] is the sub-list for method input_type
+	54, // 71: rpcpb.ControlService.SaveHotSnapshot:input_type -> rpcpb.SaveSnapshotRequest
+	56, // 72: rpcpb.ControlService.LoadSnapshot:input_type -> rpcpb.LoadSnapshotRequest
+	58, // 73: rpcpb.ControlService.RemoveSnapshot:input_type -> rpcpb.RemoveSnapshotRequest
+	60, // 74: rpcpb.ControlService.GetSnapshotNames:input_type -> rpcpb.GetSnapshotNamesRequest
+	1,  // 75: rpcpb.PingService.Ping:output_type -> rpcpb.PingResponse
+	11, // 76: rpcpb.ControlService.RPCVersion:output_type -> rpcpb.RPCVersionResponse
+	12, // 77: rpcpb.ControlService.Start:output_type -> rpcpb.StartResponse
+	25, // 78: rpcpb.ControlService.CreateBlockchains:output_type -> rpcpb.CreateBlockchainsResponse
+	16, // 79: rpcpb.ControlService.TransformElasticChains:output_type -> rpcpb.TransformElasticChainsResponse
+	19, // 80: rpcpb.ControlService.AddPermissionlessValidator:output_type -> rpcpb.AddPermissionlessValidatorResponse
+	22, // 81: rpcpb.ControlService.RemoveChainValidator:output_type -> rpcpb.RemoveChainValidatorResponse
+	27, // 82: rpcpb.ControlService.CreateChains:output_type -> rpcpb.CreateChainsResponse
+	29, // 83: rpcpb.ControlService.Health:output_type -> rpcpb.HealthResponse
+	31, // 84: rpcpb.ControlService.URIs:output_type -> rpcpb.URIsResponse
+	33, // 85: rpcpb.ControlService.WaitForHealthy:output_type -> rpcpb.WaitForHealthyResponse
+	35, // 86: rpcpb.ControlService.Status:output_type -> rpcpb.StatusResponse
+	37, // 87: rpcpb.ControlService.StreamStatus:output_type -> rpcpb.StreamStatusResponse
+	41, // 88: rpcpb.ControlService.RemoveNode:output_type -> rpcpb.RemoveNodeResponse
+	47, // 89: rpcpb.ControlService.AddNode:output_type -> rpcpb.AddNodeResponse
+	39, // 90: rpcpb.ControlService.RestartNode:output_type -> rpcpb.RestartNodeResponse
+	43, // 91: rpcpb.ControlService.PauseNode:output_type -> rpcpb.PauseNodeResponse
+	45, // 92: rpcpb.ControlService.ResumeNode:output_type -> rpcpb.ResumeNodeResponse
+	49, // 93: rpcpb.ControlService.Stop:output_type -> rpcpb.StopResponse
+	51, // 94: rpcpb.ControlService.AttachPeer:output_type -> rpcpb.AttachPeerResponse
+	53, // 95: rpcpb.ControlService.SendOutboundMessage:output_type -> rpcpb.SendOutboundMessageResponse
+	55, // 96: rpcpb.ControlService.SaveSnapshot:output_type -> rpcpb.SaveSnapshotResponse
+	55, // 97: rpcpb.ControlService.SaveHotSnapshot:output_type -> rpcpb.SaveSnapshotResponse
+	57, // 98: rpcpb.ControlService.LoadSnapshot:output_type -> rpcpb.LoadSnapshotResponse
+	59, // 99: rpcpb.ControlService.RemoveSnapshot:output_type -> rpcpb.RemoveSnapshotResponse
+	61, // 100: rpcpb.ControlService.GetSnapshotNames:output_type -> rpcpb.GetSnapshotNamesResponse
+	75, // [75:101] is the sub-list for method output_type
+	49, // [49:75] is the sub-list for method input_type
 	49, // [49:49] is the sub-list for extension type_name
 	49, // [49:49] is the sub-list for extension extendee
 	0,  // [0:49] is the sub-list for field type_name

@@ -17,8 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/keys"
+
+	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/node/vms/platformvm/reward"
 
 	"github.com/luxfi/node/vms/components/lux"
@@ -1277,24 +1278,27 @@ type wallet struct {
 // getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
 // Priority: LUX_MNEMONIC > LUX_PRIVATE_KEY > disk keys
 func getDefaultKey() (*secp256k1.PrivateKey, error) {
-	// If LUX_MNEMONIC is set, derive key from mnemonic (index 0)
+	// If LUX_MNEMONIC is set, derive key using BIP44 path m/44'/9000'/0'/0/0 (LUX native)
+	// CRITICAL: This MUST match the derivation path used in genesis allocations
+	// (keys.DeriveValidatorFromMnemonic uses m/44'/9000'/0'/0/{index})
 	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
 		fmt.Printf("🔑 getDefaultKey: Using LUX_MNEMONIC (len=%d)\n", len(mnemonic))
+		
+		// Use the SAME derivation function as genesis allocations
+		// This ensures wallet operations use keys that have funds allocated in genesis
 		vk, err := keys.DeriveValidatorFromMnemonic(mnemonic, 0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive key from mnemonic: %w", err)
 		}
-		fmt.Printf("🔑 VK.PChainAddr (from mnemonic derivation): %s\n", vk.PChainAddr.String())
-
 		privKey, err := secp256k1.ToPrivateKey(vk.ECPrivateKey)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to convert key: %w", err)
 		}
+		
 		pubKey := privKey.PublicKey()
 		walletAddr := ids.ShortID(pubKey.Address())
-		fmt.Printf("🔑 Wallet address (from secp256k1 key): %s\n", walletAddr.String())
-		fmt.Printf("🔑 Addresses match: %v\n", vk.PChainAddr == walletAddr)
-
+		fmt.Printf("🔑 Wallet address (from mnemonic m/44'/9000'/0'/0/0): %s\n", walletAddr.String())
+		
 		return privKey, nil
 	}
 
@@ -2440,6 +2444,29 @@ func (ln *localNetwork) setBlockchainConfigFiles(
 			participants = nodeNames
 		}
 		chainAlias := blockchainTxs[i].ID().String()
+
+		// For EVM chains, write genesis.json to chainConfigs directory
+		// This is required for the EVM to load the chain configuration
+		if len(chainSpec.Genesis) > 0 {
+			for _, nodeName := range participants {
+				_, b := ln.nodes[nodeName]
+				if !b {
+					return nil, fmt.Errorf("participant node %s is not in network nodes", nodeName)
+				}
+				// Initialize GenesisConfigFiles map if nil
+				if ln.nodes[nodeName].config.GenesisConfigFiles == nil {
+					ln.nodes[nodeName].config.GenesisConfigFiles = make(map[string]string)
+				}
+				ln.nodes[nodeName].config.GenesisConfigFiles[chainAlias] = string(chainSpec.Genesis)
+				nodesToRestart.Add(nodeName)
+			}
+			log.Info("set genesis config for chain",
+				"chainAlias", chainAlias,
+				"participants", len(participants),
+				"genesisLength", len(chainSpec.Genesis),
+			)
+		}
+
 		// update config info. set defaults and node specifics
 		if chainSpec.ChainConfig != nil || len(chainSpec.PerNodeChainConfig) != 0 {
 			for _, nodeName := range participants {

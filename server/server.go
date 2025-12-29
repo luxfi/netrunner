@@ -1493,6 +1493,32 @@ func (s *server) SaveSnapshot(ctx context.Context, req *rpcpb.SaveSnapshotReques
 	return &rpcpb.SaveSnapshotResponse{SnapshotPath: snapshotPath}, nil
 }
 
+// SaveHotSnapshot saves a snapshot without stopping the network
+// Uses Copy-on-Write on APFS (macOS) for instant snapshots
+func (s *server) SaveHotSnapshot(ctx context.Context, req *rpcpb.SaveSnapshotRequest) (*rpcpb.SaveSnapshotResponse, error) {
+	s.mu.RLock() // Read lock - doesn't block network operations
+	defer s.mu.RUnlock()
+
+	s.logger.Info("SaveHotSnapshot", log.String("snapshot-name", req.SnapshotName))
+
+	if s.network == nil {
+		return nil, ErrNotBootstrapped
+	}
+
+	snapshotPath, err := s.network.nw.SaveHotSnapshot(ctx, req.SnapshotName)
+	if err != nil {
+		s.logger.Warn("hot snapshot save failed to complete", log.Err(err))
+		return nil, err
+	}
+
+	// Note: We do NOT stop the network for hot snapshots
+	s.logger.Info("Hot snapshot saved successfully",
+		log.String("snapshot-name", req.SnapshotName),
+		log.String("path", snapshotPath))
+
+	return &rpcpb.SaveSnapshotResponse{SnapshotPath: snapshotPath}, nil
+}
+
 func (s *server) RemoveSnapshot(_ context.Context, req *rpcpb.RemoveSnapshotRequest) (*rpcpb.RemoveSnapshotResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

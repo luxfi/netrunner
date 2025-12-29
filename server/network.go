@@ -137,6 +137,7 @@ func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 // TODO document.
 // Assumes [lc.lock] is held.
 func (lc *localNetwork) createConfig() error {
+	lc.log.Info("createConfig() ENTERED", "globalNodeConfig", lc.options.globalNodeConfig)
 	var globalConfig map[string]interface{}
 
 	if lc.options.globalNodeConfig != "" {
@@ -164,34 +165,80 @@ func (lc *localNetwork) createConfig() error {
 		}
 	}
 
+	lc.log.Info("createConfig networkID parsed", "networkID", networkID, "MainnetID", luxd_constants.MainnetID, "TestnetID", luxd_constants.TestnetID)
+
+	// CRITICAL: Check if we're resuming from existing state.
+	// If node1/genesis.json exists AND node1/db has data, we MUST use the existing genesis
+	// to avoid "db contains invalid genesis hash" errors. JSON serialization is non-deterministic
+	// due to Go map iteration order, so regenerating genesis produces different bytes.
+	existingGenesis, isResume := lc.checkForExistingGenesis()
+	if isResume {
+		ux.Print(lc.log, log.Green.Wrap("📂 RESUME DETECTED: Using existing genesis from %s"), lc.options.rootDataDir)
+		fmt.Fprintf(os.Stderr, "📂 RESUME DETECTED: Using existing genesis from %s\n", lc.options.rootDataDir)
+	} else {
+		fmt.Fprintf(os.Stderr, "DEBUG: Not resuming - checkForExistingGenesis returned false (rootDataDir=%s)\n", lc.options.rootDataDir)
+	}
+
 	// Use the appropriate genesis configuration based on network ID
-	// If LUX_MNEMONIC is set, derive validators from it (preferred for mainnet/testnet)
+	// CRITICAL: For mainnet/testnet, ALWAYS use canonical genesis to ensure byte-for-byte
+	// deterministic output. This prevents "db contains invalid genesis hash" errors on restart.
+	// The canonical genesis files are pre-serialized and never re-generated.
+
+	// Check if LUX_MNEMONIC is set - if so, use mnemonic-based config to generate
+	// genesis with funds allocated to the mnemonic-derived address
 	mnemonic := os.Getenv("LUX_MNEMONIC")
 	useMnemonic := mnemonic != ""
-	fmt.Printf("🔍 DEBUG: LUX_MNEMONIC set: %v (len=%d)\n", useMnemonic, len(mnemonic))
 
 	switch networkID {
 	case luxd_constants.MainnetID: // LUX Mainnet (1)
 		if useMnemonic {
-			fmt.Printf("🔑 Using NewMainnetConfigFromMnemonic (mnemonic-derived keys)\n")
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading mainnet genesis FROM MNEMONIC (funds allocated to derived address)"))
 			cfg, err = local.NewMainnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
 		} else {
-			fmt.Printf("📦 Using NewMainnetConfig (embedded keys)\n")
-			cfg, err = local.NewMainnetConfig(lc.options.execPath, lc.options.numNodes)
+			// ALWAYS use canonical genesis for mainnet - never regenerate
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL mainnet genesis (deterministic bytes)"))
+			cfg, err = local.NewCanonicalMainnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
 	case luxd_constants.TestnetID: // LUX Testnet (2)
 		if useMnemonic {
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading testnet genesis FROM MNEMONIC (funds allocated to derived address)"))
 			cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
 		} else {
-			// Use pre-existing keys from ~/.lux/keys if available
-			fmt.Printf("📦 Using NewTestnetConfigWithKeys (pre-existing keys from ~/.lux/keys)\n")
-			cfg, err = local.NewTestnetConfigWithKeys(lc.options.execPath, "")
+			// ALWAYS use canonical genesis for testnet - never regenerate
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL testnet genesis (deterministic bytes)"))
+			cfg, err = local.NewCanonicalTestnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
+	case luxd_constants.DevnetID: // LUX Devnet (3)
+		// ALWAYS use canonical genesis for devnet - never regenerate
+		ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
+		cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
+	case luxd_constants.CustomID: // Custom/Local (1337)
+		// ALWAYS use canonical genesis for custom network - never regenerate
+		ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL custom genesis (deterministic bytes)"))
+		cfg, err = local.NewCanonicalCustomConfig(lc.options.execPath, lc.options.numNodes)
 	default:
+		// Fallback for unknown network IDs
+		ux.Print(lc.log, "%s", log.Orange.Wrap(fmt.Sprintf("Unknown network ID %d, using default config", networkID)))
 		cfg, err = local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
 	}
 	if err != nil {
 		return err
+	}
+
+	// For resume scenarios, verify genesis matches (but don't override for mainnet/testnet
+	// since canonical genesis is already deterministic)
+	if isResume && existingGenesis != "" {
+		if cfg.Genesis != existingGenesis {
+			if networkID == luxd_constants.MainnetID || networkID == luxd_constants.TestnetID {
+				// Log warning but use canonical - this shouldn't happen with proper setup
+				ux.Print(lc.log, "%s", log.Orange.Wrap("WARNING: Existing genesis differs from canonical. Using canonical."))
+				fmt.Fprintf(os.Stderr, "WARNING: Genesis mismatch detected. Using canonical genesis.\n")
+			} else {
+				// For custom networks, use existing genesis to preserve state
+				ux.Print(lc.log, "%s", log.Green.Wrap("Using existing genesis for custom network"))
+				cfg.Genesis = existingGenesis
+			}
+		}
 	}
 
 	// Ensure required staking flags are set for non-local networks
@@ -312,6 +359,44 @@ func (lc *localNetwork) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// checkForExistingGenesis checks if we're resuming from existing state.
+// Returns (genesisJSON, isResume) where isResume is true if:
+// 1. node1/genesis.json exists, AND
+// 2. node1/db directory has data (meaning blocks have been committed)
+//
+// This is critical because JSON serialization is non-deterministic in Go
+// (map iteration order varies), so regenerating genesis from the same source
+// data produces different bytes, causing "db contains invalid genesis hash" errors.
+func (lc *localNetwork) checkForExistingGenesis() (string, bool) {
+	if lc.options.rootDataDir == "" {
+		return "", false
+	}
+
+	// Check node1 for existing genesis and db data
+	node1Dir := filepath.Join(lc.options.rootDataDir, "node1")
+	genesisPath := filepath.Join(node1Dir, "genesis.json")
+	dbDir := filepath.Join(node1Dir, "db")
+
+	// Check if genesis.json exists
+	genesisBytes, err := os.ReadFile(genesisPath)
+	if err != nil {
+		// No existing genesis file - this is a fresh start
+		return "", false
+	}
+
+	// Check if db directory has data (indicating we're resuming)
+	entries, err := os.ReadDir(dbDir)
+	if err != nil || len(entries) == 0 {
+		// No db data - this is a fresh start even though genesis file exists
+		// (perhaps from a failed previous start)
+		return "", false
+	}
+
+	// Both genesis.json exists AND db has data - we're resuming
+	// Note: We can't log here since lc.log may not be set yet during config creation
+	return string(genesisBytes), true
 }
 
 // Creates the blockchains specified in [chainSpecs].
