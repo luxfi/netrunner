@@ -99,6 +99,10 @@ type Network interface {
 	// Network is stopped in order to do a safe preservation
 	// Returns the full local path to the snapshot dir
 	SaveSnapshot(context.Context, string) (string, error)
+	// SaveHotSnapshot saves a snapshot without stopping the network
+	// Uses CoW on APFS (macOS) for instant snapshots
+	// WARNING: May have minor inconsistencies if writes occur during copy
+	SaveHotSnapshot(context.Context, string) (string, error)
 	// Remove network snapshot
 	RemoveSnapshot(string) error
 	// Get name of available snapshots

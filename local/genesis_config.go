@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/luxfi/constants"
@@ -335,6 +336,85 @@ func NewLocalConfig(binaryPath string, numNodes uint32) (network.Config, error) 
 	return NewConfigForNetwork(binaryPath, numNodes, configs.CustomID)
 }
 
+// NewCanonicalMainnetConfig creates a mainnet network config using the CANONICAL genesis bytes.
+// This function loads the pre-serialized genesis.json file directly, ensuring byte-for-byte
+// deterministic output. Use this to avoid "db contains invalid genesis hash" errors on restart.
+//
+// CRITICAL: For mainnet/testnet, always use this function or NewCanonicalTestnetConfig
+// rather than functions that regenerate genesis (which causes non-deterministic bytes).
+func NewCanonicalMainnetConfig(binaryPath string, numNodes uint32) (network.Config, error) {
+	return newCanonicalConfig(binaryPath, numNodes, configs.MainnetID, 9630)
+}
+
+// NewCanonicalTestnetConfig creates a testnet network config using the CANONICAL genesis bytes.
+// See NewCanonicalMainnetConfig for details on why this is critical.
+func NewCanonicalTestnetConfig(binaryPath string, numNodes uint32) (network.Config, error) {
+	return newCanonicalConfig(binaryPath, numNodes, configs.TestnetID, 9640)
+}
+
+// NewCanonicalDevnetConfig creates a devnet network config using the CANONICAL genesis bytes.
+// See NewCanonicalMainnetConfig for details on why this is critical.
+func NewCanonicalDevnetConfig(binaryPath string, numNodes uint32) (network.Config, error) {
+	return newCanonicalConfig(binaryPath, numNodes, configs.DevnetID, 9650)
+}
+
+// NewCanonicalCustomConfig creates a custom (local) network config using the CANONICAL genesis bytes.
+// See NewCanonicalMainnetConfig for details on why this is critical.
+func NewCanonicalCustomConfig(binaryPath string, numNodes uint32) (network.Config, error) {
+	return newCanonicalConfig(binaryPath, numNodes, configs.CustomID, 9660)
+}
+
+// newCanonicalConfig creates a network config with canonical (pre-serialized) genesis bytes
+// and loads validator keys from ~/.lux/keys/node{0..n-1}/
+func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, portBase int) (network.Config, error) {
+	// Load CANONICAL genesis bytes - no parsing/re-serialization
+	genesisBytes, err := configs.GetCanonicalGenesisBytes(networkID)
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to load canonical genesis: %w", err)
+	}
+
+	// Start with default config
+	netConfig := NewDefaultConfig(binaryPath)
+	netConfig.Genesis = string(genesisBytes)
+
+	// Load validator keys from ~/.lux/keys/
+	keysDir := os.Getenv("LUX_KEYS_DIR")
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
+	ks := keys.NewKeyStore(keysDir)
+
+	// Load keys for each node
+	nodeConfigs := make([]node.Config, numNodes)
+	for i := uint32(0); i < numNodes; i++ {
+		name := fmt.Sprintf("node%d", i)
+		vk, err := ks.Load(name)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to load validator key %s from %s: %w (run 'lux key generate' first)", name, keysDir, err)
+		}
+
+		port := portBase + int(i)*2
+		nodeConfigs[i] = node.Config{
+			Flags: map[string]interface{}{
+				config.HTTPPortKey:    port,
+				config.StakingPortKey: port + 1,
+			},
+			StakingKey:         string(vk.StakerKey),
+			StakingCert:        string(vk.StakerCert),
+			StakingSigningKey:  base64.StdEncoding.EncodeToString(vk.BLSSecretKey),
+			IsBeacon:           true,
+			ChainConfigFiles:   map[string]string{},
+			UpgradeConfigFiles: map[string]string{},
+			PChainConfigFiles:  map[string]string{},
+		}
+		fmt.Printf("  Loaded validator %d: %s\n", i, vk.NodeID.String())
+	}
+	netConfig.NodeConfigs = nodeConfigs
+
+	fmt.Printf("✅ Loaded canonical genesis for network %d with %d validators\n", networkID, numNodes)
+	return netConfig, nil
+}
+
 // NewConfigForNetworkWithCustomGenesis creates a network config with a custom genesis string.
 // Use this for networks not defined in the configs package or for testing.
 func NewConfigForNetworkWithCustomGenesis(binaryPath string, numNodes uint32, genesisJSON string) (network.Config, error) {
@@ -394,11 +474,15 @@ func NewConfigForNetworkWithCustomGenesis(binaryPath string, numNodes uint32, ge
 // - ec/private.key for P-Chain addresses (optional)
 func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir string) (network.Config, error) {
 	// Determine port base based on network ID
-	// Mainnet (96369): 9630 base
-	// Testnet (96368): 9640 base
+	// Mainnet (1): 9630 base
+	// Testnet (2): 9640 base
+	// Devnet (3): 9650 base
 	portBase := 9630
-	if networkID == configs.TestnetChainID {
+	switch networkID {
+	case constants.TestnetID: // 2
 		portBase = 9640
+	case constants.DevnetID: // 3
+		portBase = 9650
 	}
 
 	// Get genesis for the specified network
@@ -919,6 +1003,38 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 
 	genesis["initialStakers"] = initialStakers
 	genesis["allocations"] = allocations
+
+	// CRITICAL: Also update xChainGenesis.allocations!
+	// The X-chain reads allocations from the embedded xChainGenesis JSON string,
+	// NOT from the top-level allocations array. We must update both.
+	if xChainGenesisStr, ok := genesis["xChainGenesis"].(string); ok {
+		var xChainGenesis map[string]interface{}
+		if err := json.Unmarshal([]byte(xChainGenesisStr), &xChainGenesis); err == nil {
+			// Build X-chain specific allocations (only X-chain addresses, use avaxAddr format)
+			xAllocations := make([]map[string]interface{}, 0)
+			for _, alloc := range allocations {
+				allocMap := alloc.(map[string]interface{})
+				luxAddr, _ := allocMap["luxAddr"].(string)
+				// Only include X-chain allocations (start with "X-")
+				if strings.HasPrefix(luxAddr, "X-") {
+					initialAmount, _ := allocMap["initialAmount"].(uint64)
+					if initialAmount > 0 {
+						xAllocations = append(xAllocations, map[string]interface{}{
+							"avaxAddr":       luxAddr, // X-chain uses avaxAddr field name
+							"ethAddr":        allocMap["ethAddr"],
+							"initialAmount":  initialAmount,
+							"unlockSchedule": []interface{}{},
+						})
+					}
+				}
+			}
+			xChainGenesis["allocations"] = xAllocations
+			if updatedXChain, err := json.Marshal(xChainGenesis); err == nil {
+				genesis["xChainGenesis"] = string(updatedXChain)
+				fmt.Printf("✅ Updated xChainGenesis with %d allocations\n", len(xAllocations))
+			}
+		}
+	}
 
 	// IMPORTANT: Set initialStakedFunds to EMPTY so that P-chain allocations
 	// are NOT filtered by the builder. The builder filters allocations where

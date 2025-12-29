@@ -142,6 +142,7 @@ const (
 	ControlService_AttachPeer_FullMethodName                 = "/rpcpb.ControlService/AttachPeer"
 	ControlService_SendOutboundMessage_FullMethodName        = "/rpcpb.ControlService/SendOutboundMessage"
 	ControlService_SaveSnapshot_FullMethodName               = "/rpcpb.ControlService/SaveSnapshot"
+	ControlService_SaveHotSnapshot_FullMethodName            = "/rpcpb.ControlService/SaveHotSnapshot"
 	ControlService_LoadSnapshot_FullMethodName               = "/rpcpb.ControlService/LoadSnapshot"
 	ControlService_RemoveSnapshot_FullMethodName             = "/rpcpb.ControlService/RemoveSnapshot"
 	ControlService_GetSnapshotNames_FullMethodName           = "/rpcpb.ControlService/GetSnapshotNames"
@@ -172,6 +173,9 @@ type ControlServiceClient interface {
 	AttachPeer(ctx context.Context, in *AttachPeerRequest, opts ...grpc.CallOption) (*AttachPeerResponse, error)
 	SendOutboundMessage(ctx context.Context, in *SendOutboundMessageRequest, opts ...grpc.CallOption) (*SendOutboundMessageResponse, error)
 	SaveSnapshot(ctx context.Context, in *SaveSnapshotRequest, opts ...grpc.CallOption) (*SaveSnapshotResponse, error)
+	// SaveHotSnapshot saves a snapshot without stopping the network
+	// Uses Copy-on-Write on APFS (macOS) for instant snapshots
+	SaveHotSnapshot(ctx context.Context, in *SaveSnapshotRequest, opts ...grpc.CallOption) (*SaveSnapshotResponse, error)
 	LoadSnapshot(ctx context.Context, in *LoadSnapshotRequest, opts ...grpc.CallOption) (*LoadSnapshotResponse, error)
 	RemoveSnapshot(ctx context.Context, in *RemoveSnapshotRequest, opts ...grpc.CallOption) (*RemoveSnapshotResponse, error)
 	GetSnapshotNames(ctx context.Context, in *GetSnapshotNamesRequest, opts ...grpc.CallOption) (*GetSnapshotNamesResponse, error)
@@ -404,6 +408,16 @@ func (c *controlServiceClient) SaveSnapshot(ctx context.Context, in *SaveSnapsho
 	return out, nil
 }
 
+func (c *controlServiceClient) SaveHotSnapshot(ctx context.Context, in *SaveSnapshotRequest, opts ...grpc.CallOption) (*SaveSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveSnapshotResponse)
+	err := c.cc.Invoke(ctx, ControlService_SaveHotSnapshot_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *controlServiceClient) LoadSnapshot(ctx context.Context, in *LoadSnapshotRequest, opts ...grpc.CallOption) (*LoadSnapshotResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoadSnapshotResponse)
@@ -459,6 +473,9 @@ type ControlServiceServer interface {
 	AttachPeer(context.Context, *AttachPeerRequest) (*AttachPeerResponse, error)
 	SendOutboundMessage(context.Context, *SendOutboundMessageRequest) (*SendOutboundMessageResponse, error)
 	SaveSnapshot(context.Context, *SaveSnapshotRequest) (*SaveSnapshotResponse, error)
+	// SaveHotSnapshot saves a snapshot without stopping the network
+	// Uses Copy-on-Write on APFS (macOS) for instant snapshots
+	SaveHotSnapshot(context.Context, *SaveSnapshotRequest) (*SaveSnapshotResponse, error)
 	LoadSnapshot(context.Context, *LoadSnapshotRequest) (*LoadSnapshotResponse, error)
 	RemoveSnapshot(context.Context, *RemoveSnapshotRequest) (*RemoveSnapshotResponse, error)
 	GetSnapshotNames(context.Context, *GetSnapshotNamesRequest) (*GetSnapshotNamesResponse, error)
@@ -534,6 +551,9 @@ func (UnimplementedControlServiceServer) SendOutboundMessage(context.Context, *S
 }
 func (UnimplementedControlServiceServer) SaveSnapshot(context.Context, *SaveSnapshotRequest) (*SaveSnapshotResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SaveSnapshot not implemented")
+}
+func (UnimplementedControlServiceServer) SaveHotSnapshot(context.Context, *SaveSnapshotRequest) (*SaveSnapshotResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveHotSnapshot not implemented")
 }
 func (UnimplementedControlServiceServer) LoadSnapshot(context.Context, *LoadSnapshotRequest) (*LoadSnapshotResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LoadSnapshot not implemented")
@@ -936,6 +956,24 @@ func _ControlService_SaveSnapshot_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ControlService_SaveHotSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServiceServer).SaveHotSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlService_SaveHotSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServiceServer).SaveHotSnapshot(ctx, req.(*SaveSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ControlService_LoadSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LoadSnapshotRequest)
 	if err := dec(in); err != nil {
@@ -1076,6 +1114,10 @@ var ControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SaveSnapshot",
 			Handler:    _ControlService_SaveSnapshot_Handler,
+		},
+		{
+			MethodName: "SaveHotSnapshot",
+			Handler:    _ControlService_SaveHotSnapshot_Handler,
 		},
 		{
 			MethodName: "LoadSnapshot",

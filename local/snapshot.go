@@ -151,6 +151,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		NodeConfigs:        []node.Config{},
 		BinaryPath:         ln.binaryPath,
 		ChainConfigFiles:   ln.chainConfigFiles,
+		GenesisConfigFiles: ln.genesisConfigFiles,
 		UpgradeConfigFiles: ln.upgradeConfigFiles,
 		PChainConfigFiles:  ln.pChainConfigFiles,
 	}
@@ -291,6 +292,122 @@ func (ln *localNetwork) loadSnapshot(
 		}
 	}
 	return ln.loadConfig(ctx, networkConfig)
+}
+
+// SaveHotSnapshot saves a snapshot without stopping the network.
+// Uses copy-on-write on filesystems that support it (APFS on macOS).
+// WARNING: Hot snapshots may have minor inconsistencies if writes occur during copy.
+// For guaranteed consistency, use SaveSnapshot which stops the network.
+func (ln *localNetwork) SaveHotSnapshot(ctx context.Context, snapshotName string) (string, error) {
+	ln.lock.RLock() // Read lock - doesn't block network operations
+	defer ln.lock.RUnlock()
+
+	if ln.stopCalled() {
+		return "", network.ErrStopped
+	}
+	if len(snapshotName) == 0 {
+		return "", fmt.Errorf("invalid snapshotName %q", snapshotName)
+	}
+	// check if snapshot already exists
+	snapshotDir := filepath.Join(ln.snapshotsDir, snapshotPrefix+snapshotName)
+	if _, err := os.Stat(snapshotDir); err == nil {
+		return "", fmt.Errorf("snapshot %q already exists", snapshotName)
+	}
+
+	// Collect node info (read-only, safe during operation)
+	nodesConfig := map[string]node.Config{}
+	nodesDBDir := map[string]string{}
+	for nodeName, node := range ln.nodes {
+		nodeConfig := node.config
+		nodeConfig.Flags = maps.Clone(nodeConfig.Flags)
+		nodesConfig[nodeName] = nodeConfig
+		nodesDBDir[nodeName] = node.GetDbDir()
+	}
+
+	// Preserve current node ports
+	for nodeName, nodeConfig := range nodesConfig {
+		nodeConfig.Flags[config.HTTPPortKey] = ln.nodes[nodeName].GetAPIPort()
+		nodeConfig.Flags[config.StakingPortKey] = ln.nodes[nodeName].GetP2PPort()
+	}
+
+	// Make copy of network flags
+	networkConfigFlags := maps.Clone(ln.flags)
+	delete(networkConfigFlags, config.DataDirKey)
+	delete(networkConfigFlags, config.LogsDirKey)
+	for nodeName, nodeConfig := range nodesConfig {
+		if nodeConfig.ConfigFile != "" {
+			var err error
+			nodeConfig.ConfigFile, err = utils.SetJSONKey(nodeConfig.ConfigFile, config.LogsDirKey, "")
+			if err != nil {
+				return "", err
+			}
+		}
+		delete(nodeConfig.Flags, config.DataDirKey)
+		delete(nodeConfig.Flags, config.LogsDirKey)
+		nodesConfig[nodeName] = nodeConfig
+	}
+
+	// Sync filesystem to flush pending writes
+	syncFilesystem()
+
+	// Create main snapshot dirs
+	snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
+	if err := os.MkdirAll(snapshotDBDir, os.ModePerm); err != nil {
+		return "", err
+	}
+
+	// Copy db directories (hot - network still running)
+	// On APFS (macOS), dircopy uses clonefile which is CoW and instant
+	for _, nodeConfig := range nodesConfig {
+		sourceDBDir, ok := nodesDBDir[nodeConfig.Name]
+		if !ok {
+			return "", fmt.Errorf("failure obtaining db path for node %q", nodeConfig.Name)
+		}
+		sourceDBDir = filepath.Join(sourceDBDir, constants.NetworkName(ln.networkID))
+		targetDBDir := filepath.Join(filepath.Join(snapshotDBDir, nodeConfig.Name), constants.NetworkName(ln.networkID))
+		if err := dircopy.Copy(sourceDBDir, targetDBDir); err != nil {
+			return "", fmt.Errorf("failure saving node %q db dir: %w", nodeConfig.Name, err)
+		}
+	}
+
+	// Save network config
+	networkConfig := network.Config{
+		Genesis:            string(ln.genesis),
+		Flags:              networkConfigFlags,
+		NodeConfigs:        []node.Config{},
+		BinaryPath:         ln.binaryPath,
+		ChainConfigFiles:   ln.chainConfigFiles,
+		GenesisConfigFiles: ln.genesisConfigFiles,
+		UpgradeConfigFiles: ln.upgradeConfigFiles,
+		PChainConfigFiles:  ln.pChainConfigFiles,
+	}
+	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, maps.Values(nodesConfig)...)
+	networkConfigJSON, err := json.MarshalIndent(networkConfig, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	if err := createFileAndWrite(filepath.Join(snapshotDir, "network.json"), networkConfigJSON); err != nil {
+		return "", err
+	}
+
+	// Save dynamic network state
+	chainID2ElasticChainID := map[string]string{}
+	for chainID, elasticChainID := range ln.chainID2ElasticChainID {
+		chainID2ElasticChainID[chainID.String()] = elasticChainID.String()
+	}
+	networkState := NetworkState{
+		ChainID2ElasticChainID: chainID2ElasticChainID,
+	}
+	networkStateJSON, err := json.MarshalIndent(networkState, "", "    ")
+	if err != nil {
+		return "", err
+	}
+	if err := createFileAndWrite(filepath.Join(snapshotDir, "state.json"), networkStateJSON); err != nil {
+		return "", err
+	}
+
+	ln.logger.Info("Hot snapshot saved", log.String("snapshot", snapshotName), log.String("path", snapshotDir))
+	return snapshotDir, nil
 }
 
 // Remove network snapshot

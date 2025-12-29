@@ -52,6 +52,7 @@ type Client interface {
 	SendOutboundMessage(ctx context.Context, nodeName string, peerID string, op uint32, msgBody []byte) (*rpcpb.SendOutboundMessageResponse, error)
 	Close() error
 	SaveSnapshot(ctx context.Context, snapshotName string) (*rpcpb.SaveSnapshotResponse, error)
+	SaveHotSnapshot(ctx context.Context, snapshotName string) (*rpcpb.SaveSnapshotResponse, error)
 	LoadSnapshot(ctx context.Context, snapshotName string, opts ...OpOption) (*rpcpb.LoadSnapshotResponse, error)
 	RemoveSnapshot(ctx context.Context, snapshotName string) (*rpcpb.RemoveSnapshotResponse, error)
 	GetSnapshotNames(ctx context.Context) ([]string, error)
@@ -341,6 +342,11 @@ func (c *client) SendOutboundMessage(ctx context.Context, nodeName string, peerI
 func (c *client) SaveSnapshot(ctx context.Context, snapshotName string) (*rpcpb.SaveSnapshotResponse, error) {
 	c.logger.Info("save snapshot", log.String("snapshot-name", snapshotName))
 	return c.controlc.SaveSnapshot(ctx, &rpcpb.SaveSnapshotRequest{SnapshotName: snapshotName})
+}
+
+func (c *client) SaveHotSnapshot(ctx context.Context, snapshotName string) (*rpcpb.SaveSnapshotResponse, error) {
+	c.logger.Info("save hot snapshot", log.String("snapshot-name", snapshotName))
+	return c.controlc.SaveHotSnapshot(ctx, &rpcpb.SaveSnapshotRequest{SnapshotName: snapshotName})
 }
 
 func (c *client) LoadSnapshot(ctx context.Context, snapshotName string, opts ...OpOption) (*rpcpb.LoadSnapshotResponse, error) {

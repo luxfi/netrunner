@@ -169,6 +169,15 @@ service ControlService {
     };
   }
 
+  // SaveHotSnapshot saves a snapshot without stopping the network
+  // Uses Copy-on-Write on APFS (macOS) for instant snapshots
+  rpc SaveHotSnapshot(SaveSnapshotRequest) returns (SaveSnapshotResponse) {
+    option (google.api.http) = {
+      post: "/v1/control/savehotsnapshot"
+      body: "*"
+    };
+  }
+
   rpc LoadSnapshot(LoadSnapshotRequest) returns (LoadSnapshotResponse) {
     option (google.api.http) = {
       post: "/v1/control/loadsnapshot"
