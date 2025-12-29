@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luxfi/constants"
+	"github.com/luxfi/const"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/bls/signer/localsigner"
 	"github.com/luxfi/node/vms/platformvm/signer"

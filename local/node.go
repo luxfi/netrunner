@@ -12,7 +12,7 @@ import (
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
-	"github.com/luxfi/constants"
+	"github.com/luxfi/const"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
