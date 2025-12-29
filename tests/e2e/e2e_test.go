@@ -183,7 +183,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	cli, err = client.New(client.Config{
 		Endpoint:    gRPCEp,
 		DialTimeout: 10 * time.Second,
-	}, log)
+	}, logger)
 	gomega.Ω(err).Should(gomega.BeNil())
 
 	genesisPath = "tests/e2e/evm-genesis.json"
@@ -264,7 +264,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			subnetIDs := maps.Keys(status.ClusterInfo.Subnets)
 			sort.Strings(subnetIDs)
 			createdSubnetIDString := subnetIDs[0]
-			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(log, existingNodes, status.ClusterInfo, createdSubnetIDString)
+			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(logger, existingNodes, status.ClusterInfo, createdSubnetIDString)
 			gomega.Ω(subnetHasCorrectParticipants).Should(gomega.Equal(true))
 		})
 
@@ -350,7 +350,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			gomega.Ω(err).Should(gomega.BeNil())
 			customChains := status.ClusterInfo.GetCustomChains()
 			createdSubnetIDString := customChains[createdBlockchainID].SubnetId
-			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(log, subnetParticipants, status.ClusterInfo, createdSubnetIDString)
+			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(logger, subnetParticipants, status.ClusterInfo, createdSubnetIDString)
 			gomega.Ω(subnetHasCorrectParticipants).Should(gomega.Equal(true))
 			// verify that no new nodes is added to cluster
 			gomega.Ω(len(status.ClusterInfo.NodeNames)).Should(gomega.Equal(5))
@@ -903,7 +903,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			defer cancel()
 			status, err := cli.Status(ctx)
 			gomega.Ω(err).Should(gomega.BeNil())
-			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(log, subnetParticipants2, status.ClusterInfo, newSubnetID)
+			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(logger, subnetParticipants2, status.ClusterInfo, newSubnetID)
 			gomega.Ω(subnetHasCorrectParticipants).Should(gomega.Equal(true))
 		})
 	})
