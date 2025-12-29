@@ -6,19 +6,28 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 exclude github.com/luxfi/geth v1.16.1
 
+replace github.com/luxfi/genesis => /Users/z/work/lux/genesis
+
+replace github.com/luxfi/sdk => /Users/z/work/lux/sdk
+
+replace github.com/luxfi/node => /Users/z/work/lux/node
+
 require (
+	github.com/btcsuite/btcd v0.24.2
+	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/dgraph-io/badger/v4 v4.8.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/config v1.0.0
-	github.com/luxfi/consensus v1.22.41
-	github.com/luxfi/constants v1.2.8
+	github.com/luxfi/consensus v1.22.46
+	github.com/luxfi/constants v1.3.0
 	github.com/luxfi/crypto v1.17.26
-	github.com/luxfi/genesis v1.5.11
-	github.com/luxfi/geth v1.16.60
+	github.com/luxfi/genesis v1.5.16
+	github.com/luxfi/geth v1.16.64
+	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.5
 	github.com/luxfi/keys v1.0.3
 	github.com/luxfi/log v1.1.26
-	github.com/luxfi/math v1.1.1
+	github.com/luxfi/math v1.2.0
 	github.com/luxfi/metric v1.4.8
 	github.com/luxfi/node v1.22.61
 	github.com/luxfi/units v1.0.0
@@ -29,11 +38,10 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tyler-smith/go-bip32 v1.0.0
-	github.com/tyler-smith/go-bip39 v1.1.0
 	go.uber.org/multierr v1.11.0
+	golang.org/x/crypto v0.46.0
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
-	golang.org/x/mod v0.30.0
+	golang.org/x/mod v0.31.0
 	golang.org/x/sync v0.19.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a
 	google.golang.org/grpc v1.75.1
@@ -43,14 +51,13 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.5.7 // indirect
-	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e // indirect
-	github.com/FactomProject/btcutilecc v0.0.0-20130527213604-d3a63a5752ec // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251211224604-2e727cd2e6fe // indirect
+	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251221085550-b8e13ca38217 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
-	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.5 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.2-0.20251204010831-23491bd573cf // indirect
@@ -95,17 +102,19 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/luxfi/address v1.0.0 // indirect
 	github.com/luxfi/cache v1.1.0 // indirect
-	github.com/luxfi/database v1.2.14 // indirect
+	github.com/luxfi/database v1.2.17 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
-	github.com/luxfi/go-bip39 v1.1.2 // indirect
-	github.com/luxfi/ledger-lux-go v1.0.2 // indirect
+	github.com/luxfi/keychain v1.0.0 // indirect
 	github.com/luxfi/mock v0.1.0 // indirect
-	github.com/luxfi/p2p v1.5.0 // indirect
+	github.com/luxfi/p2p v1.18.2 // indirect
+	github.com/luxfi/sampler v1.0.0 // indirect
+	github.com/luxfi/staking v1.0.0 // indirect
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/utils v1.1.0 // indirect
 	github.com/luxfi/vm v1.0.1 // indirect
-	github.com/luxfi/warp v1.18.0 // indirect
+	github.com/luxfi/warp v1.18.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
@@ -118,13 +127,13 @@ require (
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rs/cors v1.11.1 // indirect
-	github.com/sagikazarmark/locafero v0.10.0 // indirect
+	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/afero v1.14.0 // indirect
+	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/pflag v1.0.7 // indirect
-	github.com/spf13/viper v1.20.1 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/viper v1.21.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/supranational/blst v0.3.16 // indirect
@@ -143,14 +152,14 @@ require (
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.39.0 // indirect
+	golang.org/x/tools v0.40.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
