@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	luxconfig "github.com/luxfi/config"
-	"github.com/luxfi/constants"
+	"github.com/luxfi/const"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"

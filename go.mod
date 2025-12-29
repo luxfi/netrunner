@@ -10,6 +10,10 @@ replace github.com/luxfi/genesis => /Users/z/work/lux/genesis
 
 replace github.com/luxfi/sdk => /Users/z/work/lux/sdk
 
+replace github.com/luxfi/keys => /Users/z/work/lux/keys
+
+replace github.com/luxfi/node => /Users/z/work/lux/node
+
 require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -102,7 +106,6 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/address v1.0.0 // indirect
 	github.com/luxfi/cache v1.1.0 // indirect
-	github.com/luxfi/constants v1.3.1 // indirect
 	github.com/luxfi/database v1.2.17 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
 	github.com/luxfi/keychain v1.0.1 // indirect
