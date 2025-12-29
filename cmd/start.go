@@ -54,19 +54,7 @@ var startCmd = &cobra.Command{
 }
 
 func runMultiNetwork(cmd *cobra.Command, args []string) error {
-	fmt.Println("🚀 Starting networks in parallel mode...")
-
-	dbPath := "/tmp/netrunner-shared-db"
-	if sharedDB {
-		fmt.Println("📦 Using shared BadgerDB for cross-chain transactions")
-	}
-
-	// Create multi-network manager
-	manager, err := multinet.NewMultiNetworkManager(startLogger, dbPath)
-	if err != nil {
-		return fmt.Errorf("failed to create multi-network manager: %w", err)
-	}
-	defer manager.Shutdown()
+	fmt.Println("🚀 Starting multiple networks...")
 
 	// Determine which networks to start
 	networksToStart := networks
@@ -74,25 +62,71 @@ func runMultiNetwork(cmd *cobra.Command, args []string) error {
 		networksToStart = []string{"mainnet", "testnet"}
 	}
 
-	// Configure networks
-	for _, network := range networksToStart {
-		config := getNetworkConfig(network)
-		if err := manager.AddNetwork(config); err != nil {
-			return fmt.Errorf("failed to add network %s: %w", network, err)
+	// Load validator keys once
+	ks := keys.NewKeyStore(keysDir)
+	validatorKeys, err := ks.LoadAll()
+	if err != nil {
+		return fmt.Errorf("failed to load validator keys: %w", err)
+	}
+	if len(validatorKeys) == 0 {
+		return fmt.Errorf("no validator keys found in %s", keysDir)
+	}
+
+	fmt.Printf("📋 Loaded %d validator keys\n", len(validatorKeys))
+
+	// Track running networks for cleanup
+	var runningNetworks []network.Network
+	defer func() {
+		for _, ln := range runningNetworks {
+			_ = ln.Stop(cmd.Context())
+		}
+	}()
+
+	// Start each network
+	for _, networkName := range networksToStart {
+		fmt.Printf("\n🔧 Starting %s...\n", networkName)
+
+		var netConfig network.Config
+		switch networkName {
+		case "mainnet":
+			netConfig, err = local.NewMainnetConfigWithKeys(binaryPath, keysDir)
+		case "testnet":
+			netConfig, err = local.NewTestnetConfigWithKeys(binaryPath, keysDir)
+		default:
+			return fmt.Errorf("unknown network: %s", networkName)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to create %s config: %w", networkName, err)
+		}
+
+		ln, err := local.NewNetwork(
+			startLogger,
+			netConfig,
+			"/tmp/netrunner/"+networkName,
+			"",   // snapshot dir
+			true, // reassign ports if busy
+		)
+		if err != nil {
+			return fmt.Errorf("failed to start %s: %w", networkName, err)
+		}
+		runningNetworks = append(runningNetworks, ln)
+
+		nodes, _ := ln.GetAllNodes()
+		for name, n := range nodes {
+			fmt.Printf("   %s: http://localhost:%d\n", name, n.GetAPIPort())
 		}
 	}
 
-	// Start all networks
-	if err := manager.StartAll(); err != nil {
-		return fmt.Errorf("failed to start networks: %w", err)
-	}
-
-	fmt.Println("\n✅ Networks started successfully!")
+	fmt.Println("\n✅ All networks started!")
 	printNetworkEndpoints(networksToStart)
 
-	fmt.Println("\nPress Ctrl+C to stop...")
-	select {}
+	// Wait for interrupt
+	fmt.Println("\n⏳ Press Ctrl+C to stop...")
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
 
+	fmt.Println("\n🛑 Shutting down all networks...")
 	return nil
 }
 
@@ -214,7 +248,7 @@ func printNetworkEndpoints(networks []string) {
 		case "mainnet":
 			fmt.Println("  Lux Mainnet: http://localhost:9630")
 		case "testnet":
-			fmt.Println("  Lux Testnet: http://localhost:9620")
+			fmt.Println("  Lux Testnet: http://localhost:9640")
 		}
 	}
 }

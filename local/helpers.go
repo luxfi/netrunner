@@ -11,9 +11,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/luxfi/netrunner/network/node"
-	"github.com/luxfi/node/config"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/log"
+	"github.com/luxfi/netrunner/network/node"
+	"github.com/luxfi/netrunner/utils"
+	"github.com/luxfi/node/config"
 )
 
 func init() {
@@ -95,12 +97,50 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 			contents:  decodedStakingSigningKey,
 		},
 	}
-	// Always write genesis file if provided, even for LocalID
-	// This allows custom genesis (e.g., with mnemonic-derived validators) to override defaults
-	if len(genesis) > 0 {
+	// Check if this is a resume from existing state:
+	// If genesis.json already exists AND db directory has chain data, preserve existing genesis
+	// This prevents the "db contains invalid genesis hash" error when resuming from snapshots
+	// EXCEPTION: For canonical networks (mainnet/testnet), if the existing genesis has a different
+	// networkID, we must clean the db and write the correct canonical genesis.
+	existingGenesisPath := filepath.Join(nodeRootDir, genesisFileName)
+	dbDir := filepath.Join(nodeRootDir, "db")
+	shouldPreserveGenesis := false
+
+	if _, err := os.Stat(existingGenesisPath); err == nil {
+		// Genesis exists, check if db has data (indicating we're resuming)
+		if entries, err := os.ReadDir(dbDir); err == nil && len(entries) > 0 {
+			shouldPreserveGenesis = true
+
+			// For canonical networks, verify the existing genesis matches
+			if networkID == constants.MainnetID || networkID == constants.TestnetID {
+				existingGenesisBytes, readErr := os.ReadFile(existingGenesisPath)
+				if readErr == nil {
+					existingNetworkID, parseErr := utils.NetworkIDFromGenesis(existingGenesisBytes)
+					if parseErr == nil && existingNetworkID != networkID {
+						// NetworkID mismatch! Clean db and write correct canonical genesis
+						log.Info("Genesis networkID mismatch for canonical network, cleaning db",
+							log.Uint32("existing", existingNetworkID),
+							log.Uint32("target", networkID),
+							log.String("dbDir", dbDir))
+						if err := os.RemoveAll(dbDir); err != nil {
+							return nil, fmt.Errorf("failed to clean db directory for canonical network: %w", err)
+						}
+						// Recreate empty db directory
+						if err := os.MkdirAll(dbDir, 0o750); err != nil {
+							return nil, fmt.Errorf("failed to recreate db directory: %w", err)
+						}
+						shouldPreserveGenesis = false
+					}
+				}
+			}
+		}
+	}
+
+	if len(genesis) > 0 && !shouldPreserveGenesis {
+		// Write new genesis (fresh start or custom genesis with mnemonic-derived validators)
 		files = append(files, file{
-			flagValue: filepath.Join(nodeRootDir, genesisFileName),
-			path:      filepath.Join(nodeRootDir, genesisFileName),
+			flagValue: existingGenesisPath,
+			path:      existingGenesisPath,
 			pathKey:   config.GenesisFileKey,
 			contents:  genesis,
 		})
@@ -120,6 +160,10 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 			return nil, fmt.Errorf("couldn't write file at %q: %w", f.path, err)
 		}
 	}
+	// If preserving existing genesis, add the flag without writing the file
+	if shouldPreserveGenesis {
+		flags[config.GenesisFileKey] = existingGenesisPath
+	}
 	// chain configs dir
 	chainConfigDir := filepath.Join(nodeRootDir, chainConfigSubDir)
 	if err := os.MkdirAll(chainConfigDir, 0o750); err != nil {
@@ -137,6 +181,13 @@ func writeFiles(networkID uint32, genesis []byte, nodeRootDir string, nodeConfig
 		chainConfigPath := filepath.Join(chainConfigDir, chainAlias, configFileName)
 		if err := createFileAndWrite(chainConfigPath, []byte(chainConfigFile)); err != nil {
 			return nil, fmt.Errorf("couldn't write file at %q: %w", chainConfigPath, err)
+		}
+	}
+	// genesis files for EVM chains
+	for chainAlias, genesisFile := range nodeConfig.GenesisConfigFiles {
+		genesisPath := filepath.Join(chainConfigDir, chainAlias, genesisFileName)
+		if err := createFileAndWrite(genesisPath, []byte(genesisFile)); err != nil {
+			return nil, fmt.Errorf("couldn't write genesis file at %q: %w", genesisPath, err)
 		}
 	}
 	// network upgrades

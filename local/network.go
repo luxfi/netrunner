@@ -55,7 +55,7 @@ const (
 	// healthCheckFreq reduced from 3s to 1s for faster health polling
 	healthCheckFreq           = 1 * time.Second
 	DefaultNumNodes           = 5
-	snapshotPrefix            = "anr-snapshot-"
+	snapshotPrefix            = "lux-snapshot-"
 	networkRootDirPrefix      = "network"
 	defaultDBSubdir           = "db"
 	defaultLogsSubdir         = "logs"
@@ -114,6 +114,8 @@ type localNetwork struct {
 	binaryPath string
 	// chain config files to use per default
 	chainConfigFiles map[string]string
+	// genesis config files for EVM chains (per blockchain ID)
+	genesisConfigFiles map[string]string
 	// upgrade config files to use per default
 	upgradeConfigFiles map[string]string
 	// P-chain config files to use per default
@@ -546,13 +548,13 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 	if ln.chainConfigFiles == nil {
 		ln.chainConfigFiles = map[string]string{}
 	}
+	ln.genesisConfigFiles = networkConfig.GenesisConfigFiles
+	if ln.genesisConfigFiles == nil {
+		ln.genesisConfigFiles = map[string]string{}
+	}
 	ln.upgradeConfigFiles = networkConfig.UpgradeConfigFiles
 	if ln.upgradeConfigFiles == nil {
 		ln.upgradeConfigFiles = map[string]string{}
-	}
-	ln.chainConfigFiles = networkConfig.ChainConfigFiles
-	if ln.chainConfigFiles == nil {
-		ln.chainConfigFiles = map[string]string{}
 	}
 
 	// Sort node configs so beacons start first

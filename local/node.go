@@ -12,15 +12,16 @@ import (
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/network/throttling"
 	"github.com/luxfi/node/network/tracker"
+	"github.com/luxfi/node/utils/compression"
 	"github.com/luxfi/consensus/validator" // package name is validators
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils"
-	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/log"
 	"github.com/luxfi/math/set"
@@ -99,7 +100,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router peer.InboundHandle
 	}
 	mc, err := message.NewCreator(
 		prometheus.NewRegistry(),
-		constants.DefaultNetworkCompressionType,
+		compression.TypeZstd,
 		10*time.Second,
 	)
 	if err != nil {

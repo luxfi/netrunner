@@ -71,6 +71,8 @@ type Config struct {
 	BinaryPath string `json:"binaryPath"`
 	// Chain config files to use per default, if not specified in node config
 	ChainConfigFiles map[string]string `json:"chainConfigFiles"`
+	// Genesis config files for EVM chains (per blockchain ID)
+	GenesisConfigFiles map[string]string `json:"genesisConfigFiles"`
 	// Upgrade config files to use per default, if not specified in node config
 	UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
 	// P-Chain config files to use per default, if not specified in node config
