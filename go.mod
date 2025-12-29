@@ -17,7 +17,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/config v1.0.0
 	github.com/luxfi/consensus v1.22.46
-	github.com/luxfi/constants v1.3.1
+	github.com/luxfi/const v1.4.0
 	github.com/luxfi/crypto v1.17.27
 	github.com/luxfi/genesis v1.5.16
 	github.com/luxfi/geth v1.16.64
@@ -102,6 +102,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/address v1.0.0 // indirect
 	github.com/luxfi/cache v1.1.0 // indirect
+	github.com/luxfi/constants v1.3.1 // indirect
 	github.com/luxfi/database v1.2.17 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
 	github.com/luxfi/keychain v1.0.1 // indirect
