@@ -12,10 +12,11 @@ import (
 	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
+	"maps"
+
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/units"
-	"golang.org/x/exp/maps"
 )
 
 var cChainConfig map[string]interface{}

@@ -31,10 +31,12 @@ import (
 	"github.com/luxfi/consensus/core"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/ids"
+	"maps"
+	"slices"
+
 	"github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -491,7 +493,7 @@ func (s *server) updateClusterInfo() {
 		return
 	}
 	s.clusterInfo.Healthy = true
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 	s.clusterInfo.CustomChainsHealthy = true
@@ -598,7 +600,7 @@ func (s *server) CreateBlockchains(
 
 	// check that the given chains exist
 	chainsSet := set.Set[string]{}
-	chainIDsList := maps.Keys(s.clusterInfo.Chains)
+	chainIDsList := slices.Collect(maps.Keys(s.clusterInfo.Chains))
 	chainsSet.Add(chainIDsList...)
 
 	for _, chainSpec := range chainSpecs {
@@ -692,7 +694,7 @@ func (s *server) AddPermissionlessValidator(
 
 	// check that the given chains exist
 	chainsSet := set.Set[string]{}
-	chainsSet.Add(maps.Keys(s.clusterInfo.Chains)...)
+	chainsSet.Add(slices.Collect(maps.Keys(s.clusterInfo.Chains))...)
 
 	for _, validatorSpec := range validatorSpecList {
 		if validatorSpec.ChainID == "" {
@@ -750,7 +752,7 @@ func (s *server) RemoveChainValidator(
 
 	// check that the given chains exist
 	chainsSet := set.Set[string]{}
-	chainsSet.Add(maps.Keys(s.clusterInfo.Chains)...)
+	chainsSet.Add(slices.Collect(maps.Keys(s.clusterInfo.Chains))...)
 
 	for _, validatorSpec := range validatorSpecList {
 		if validatorSpec.ChainID == "" {
@@ -808,7 +810,7 @@ func (s *server) TransformElasticChains(
 
 	// check that the given chains exist
 	chainsSet := set.Set[string]{}
-	chainsSet.Add(maps.Keys(s.clusterInfo.Chains)...)
+	chainsSet.Add(slices.Collect(maps.Keys(s.clusterInfo.Chains))...)
 
 	for _, elasticParticipantsSpec := range elasticParticipantsSpecList {
 		if elasticParticipantsSpec.ChainID == nil {
@@ -913,7 +915,7 @@ func (s *server) Health(ctx context.Context, _ *rpcpb.HealthRequest) (*rpcpb.Hea
 		return nil, err
 	}
 
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 	s.clusterInfo.Healthy = true
@@ -1120,7 +1122,7 @@ func (s *server) AddNode(_ context.Context, req *rpcpb.AddNodeRequest) (*rpcpb.A
 		return nil, err
 	}
 
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 
@@ -1149,7 +1151,7 @@ func (s *server) RemoveNode(ctx context.Context, req *rpcpb.RemoveNodeRequest) (
 		return nil, err
 	}
 
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 
@@ -1187,7 +1189,7 @@ func (s *server) RestartNode(ctx context.Context, req *rpcpb.RestartNodeRequest)
 		return nil, err
 	}
 
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 
@@ -1219,7 +1221,7 @@ func (s *server) PauseNode(ctx context.Context, req *rpcpb.PauseNodeRequest) (*r
 		return nil, err
 	}
 
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 
@@ -1247,7 +1249,7 @@ func (s *server) ResumeNode(ctx context.Context, req *rpcpb.ResumeNodeRequest) (
 		return nil, err
 	}
 
-	s.clusterInfo.NodeNames = maps.Keys(s.network.nodeInfos)
+	s.clusterInfo.NodeNames = slices.Collect(maps.Keys(s.network.nodeInfos))
 	sort.Strings(s.clusterInfo.NodeNames)
 	s.clusterInfo.NodeInfos = s.network.nodeInfos
 

@@ -17,9 +17,11 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
+	"maps"
+	"slices"
+
 	"github.com/luxfi/node/config"
 	dircopy "github.com/otiai10/copy"
-	"golang.org/x/exp/maps"
 )
 
 // NetworkState defines dynamic network information not available on chain db
@@ -157,7 +159,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 	}
 
 	// no need to save this, will be generated automatically on snapshot load
-	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, maps.Values(nodesConfig)...)
+	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, slices.Collect(maps.Values(nodesConfig))...)
 	networkConfigJSON, err := json.MarshalIndent(networkConfig, "", "    ")
 	if err != nil {
 		return "", err
@@ -381,7 +383,7 @@ func (ln *localNetwork) SaveHotSnapshot(ctx context.Context, snapshotName string
 		UpgradeConfigFiles: ln.upgradeConfigFiles,
 		PChainConfigFiles:  ln.pChainConfigFiles,
 	}
-	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, maps.Values(nodesConfig)...)
+	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, slices.Collect(maps.Values(nodesConfig))...)
 	networkConfigJSON, err := json.MarshalIndent(networkConfig, "", "    ")
 	if err != nil {
 		return "", err
