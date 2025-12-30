@@ -20,8 +20,10 @@ import (
 	"github.com/luxfi/node/api/admin"
 	"github.com/luxfi/node/message"
 	luxd_constants "github.com/luxfi/const"
+	"maps"
+	"slices"
+
 	"github.com/luxfi/node/vms/platformvm"
-	"golang.org/x/exp/maps"
 
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/rpcpb"
@@ -261,7 +263,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			defer cancel()
 			status, err := cli.Status(ctx)
 			gomega.Ω(err).Should(gomega.BeNil())
-			subnetIDs := maps.Keys(status.ClusterInfo.Subnets)
+			subnetIDs := slices.Collect(maps.Keys(status.ClusterInfo.Subnets))
 			sort.Strings(subnetIDs)
 			createdSubnetIDString := subnetIDs[0]
 			subnetHasCorrectParticipants := utils.VerifySubnetHasCorrectParticipants(logger, existingNodes, status.ClusterInfo, createdSubnetIDString)
@@ -1044,7 +1046,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			gomega.Ω(err).Should(gomega.BeNil())
 			numSubnets := len(status.ClusterInfo.Subnets)
 			gomega.Ω(numSubnets).Should(gomega.Equal(5))
-			originalSubnets = maps.Keys(status.ClusterInfo.Subnets)
+			originalSubnets = slices.Collect(maps.Keys(status.ClusterInfo.Subnets))
 		})
 		ginkgo.By("check there are no snapshots", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -1090,7 +1092,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			status, err := cli.Status(ctx)
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
-			subnetIDs := maps.Keys(status.ClusterInfo.Subnets)
+			subnetIDs := slices.Collect(maps.Keys(status.ClusterInfo.Subnets))
 			sort.Strings(subnetIDs)
 			sort.Strings(originalSubnets)
 			gomega.Ω(subnetIDs).Should(gomega.Equal(originalSubnets))
