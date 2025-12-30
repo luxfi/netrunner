@@ -6,32 +6,24 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
 exclude github.com/luxfi/geth v1.16.1
 
-replace github.com/luxfi/genesis => /Users/z/work/lux/genesis
-
-replace github.com/luxfi/sdk => /Users/z/work/lux/sdk
-
-replace github.com/luxfi/keys => /Users/z/work/lux/keys
-
-replace github.com/luxfi/node => /Users/z/work/lux/node
-
 require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/dgraph-io/badger/v4 v4.8.0
+	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/luxfi/config v1.0.0
 	github.com/luxfi/consensus v1.22.46
 	github.com/luxfi/const v1.4.0
 	github.com/luxfi/crypto v1.17.27
-	github.com/luxfi/genesis v1.5.16
-	github.com/luxfi/geth v1.16.64
+	github.com/luxfi/genesis v1.5.17
+	github.com/luxfi/geth v1.16.66
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.5
-	github.com/luxfi/keys v1.0.3
-	github.com/luxfi/log v1.1.26
+	github.com/luxfi/keys v1.0.5
+	github.com/luxfi/log v1.2.1
 	github.com/luxfi/math v1.2.0
 	github.com/luxfi/metric v1.4.8
-	github.com/luxfi/node v1.22.72
+	github.com/luxfi/node v1.22.74
 	github.com/luxfi/units v1.0.0
 	github.com/onsi/ginkgo/v2 v2.25.1
 	github.com/onsi/gomega v1.38.0
@@ -42,7 +34,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.46.0
-	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
+	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93
 	golang.org/x/mod v0.31.0
 	golang.org/x/sync v0.19.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a
@@ -160,7 +152,7 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
