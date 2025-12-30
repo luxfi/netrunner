@@ -211,13 +211,22 @@ func (lc *localNetwork) createConfig() error {
 			cfg, err = local.NewCanonicalTestnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
 	case luxd_constants.DevnetID: // LUX Devnet (3)
-		// ALWAYS use canonical genesis for devnet - never regenerate
-		ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
-		cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
+		if useMnemonic {
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading devnet genesis FROM MNEMONIC (funds allocated to derived address)"))
+			cfg, err = local.NewDevnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+		} else {
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
+			cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
+		}
 	case luxd_constants.CustomID: // Custom/Local (1337)
-		// ALWAYS use canonical genesis for custom network - never regenerate
-		ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL custom genesis (deterministic bytes)"))
-		cfg, err = local.NewCanonicalCustomConfig(lc.options.execPath, lc.options.numNodes)
+		if useMnemonic {
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading custom genesis FROM MNEMONIC (funds allocated to derived address)"))
+			cfg, err = local.NewLocalConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+		} else {
+			// Use canonical genesis for custom network
+			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL custom genesis (deterministic bytes)"))
+			cfg, err = local.NewCanonicalCustomConfig(lc.options.execPath, lc.options.numNodes)
+		}
 	default:
 		// Fallback for unknown network IDs
 		ux.Print(lc.log, "%s", log.Orange.Wrap(fmt.Sprintf("Unknown network ID %d, using default config", networkID)))
