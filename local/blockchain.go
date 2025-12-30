@@ -44,13 +44,15 @@ import (
 	"github.com/luxfi/node/vms/secp256k1fx"
 	pwallet "github.com/luxfi/node/wallet/chain/p"
 	pwalletwallet "github.com/luxfi/node/wallet/chain/p/wallet"
+	"maps"
+	"slices"
+
 	pbuilder "github.com/luxfi/node/wallet/chain/p/builder"
 	psigner "github.com/luxfi/node/wallet/chain/p/signer"
 	xbuilder "github.com/luxfi/node/wallet/chain/x/builder"
 	xsigner "github.com/luxfi/node/wallet/chain/x/signer"
 	primary "github.com/luxfi/node/wallet/net/primary"
 	common "github.com/luxfi/node/wallet/net/primary/common"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -740,7 +742,7 @@ func (ln *localNetwork) installCustomChains(
 	}
 
 	// if no participants are given for a new chain, assume all nodes should be participants
-	allNodeNames := maps.Keys(ln.nodes)
+	allNodeNames := slices.Collect(maps.Keys(ln.nodes))
 	sort.Strings(allNodeNames)
 	for i := range participantsSpecs {
 		if len(participantsSpecs[i].Participants) == 0 {
@@ -1021,7 +1023,7 @@ func (ln *localNetwork) installChains(
 	}
 
 	// if no participants are given, assume all nodes should be participants
-	allNodeNames := maps.Keys(ln.nodes)
+	allNodeNames := slices.Collect(maps.Keys(ln.nodes))
 	sort.Strings(allNodeNames)
 	for i := range participantsSpecs {
 		if len(participantsSpecs[i].Participants) == 0 {
@@ -1166,7 +1168,7 @@ func (ln *localNetwork) restartNodes(
 	fmt.Println()
 	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("restarting network")))
 
-	nodeNames := maps.Keys(ln.nodes)
+	nodeNames := slices.Collect(maps.Keys(ln.nodes))
 	sort.Strings(nodeNames)
 
 	for _, nodeName := range nodeNames {

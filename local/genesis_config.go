@@ -25,9 +25,10 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/config"
+	"maps"
+
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/formatting/address"
-	"golang.org/x/exp/maps"
 )
 
 // NewConfigForNetwork creates a network config for the specified network ID.

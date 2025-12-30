@@ -21,9 +21,11 @@ import (
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/ids"
+	"maps"
+	"slices"
+
 	luxd_constants "github.com/luxfi/const"
 	"github.com/luxfi/log"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -795,7 +797,7 @@ func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 		return err
 	}
 
-	nodeNames := maps.Keys(lc.nodeInfos)
+	nodeNames := slices.Collect(maps.Keys(lc.nodeInfos))
 	sort.Strings(nodeNames)
 	for _, nodeName := range nodeNames {
 		nodeInfo := lc.nodeInfos[nodeName]

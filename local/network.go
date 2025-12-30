@@ -36,9 +36,11 @@ import (
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
+	"maps"
+	"slices"
+
 	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/node/utils/wrappers"
-	"golang.org/x/exp/maps"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )
@@ -852,7 +854,7 @@ func (ln *localNetwork) GetNodeNames() ([]string, error) {
 		return nil, network.ErrStopped
 	}
 
-	return maps.Keys(ln.nodes), nil
+	return slices.Collect(maps.Keys(ln.nodes)), nil
 }
 
 // See network.Network
