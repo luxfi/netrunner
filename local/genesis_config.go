@@ -1107,6 +1107,11 @@ func NewTestnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.C
 	return NewConfigFromMnemonic(binaryPath, constants.TestnetID, numNodes)
 }
 
+// NewDevnetConfigFromMnemonic creates devnet config from LUX_MNEMONIC
+func NewDevnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
+	return NewConfigFromMnemonic(binaryPath, constants.DevnetID, numNodes)
+}
+
 // NewLocalConfigFromMnemonic creates local network config from LUX_MNEMONIC
 // This uses network ID 1337 with "custom" HRP, which is simpler for testing
 func NewLocalConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
