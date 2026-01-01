@@ -53,9 +53,14 @@ const (
 
 	stopTimeout           = 5 * time.Second
 	defaultStartTimeout   = 5 * time.Minute
-	// waitForHealthyTimeout increased from 3 to 10 minutes to allow proper
-	// bootstrapping of staking validators in mainnet configuration
-	waitForHealthyTimeout = 10 * time.Minute
+	// waitForHealthyTimeout - 60s for local 5-node network bootstrap
+	// First startup takes longer as nodes need to establish consensus
+	// Subsequent restarts are faster (<10s) but initial bootstrap needs time
+	waitForHealthyTimeout = 60 * time.Second
+	// chainDeployTimeout - 30s MAX for chain deploy operations
+	// FAIL FAST: If chain deploy takes longer than 30s, something is wrong
+	// Most P-chain API calls complete in <5s on localhost
+	chainDeployTimeout = 30 * time.Second
 
 	TimeParseLayout        = "2006-01-02 15:04:05"
 	StakingMinimumLeadTime = 25 * time.Second
@@ -619,10 +624,12 @@ func (s *server) CreateBlockchains(
 
 	s.logger.Info("CreateBlockchains: starting chain creation",
 		log.Int("numChains", len(chainSpecs)),
-		log.Duration("timeout", waitForHealthyTimeout),
+		log.Duration("timeout", chainDeployTimeout),
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), waitForHealthyTimeout)
+	// FAIL FAST: Use shorter timeout for chain deploy operations
+	// 30s is plenty for local P-chain operations; if it takes longer, something is wrong
+	ctx, cancel := context.WithTimeout(context.Background(), chainDeployTimeout)
 	defer cancel()
 	chainIDs, err := s.network.CreateChains(ctx, chainSpecs)
 	if err != nil {
