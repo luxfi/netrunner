@@ -13,6 +13,7 @@ import (
 	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/cmd/netrunner/commands"
+	"github.com/luxfi/netrunner/cmd/server"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,7 @@ OP Stack, and more.`,
 
 	// Add subcommands
 	rootCmd.AddCommand(
+		server.NewCommand(),
 		commands.NewEngineCmd(logger),
 		commands.NewStackCmd(logger),
 		commands.NewStatusCmd(logger),

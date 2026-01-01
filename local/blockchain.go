@@ -69,11 +69,15 @@ const (
 	// check period while waiting for all validators to be ready
 	// Reduced from 1s to 200ms for faster validator detection
 	waitForValidatorsPullFrequency = 200 * time.Millisecond
-	defaultTimeout                 = 10 * time.Minute // Increased for mainnet staking validators
-	stakingMinimumLeadTime         = 25 * time.Second
+	// FAIL FAST: Reduced from 10 minutes to 30 seconds for local deployments
+	// Most P-chain API calls should complete in <5s on localhost
+	defaultTimeout         = 30 * time.Second
+	stakingMinimumLeadTime = 25 * time.Second
 	minStakeDuration               = 24 * 14 * time.Hour
-	// dedicated timeout for waiting on chain validators to become active
-	chainValidatorWaitTimeout = 2 * time.Minute
+	// FAIL FAST: Reduced from 45s to 30s for local deployments
+	// For local networks, validators activate quickly (5-10s). If it takes longer,
+	// something is wrong - fail fast with clear error rather than waiting forever.
+	chainValidatorWaitTimeout = 30 * time.Second
 )
 
 var (
@@ -197,8 +201,9 @@ func (ln *localNetwork) RegisterAliases(
 				return fmt.Errorf("admin client is nil for node %v", nodeName)
 			}
 			// Retry with exponential backoff - nodes may not have discovered chain yet
-			maxRetries := 10
-			baseDelay := 500 * time.Millisecond
+			// FAIL FAST: Reduced retries from 10 to 5, max delay from 5s to 2s
+			maxRetries := 5
+			baseDelay := 300 * time.Millisecond
 			var lastErr error
 			for attempt := 0; attempt < maxRetries; attempt++ {
 				if err := (*adminClient).AliasChain(ctx, chainID, blockchainAlias); err != nil {
@@ -214,8 +219,8 @@ func (ln *localNetwork) RegisterAliases(
 					}
 					lastErr = err
 					delay := baseDelay * time.Duration(1<<attempt)
-					if delay > 5*time.Second {
-						delay = 5 * time.Second
+					if delay > 2*time.Second {
+						delay = 2 * time.Second // FAIL FAST: reduced max delay
 					}
 					ln.logger.Debug("alias registration failed, retrying",
 						"node", nodeName,
@@ -253,11 +258,17 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 	fmt.Println()
 	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for chains to be discovered on all nodes...")))
 
-	// Use a longer timeout for chain discovery - VMs may need time to initialize
-	// Especially for first-time deployments where VMs need to be loaded
-	maxWait := 120 * time.Second // Extended timeout for VM initialization
-	pollInterval := 500 * time.Millisecond // Poll frequently
+	// FAIL FAST: Respect the context deadline, don't use hardcoded timeout
+	// For local networks, chain discovery should complete in <30s
+	// The context already has a timeout from the caller
+	maxWait := 30 * time.Second // Max wait for local chain discovery
+	pollInterval := 500 * time.Millisecond
+
+	// Use the earlier of: context deadline or our maxWait
 	deadline := time.Now().Add(maxWait)
+	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
+		deadline = ctxDeadline
+	}
 
 	for _, chainInfo := range chainInfos {
 		blockchainID := chainInfo.blockchainID.String()
@@ -392,9 +403,15 @@ func (ln *localNetwork) waitForBlockchainOnPChain(
 	fmt.Println()
 	ln.logger.Info(log.Blue.Wrap(log.Bold.Wrap("waiting for P-Chain to sync blockchain across all nodes...")))
 
-	maxWait := 60 * time.Second
+	// FAIL FAST: Respect context deadline, don't use hardcoded 60s
+	maxWait := 30 * time.Second // P-chain sync should be fast on localhost
 	pollInterval := 500 * time.Millisecond
+
+	// Use the earlier of: context deadline or our maxWait
 	deadline := time.Now().Add(maxWait)
+	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
+		deadline = ctxDeadline
+	}
 
 	for _, blockchainID := range blockchainIDs {
 		ln.logger.Info("waiting for blockchain on P-Chain",
@@ -490,6 +507,7 @@ func (ln *localNetwork) waitForPeerConnectivity(ctx context.Context) error {
 
 		connected := false
 		attemptCount := 0
+	peerLoop:
 		for time.Now().Before(deadline) {
 			attemptCount++
 			infoClient := node.GetAPIClient().InfoAPI()
@@ -500,7 +518,11 @@ func (ln *localNetwork) waitForPeerConnectivity(ctx context.Context) error {
 						"attempts", attemptCount,
 					)
 				}
-				time.Sleep(pollInterval)
+				select {
+				case <-ctx.Done():
+					return fmt.Errorf("context cancelled while waiting for peers on node %s: %w", nodeName, ctx.Err())
+				case <-time.After(pollInterval):
+				}
 				continue
 			}
 
@@ -513,7 +535,11 @@ func (ln *localNetwork) waitForPeerConnectivity(ctx context.Context) error {
 						"attempts", attemptCount,
 					)
 				}
-				time.Sleep(pollInterval)
+				select {
+				case <-ctx.Done():
+					return fmt.Errorf("context cancelled while waiting for peers on node %s: %w", nodeName, ctx.Err())
+				case <-time.After(pollInterval):
+				}
 				continue
 			}
 
@@ -524,7 +550,7 @@ func (ln *localNetwork) waitForPeerConnectivity(ctx context.Context) error {
 					"numPeers", len(peers),
 					"attempts", attemptCount,
 				)
-				break
+				break peerLoop
 			}
 
 			if attemptCount%10 == 0 {
@@ -535,7 +561,11 @@ func (ln *localNetwork) waitForPeerConnectivity(ctx context.Context) error {
 					"attempts", attemptCount,
 				)
 			}
-			time.Sleep(pollInterval)
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("context cancelled while waiting for peers on node %s: %w", nodeName, ctx.Err())
+			case <-time.After(pollInterval):
+			}
 		}
 
 		if !connected {
@@ -608,7 +638,11 @@ func (ln *localNetwork) waitForPChainHeightSync(ctx context.Context) error {
 			return nil
 		}
 
-		time.Sleep(pollInterval)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for P-Chain sync: %w", ctx.Err())
+		case <-time.After(pollInterval):
+		}
 	}
 
 	// Log final state for debugging
@@ -827,9 +861,9 @@ func (ln *localNetwork) installCustomChains(
 
 	// Wait for subnet creation transactions to be fully committed before adding validators
 	// The P-Chain needs time to commit the subnet creation blocks and propagate state to all nodes
-	// Increased from 5s to 15s to ensure state synchronization across all validators
+	// For local networks, this should be very fast (1-2s). For public networks, may need longer.
 	ln.logger.Info("waiting for subnet creation to be committed...")
-	time.Sleep(15 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	if err = ln.addChainValidators(ctx, platformCli, w, chainIDs, participantsSpecs); err != nil {
 		ln.logger.Error("installCustomChains: failed to add chain validators",
@@ -966,10 +1000,12 @@ func (ln *localNetwork) installCustomChains(
 	}
 
 	// Reload VMs after restart to ensure any new VMs are available
+	// CRITICAL FIX: Return error instead of swallowing - VM reload failure means chain won't work
 	if err := ln.reloadVMPlugins(ctx); err != nil {
-		ln.logger.Warn("VM hot-reload after chain creation failed (non-fatal)",
+		ln.logger.Error("VM hot-reload after chain creation failed",
 			"error", err.Error(),
 		)
+		return nil, fmt.Errorf("VM hot-reload failed after chain creation: %w", err)
 	}
 
 	chainInfos := make([]blockchainInfo, len(chainSpecs))
@@ -1133,22 +1169,22 @@ func (ln *localNetwork) waitForCustomChainsReady(
 		)
 	}
 
-	// Quick health check with 30s timeout - don't block forever
-	// If network is healthy, chains should come up quickly
-	healthCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// FAIL FAST: 15s timeout for local chain health check
+	// If chain isn't healthy in 15s on localhost, something is wrong - return error immediately
+	healthCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	if err := ln.healthy(healthCtx); err != nil {
-		// Log warning but don't fail - chain is created, may just need more time
-		ln.logger.Warn("chain health check timed out, chain may still be starting",
+		// CRITICAL FIX: Return error instead of swallowing it
+		// This was causing CLI to wait forever while errors were logged but not returned
+		ln.logger.Error("chain health check failed - returning error immediately",
 			"error", err.Error(),
 		)
-		ln.logger.Info("use 'lux network status' to check chain health")
-	} else {
-		fmt.Println()
-		ln.logger.Info(log.Green.Wrap("custom chains ready"))
+		return fmt.Errorf("custom chains not ready within 15s: %w", err)
 	}
 
+	fmt.Println()
+	ln.logger.Info(log.Green.Wrap("custom chains ready"))
 	return nil
 }
 
@@ -1192,6 +1228,18 @@ func (ln *localNetwork) restartNodes(
 				trackChainIDsSet.Add(s)
 			}
 		}
+
+		// OPTIMIZATION: Nodes with track-chains=all auto-discover all chains.
+		// They don't need restart for new chain deployment - VM hot-reload is enough.
+		// This prevents race conditions where VMs are killed during initialization.
+		hasTrackAll := trackChainIDsSet.Contains("all")
+		if hasTrackAll {
+			ln.logger.Debug("node has track-chains=all, skipping restart",
+				"nodeName", nodeName,
+			)
+			continue
+		}
+
 		needsRestart := false
 		for _, validatorSpec := range validatorSpecs {
 			if validatorSpec.NodeName == node.name {
@@ -2272,7 +2320,8 @@ func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 // with retry logic to handle hot-loading delays
 func (ln *localNetwork) verifyVMsAvailable(ctx context.Context, vmIDs []ids.ID) error {
 	const (
-		maxRetries    = 10
+		// FAIL FAST: Reduced retries from 10 to 5 (2.5s max)
+		maxRetries    = 5
 		retryInterval = 500 * time.Millisecond
 	)
 
