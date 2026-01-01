@@ -266,6 +266,14 @@ func (lc *localNetwork) createConfig() error {
 		cfg.Flags[k] = v
 	}
 
+	// Extract track-chains from global config if present
+	// This allows CLI to pass track-chains in globalNodeConfig JSON
+	if trackChainsVal, ok := globalConfig["track-chains"]; ok {
+		if trackChainsStr, ok := trackChainsVal.(string); ok {
+			lc.options.trackChains = trackChainsStr
+		}
+	}
+
 	if lc.pluginDir != "" {
 		cfg.Flags[config.PluginDirKey] = lc.pluginDir
 	}
@@ -288,6 +296,12 @@ func (lc *localNetwork) createConfig() error {
 		}
 		if cfg.NodeConfigs[i].ChainConfigFiles == nil {
 			cfg.NodeConfigs[i].ChainConfigFiles = map[string]string{}
+		}
+
+		// Propagate global config flags to each node config
+		// This ensures track-chains and other global settings apply to all nodes
+		for k, v := range globalConfig {
+			cfg.NodeConfigs[i].Flags[k] = v
 		}
 
 		for k, v := range lc.options.chainConfigs {

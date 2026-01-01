@@ -4,13 +4,13 @@
 package local
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/luxfi/const"
@@ -30,6 +30,79 @@ import (
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/formatting/address"
 )
+
+// patchGenesisPreservingRaw patches a top-level genesis JSON document while guaranteeing that
+// selected keys are preserved byte-for-byte as raw JSON values (including quotes/escapes for strings).
+//
+// This is the correct approach for EVM genesis fields (C-Chain + any subnet EVM genesis) because
+// parsing via interface{} will corrupt large numeric fields and/or change encoding.
+//
+// CRITICAL: Never use map[string]interface{} for genesis - it causes float64 precision loss!
+func patchGenesisPreservingRaw(
+	in []byte,
+	preserveKeys []string,
+	mutate func(m map[string]json.RawMessage) error,
+) ([]byte, error) {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(in, &m); err != nil {
+		return nil, fmt.Errorf("unmarshal genesis envelope: %w", err)
+	}
+
+	// Snapshot preserved raw values.
+	preserved := make(map[string]json.RawMessage, len(preserveKeys))
+	for _, k := range preserveKeys {
+		if v, ok := m[k]; ok {
+			// deep copy
+			preserved[k] = append(json.RawMessage(nil), v...)
+		}
+	}
+
+	// Apply edits.
+	if err := mutate(m); err != nil {
+		return nil, err
+	}
+
+	// Restore preserved values (even if mutate touched them by accident).
+	for k, v := range preserved {
+		m[k] = v
+	}
+
+	// Marshal output.
+	out, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal genesis envelope: %w", err)
+	}
+
+	// Sanity check: ensure preserved keys are still byte-identical.
+	var m2 map[string]json.RawMessage
+	if err := json.Unmarshal(out, &m2); err != nil {
+		return nil, fmt.Errorf("re-unmarshal genesis envelope: %w", err)
+	}
+	for k, v := range preserved {
+		if vv, ok := m2[k]; ok && !bytes.Equal(vv, v) {
+			return nil, fmt.Errorf("FATAL: preserved genesis key %q mutated (byte mismatch)", k)
+		}
+	}
+
+	return out, nil
+}
+
+// mustJSON is a helper for assigning scalars/structs back into RawMessage maps.
+func mustJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// evmGenesisKeys are the keys that MUST be preserved byte-for-byte in genesis.
+// These correspond to EVM chain genesis configurations.
+var evmGenesisKeys = []string{
+	"cChainGenesis",
+	// Add subnet EVM genesis keys if embedded in main genesis:
+	// "hanzoGenesis", "spcGenesis", "zooGenesis",
+}
 
 // NewConfigForNetwork creates a network config for the specified network ID.
 // This uses the proper genesis configuration from github.com/luxfi/genesis/configs.
@@ -104,12 +177,9 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 	// - Use embedded validator keys from defaultNetworkConfig
 	// - Keep initialStakers from genesis (already matches embedded keys)
 	// - Generate P-chain allocations for the embedded validators
-
-	// Parse genesis to modify it
-	var genesis map[string]interface{}
-	if err := json.Unmarshal(genesisJSON, &genesis); err != nil {
-		return network.Config{}, fmt.Errorf("failed to parse genesis: %w", err)
-	}
+	//
+	// CRITICAL: Use patchGenesisPreservingRaw to ensure cChainGenesis bytes are NEVER modified.
+	// Parsing via map[string]interface{} corrupts large numerics (float64 precision loss).
 
 	hrp := constants.GetHRP(networkID)
 
@@ -125,147 +195,133 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		numEmbeddedToUse = numEmbedded
 	}
 
-	// For P/X-chain allocations, we need to create them for keys the wallet can use.
-	// C-chain allocations are historic (embedded in genesis), but P/X can be set freely.
-	// REPLACE allocations with ones for the wallet's key (mnemonic or private key).
-	var newAllocations []interface{}
+	// Patch genesis using RawMessage to preserve cChainGenesis byte-exact
+	updatedGenesis, err := patchGenesisPreservingRaw(genesisJSON, evmGenesisKeys, func(m map[string]json.RawMessage) error {
+		// Build P/X-chain allocations for wallet keys
+		var newAllocations []map[string]interface{}
 
-	// If LUX_MNEMONIC is set, create allocations for mnemonic-derived key
-	// Need BOTH X-chain (for transfers) and P-chain (for chain creation/validators)
-	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
-		validatorKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, 1)
-		if err == nil && len(validatorKeys) > 0 {
-			vk := validatorKeys[0]
-			addr := vk.PChainAddr // Same underlying secp256k1 address
-			xLuxAddr, errX := address.Format("X", hrp, addr[:])
-			pLuxAddr, errP := address.Format("P", hrp, addr[:])
-			if errX == nil && errP == nil {
-				fmt.Printf("🔑 Setting X+P allocations for LUX_MNEMONIC: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
-				// X-chain allocation (for asset transfers)
-				newAllocations = append(newAllocations, map[string]interface{}{
-					"ethAddr":        vk.CChainAddrHex(),
-					"luxAddr":        xLuxAddr,
-					"initialAmount":  uint64(2000000000000000000), // 2B LUX
-					"unlockSchedule": []map[string]interface{}{},
-				})
-				// P-chain allocation (for chain creation, validators)
-				// IMPORTANT: Must have unlockSchedule entries for builder to create UTXOs
-				newAllocations = append(newAllocations, map[string]interface{}{
-					"ethAddr":       vk.CChainAddrHex(),
-					"luxAddr":       pLuxAddr,
-					"initialAmount": uint64(0), // Not used for P-chain, unlockSchedule is used
-					"unlockSchedule": []map[string]interface{}{
-						{
-							"amount":   uint64(2000000000000000000), // 2B LUX
-							"locktime": uint64(0),                   // Immediately available
-						},
-					},
-				})
-			}
-		}
-	}
-
-	// If LUX_PRIVATE_KEY is set, also create X+P allocations for it
-	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
-		privKeyBytes, err := hex.DecodeString(privKeyHex)
-		if err == nil && len(privKeyBytes) == 32 {
-			luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
-			if err == nil {
-				pubKey := luxPrivKey.PublicKey()
-				addr := ids.ShortID(pubKey.Address())
+		// If LUX_MNEMONIC is set, create allocations for mnemonic-derived key
+		if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
+			validatorKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, 1)
+			if err == nil && len(validatorKeys) > 0 {
+				vk := validatorKeys[0]
+				addr := vk.PChainAddr
 				xLuxAddr, errX := address.Format("X", hrp, addr[:])
 				pLuxAddr, errP := address.Format("P", hrp, addr[:])
 				if errX == nil && errP == nil {
-					fmt.Printf("🔑 Adding X+P allocations for LUX_PRIVATE_KEY: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
-					ethAddr := "0x" + hex.EncodeToString(addr[:])
+					fmt.Printf("🔑 Setting X+P allocations for LUX_MNEMONIC: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
 					// X-chain allocation
 					newAllocations = append(newAllocations, map[string]interface{}{
-						"ethAddr":        ethAddr,
+						"ethAddr":        vk.CChainAddrHex(),
 						"luxAddr":        xLuxAddr,
-						"initialAmount":  uint64(2000000000000000000), // 2B LUX
-						"unlockSchedule": []map[string]interface{}{},
+						"initialAmount":  uint64(2000000000000000000),
+						"unlockSchedule": []interface{}{},
 					})
-					// P-chain allocation - must use unlockSchedule for builder to create UTXOs
+					// P-chain allocation
 					newAllocations = append(newAllocations, map[string]interface{}{
-						"ethAddr":       ethAddr,
+						"ethAddr":       vk.CChainAddrHex(),
 						"luxAddr":       pLuxAddr,
-						"initialAmount": uint64(0), // Not used for P-chain
+						"initialAmount": uint64(0),
 						"unlockSchedule": []map[string]interface{}{
-							{
-								"amount":   uint64(2000000000000000000), // 2B LUX
-								"locktime": uint64(0),                   // Immediately available
-							},
+							{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
 						},
 					})
 				}
 			}
 		}
-	}
 
-	// If we created new allocations, replace the genesis allocations
-	// Otherwise, keep the genesis package's allocations (for backward compatibility)
-	if len(newAllocations) > 0 {
-		genesis["allocations"] = newAllocations
-	}
-
-	// Generate initialStakers from embedded validator keys if not provided in genesis
-	// This is needed because testnet/mainnet genesis may not have initialStakers defined
-	initialStakers, hasStakers := genesis["initialStakers"]
-	stakersSlice, isSlice := initialStakers.([]interface{})
-	if !hasStakers || !isSlice || len(stakersSlice) == 0 {
-		// Generate initialStakers from embedded validator keys
-		var generatedStakers []map[string]interface{}
-		for i := uint32(0); i < numEmbeddedToUse; i++ {
-			embeddedConfig := defaultNetworkConfig.NodeConfigs[i]
-
-			// Get NodeID from staking cert
-			nodeID, err := utils.ToNodeID([]byte(embeddedConfig.StakingKey), []byte(embeddedConfig.StakingCert))
-			if err != nil {
-				return network.Config{}, fmt.Errorf("failed to get NodeID for node %d: %w", i, err)
+		// If LUX_PRIVATE_KEY is set, also create X+P allocations for it
+		if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+			privKeyBytes, err := hex.DecodeString(privKeyHex)
+			if err == nil && len(privKeyBytes) == 32 {
+				luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
+				if err == nil {
+					pubKey := luxPrivKey.PublicKey()
+					addr := ids.ShortID(pubKey.Address())
+					xLuxAddr, errX := address.Format("X", hrp, addr[:])
+					pLuxAddr, errP := address.Format("P", hrp, addr[:])
+					if errX == nil && errP == nil {
+						fmt.Printf("🔑 Adding X+P allocations for LUX_PRIVATE_KEY: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
+						ethAddr := "0x" + hex.EncodeToString(addr[:])
+						newAllocations = append(newAllocations, map[string]interface{}{
+							"ethAddr":        ethAddr,
+							"luxAddr":        xLuxAddr,
+							"initialAmount":  uint64(2000000000000000000),
+							"unlockSchedule": []interface{}{},
+						})
+						newAllocations = append(newAllocations, map[string]interface{}{
+							"ethAddr":       ethAddr,
+							"luxAddr":       pLuxAddr,
+							"initialAmount": uint64(0),
+							"unlockSchedule": []map[string]interface{}{
+								{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+							},
+						})
+					}
+				}
 			}
-
-			// Get BLS key and compute ProofOfPossession
-			blsKeyBytes, err := base64.StdEncoding.DecodeString(embeddedConfig.StakingSigningKey)
-			if err != nil {
-				return network.Config{}, fmt.Errorf("failed to decode BLS key for node %d: %w", i, err)
-			}
-			blsSecretKey, err := bls.SecretKeyFromBytes(blsKeyBytes)
-			if err != nil {
-				return network.Config{}, fmt.Errorf("failed to parse BLS key for node %d: %w", i, err)
-			}
-			pop, err := signer.NewProofOfPossession(blsSecretKey)
-			if err != nil {
-				return network.Config{}, fmt.Errorf("failed to create ProofOfPossession for node %d: %w", i, err)
-			}
-
-			// Create staker entry - use a reward address derived from the first key or a treasury address
-			// For simplicity, use the X-chain address from the first allocation or default
-			staker := map[string]interface{}{
-				"nodeID":        nodeID.String(),
-				"rewardAddress": "P-test1yljhuvjkmtu0y5ls6kf4exsdd8gea9mp7faxl2", // Default testnet treasury
-				"delegationFee": uint32(20000), // 2%
-				"signer": map[string]interface{}{
-					"publicKey":         fmt.Sprintf("0x%x", pop.PublicKey[:]),
-					"proofOfPossession": fmt.Sprintf("0x%x", pop.ProofOfPossession[:]),
-				},
-			}
-			generatedStakers = append(generatedStakers, staker)
 		}
-		genesis["initialStakers"] = generatedStakers
-		fmt.Printf("🔧 Generated %d initialStakers from embedded validator keys\n", len(generatedStakers))
-	}
 
-	// Set initialStakedFunds to empty - allocations are for free balance, not staking
-	genesis["initialStakedFunds"] = []string{}
+		// Update allocations if we have new ones
+		if len(newAllocations) > 0 {
+			m["allocations"] = mustJSON(newAllocations)
+		}
 
-	// Update start time to now
-	now := time.Now().Unix()
-	genesis["startTime"] = uint64(now)
+		// Check if we need to generate initialStakers
+		var existingStakers []interface{}
+		if raw, ok := m["initialStakers"]; ok {
+			json.Unmarshal(raw, &existingStakers)
+		}
+		if len(existingStakers) == 0 {
+			// Generate initialStakers from embedded validator keys
+			var generatedStakers []map[string]interface{}
+			for i := uint32(0); i < numEmbeddedToUse; i++ {
+				embeddedConfig := defaultNetworkConfig.NodeConfigs[i]
 
-	// Re-serialize genesis
-	updatedGenesis, err := json.MarshalIndent(genesis, "", "  ")
+				nodeID, err := utils.ToNodeID([]byte(embeddedConfig.StakingKey), []byte(embeddedConfig.StakingCert))
+				if err != nil {
+					return fmt.Errorf("failed to get NodeID for node %d: %w", i, err)
+				}
+
+				blsKeyBytes, err := base64.StdEncoding.DecodeString(embeddedConfig.StakingSigningKey)
+				if err != nil {
+					return fmt.Errorf("failed to decode BLS key for node %d: %w", i, err)
+				}
+				blsSecretKey, err := bls.SecretKeyFromBytes(blsKeyBytes)
+				if err != nil {
+					return fmt.Errorf("failed to parse BLS key for node %d: %w", i, err)
+				}
+				pop, err := signer.NewProofOfPossession(blsSecretKey)
+				if err != nil {
+					return fmt.Errorf("failed to create ProofOfPossession for node %d: %w", i, err)
+				}
+
+				staker := map[string]interface{}{
+					"nodeID":        nodeID.String(),
+					"rewardAddress": "P-test1yljhuvjkmtu0y5ls6kf4exsdd8gea9mp7faxl2",
+					"delegationFee": uint32(20000),
+					"signer": map[string]interface{}{
+						"publicKey":         fmt.Sprintf("0x%x", pop.PublicKey[:]),
+						"proofOfPossession": fmt.Sprintf("0x%x", pop.ProofOfPossession[:]),
+					},
+				}
+				generatedStakers = append(generatedStakers, staker)
+			}
+			m["initialStakers"] = mustJSON(generatedStakers)
+			fmt.Printf("🔧 Generated %d initialStakers from embedded validator keys\n", len(generatedStakers))
+		}
+
+		// Set initialStakedFunds to empty
+		m["initialStakedFunds"] = mustJSON([]string{})
+
+		// Update start time to now
+		now := time.Now().Unix()
+		m["startTime"] = mustJSON(uint64(now))
+
+		return nil
+	})
 	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to serialize updated genesis: %w", err)
+		return network.Config{}, fmt.Errorf("failed to patch genesis: %w", err)
 	}
 	netConfig.Genesis = string(updatedGenesis)
 
@@ -369,9 +425,22 @@ func NewCanonicalCustomConfig(binaryPath string, numNodes uint32) (network.Confi
 // and loads validator keys from ~/.lux/keys/node{0..n-1}/
 func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, portBase int) (network.Config, error) {
 	// Load CANONICAL genesis bytes - no parsing/re-serialization
-	genesisBytes, err := configs.GetCanonicalGenesisBytes(networkID)
+	originalGenesisBytes, err := configs.GetCanonicalGenesisBytes(networkID)
 	if err != nil {
 		return network.Config{}, fmt.Errorf("failed to load canonical genesis: %w", err)
+	}
+
+	// For LOCAL TESTING: Update startTime to now so bootstrap starts immediately.
+	// CRITICAL: Use patchGenesisPreservingRaw to preserve cChainGenesis exact bytes.
+	now := time.Now().Unix()
+	fmt.Printf("📅 Updated genesis startTime to %d (now) for local testing\n", now)
+
+	genesisBytes, err := patchGenesisPreservingRaw(originalGenesisBytes, evmGenesisKeys, func(m map[string]json.RawMessage) error {
+		m["startTime"] = mustJSON(uint64(now))
+		return nil
+	})
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to patch genesis: %w", err)
 	}
 
 	// Start with default config
@@ -506,16 +575,11 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 	// Start with the default config structure
 	netConfig := NewDefaultConfig(binaryPath)
 
-	// Parse genesis to modify it
-	var genesis map[string]interface{}
-	if err := json.Unmarshal(genesisJSON, &genesis); err != nil {
-		return network.Config{}, fmt.Errorf("failed to parse genesis: %w", err)
-	}
-
-	// Build initial stakers from loaded keys
+	// Build P/X chain data BEFORE patching genesis
 	hrp := constants.GetHRP(networkID)
 	numNodes := uint32(len(validatorKeys))
 
+	// Build initial stakers from loaded keys
 	initialStakers := make([]map[string]interface{}, numNodes)
 	for i, vk := range validatorKeys {
 		rewardAddr, err := address.Format("P", hrp, vk.PChainAddr[:])
@@ -526,11 +590,10 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 		staker := map[string]interface{}{
 			"nodeID":        vk.NodeID.String(),
 			"rewardAddress": rewardAddr,
-			"delegationFee": 20000,   // 2% delegation fee
-			"weight":        GigaLux, // 1,000,000,000 LUX (1B) per validator
+			"delegationFee": 20000,
+			"weight":        GigaLux,
 		}
 
-		// Add BLS signer if available
 		if len(vk.BLSPublicKey) > 0 && len(vk.BLSPoP) > 0 {
 			staker["signer"] = map[string]interface{}{
 				"publicKey":         vk.BLSPublicKeyHex(),
@@ -541,44 +604,32 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 		initialStakers[i] = staker
 	}
 
-	// Update genesis with initial stakers (our validator NodeIDs)
-	genesis["initialStakers"] = initialStakers
-
-	// Generate allocations from validator keys (rather than expecting pre-existing allocations)
-	// Each validator gets both X-chain and P-chain allocations
-	// X-chain: 1B LUX immediately available
-	// P-chain: 1B LUX with 1% unlock per year for 100 years starting Jan 1 2020
-	allocations := make([]interface{}, 0, numNodes*2)
-
-	// Constants for P-chain unlock schedule
+	// Build allocations
 	const (
-		oneGigaLux       = uint64(1000000000000000000) // 1B LUX in nLUX
-		onePercentPerYear = oneGigaLux / 100           // 1% = 10M LUX
-		jan1_2020        = uint64(1577836800)          // Unix timestamp
-		oneYear          = uint64(31536000)            // seconds
+		oneGigaLux        = uint64(1000000000000000000)
+		onePercentPerYear = oneGigaLux / 100
+		jan1_2020         = uint64(1577836800)
+		oneYear           = uint64(31536000)
 	)
 
+	var allocations []map[string]interface{}
 	for i, vk := range validatorKeys {
-		// Build P-chain address
 		pChainAddr, err := address.Format("P", hrp, vk.PChainAddr[:])
 		if err != nil {
 			return network.Config{}, fmt.Errorf("failed to format P-chain address for validator %d: %w", i, err)
 		}
-		// Build X-chain address
 		xChainAddr, err := address.Format("X", hrp, vk.PChainAddr[:])
 		if err != nil {
 			return network.Config{}, fmt.Errorf("failed to format X-chain address for validator %d: %w", i, err)
 		}
 
-		// X-chain allocation (1B LUX) - immediately available
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":        vk.CChainAddrHex(),
 			"luxAddr":        xChainAddr,
 			"initialAmount":  oneGigaLux,
-			"unlockSchedule": []map[string]interface{}{},
+			"unlockSchedule": []interface{}{},
 		})
 
-		// P-chain allocation (1B LUX) - 1% per year for 100 years
 		pchainUnlockSchedule := make([]map[string]interface{}, 100)
 		for year := 0; year < 100; year++ {
 			pchainUnlockSchedule[year] = map[string]interface{}{
@@ -595,94 +646,65 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 
 		fmt.Printf("  Validator %d: %s -> X:%s P:%s (1B each)\n", i+1, vk.NodeID.String(), xChainAddr, pChainAddr)
 	}
-	genesis["allocations"] = allocations
 
-	// Set initialStakedFunds to EMPTY - we use explicit weight in initialStakers
-	genesis["initialStakedFunds"] = []string{}
-
-	// Check for LUX_MNEMONIC and add mnemonic-derived allocation with FREE funds
-	// This enables subnet creation without needing the hardcoded treasury key
-	// IMPORTANT: Add this AFTER setting initialStakedFunds so mnemonic funds are NOT staked
+	// Add mnemonic allocation if set
 	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
 		fmt.Printf("🔑 LUX_MNEMONIC is set, adding mnemonic allocation to genesis\n")
-		mnemonicAlloc := map[string]interface{}{
+		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":       "0x0406d56943a38ad8398a738527f27e2cf01731a8",
 			"luxAddr":       "P-lux1qsrd262r5w9dswv2wwzj0un79ncpwvdgkpqzqu",
 			"initialAmount": 0,
 			"unlockSchedule": []map[string]interface{}{
-				{
-					"amount":   uint64(100000000000000), // 100,000 LUX
-					"locktime": uint64(0),
-				},
+				{"amount": uint64(100000000000000), "locktime": uint64(0)},
 			},
-		}
-
-		// Append mnemonic allocation directly to our allocations slice
-		fmt.Printf("   Adding mnemonic allocation (NOT staked) to %d existing allocations\n", len(allocations))
-		allocations = append(allocations, mnemonicAlloc)
-		genesis["allocations"] = allocations
-	} else {
-		fmt.Printf("⚠️  LUX_MNEMONIC not set, skipping mnemonic allocation\n")
+		})
 	}
 
-	// Check for LUX_PRIVATE_KEY and add allocations with correct HRP for this network
-	// This enables deploy operations when using a specific private key
+	// Add private key allocation if set
+	var initialStakedFunds []string
 	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
 		privKeyBytes, err := hex.DecodeString(privKeyHex)
 		if err == nil && len(privKeyBytes) == 32 {
-			// Derive address from private key
 			luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
 			if err == nil {
 				pubKey := luxPrivKey.PublicKey()
 				pChainAddr := ids.ShortID(pubKey.Address())
-
-				// Format addresses with the correct HRP for this network
 				xLuxAddr, errX := address.Format("X", hrp, pChainAddr[:])
 				pLuxAddr, errP := address.Format("P", hrp, pChainAddr[:])
 				if errX == nil && errP == nil {
 					ethAddr := "0x" + hex.EncodeToString(pChainAddr[:])
 					fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
-
-					// X-chain allocation (2B LUX) - immediately available
 					allocations = append(allocations, map[string]interface{}{
 						"ethAddr":        ethAddr,
 						"luxAddr":        xLuxAddr,
-						"initialAmount":  uint64(2000000000000000000), // 2B LUX
-						"unlockSchedule": []map[string]interface{}{},
+						"initialAmount":  uint64(2000000000000000000),
+						"unlockSchedule": []interface{}{},
 					})
-
-					// P-chain allocation (2B LUX) - immediately available for subnet creation
 					allocations = append(allocations, map[string]interface{}{
 						"ethAddr":       ethAddr,
 						"luxAddr":       pLuxAddr,
 						"initialAmount": uint64(0),
 						"unlockSchedule": []map[string]interface{}{
-							{
-								"amount":   uint64(2000000000000000000), // 2B LUX
-								"locktime": uint64(0),                   // Immediately available
-							},
+							{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
 						},
 					})
-					genesis["allocations"] = allocations
-
-					// Add to initialStakedFunds for P-chain access
-					initialStakedFunds, _ := genesis["initialStakedFunds"].([]string)
 					initialStakedFunds = append(initialStakedFunds, xLuxAddr)
-					genesis["initialStakedFunds"] = initialStakedFunds
-					fmt.Printf("🔑 Added %s to initialStakedFunds for P-chain access\n", xLuxAddr)
 				}
 			}
 		}
 	}
 
-	// Update start time to now
+	// Patch genesis using RawMessage to preserve cChainGenesis byte-exact
 	now := time.Now().Unix()
-	genesis["startTime"] = uint64(now)
-
-	// Re-serialize genesis
-	updatedGenesis, err := json.MarshalIndent(genesis, "", "  ")
+	updatedGenesis, err := patchGenesisPreservingRaw(genesisJSON, evmGenesisKeys, func(m map[string]json.RawMessage) error {
+		m["initialStakers"] = mustJSON(initialStakers)
+		m["allocations"] = mustJSON(allocations)
+		m["initialStakedFunds"] = mustJSON(initialStakedFunds)
+		m["startTime"] = mustJSON(uint64(now))
+		return nil
+	})
 	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to serialize updated genesis: %w", err)
+		return network.Config{}, fmt.Errorf("failed to patch genesis: %w", err)
 	}
 	netConfig.Genesis = string(updatedGenesis)
 
@@ -848,42 +870,27 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 	// Start with default config
 	netConfig := NewDefaultConfig(binaryPath)
 
-	// Parse genesis to modify it
-	var genesis map[string]interface{}
-	if err := json.Unmarshal(genesisJSON, &genesis); err != nil {
-		return network.Config{}, fmt.Errorf("failed to parse genesis: %w", err)
-	}
-
 	hrp := constants.GetHRP(networkID)
 
 	// Build initial stakers from derived keys
 	initialStakers := make([]map[string]interface{}, numNodes)
-	// Each validator gets BOTH X-chain AND P-chain allocations (2 entries per validator)
-	allocations := make([]interface{}, 0, numNodes*2)
+	var allocations []map[string]interface{}
 
 	for i, vk := range validatorKeys {
-		fmt.Printf("🔍 Validator %d: PChainAddr ShortID = %s\n", i, vk.PChainAddr.String())
-
-		// Build P-chain address for staker rewards and P-chain operations
 		pChainAddr, err := address.Format("P", hrp, vk.PChainAddr[:])
 		if err != nil {
 			return network.Config{}, fmt.Errorf("failed to format P-chain address for validator %d: %w", i, err)
 		}
-		fmt.Printf("🔍 Validator %d: P-chain bech32 = %s\n", i, pChainAddr)
-
-		// Build X-chain address for asset transfers
 		xChainAddr, err := address.Format("X", hrp, vk.PChainAddr[:])
 		if err != nil {
 			return network.Config{}, fmt.Errorf("failed to format X-chain address for validator %d: %w", i, err)
 		}
-		fmt.Printf("🔍 Validator %d: X-chain bech32 = %s\n", i, xChainAddr)
 
-		// Initial staker entry
 		staker := map[string]interface{}{
 			"nodeID":        vk.NodeID.String(),
-			"rewardAddress": xChainAddr, // Rewards go to X-chain address
-			"delegationFee": 20000,       // 2% delegation fee
-			"weight":        GigaLux,     // 1B LUX per validator
+			"rewardAddress": xChainAddr,
+			"delegationFee": 20000,
+			"weight":        GigaLux,
 		}
 		if len(vk.BLSPublicKey) > 0 && len(vk.BLSPoP) > 0 {
 			staker["signer"] = map[string]interface{}{
@@ -893,26 +900,18 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		}
 		initialStakers[i] = staker
 
-		// X-chain allocation (2B LUX) - for asset transfers
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":        vk.CChainAddrHex(),
 			"luxAddr":        xChainAddr,
-			"initialAmount":  uint64(2000000000000000000), // 2B LUX
-			"unlockSchedule": []map[string]interface{}{},
+			"initialAmount":  uint64(2000000000000000000),
+			"unlockSchedule": []interface{}{},
 		})
-
-		// P-chain allocation (2B LUX) - for chain creation, validators
-		// P-chain allocation - MUST use unlockSchedule for P-chain UTXOs
-		// The builder processes unlockSchedule for P-chain, initialAmount for X-chain
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":       vk.CChainAddrHex(),
 			"luxAddr":       pChainAddr,
 			"initialAmount": uint64(0),
 			"unlockSchedule": []map[string]interface{}{
-				{
-					"amount":   uint64(2000000000000000000), // 2B LUX
-					"locktime": uint64(0),                   // locktime 0 = immediately unlocked
-				},
+				{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
 			},
 		})
 
@@ -921,43 +920,33 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 
 	// Add wallet key allocation if different from validators
 	if walletNeedsAllocation {
-		// Build X-chain address for wallet
 		walletXAddr, err := address.Format("X", hrp, walletKey.PChainAddr[:])
 		if err != nil {
 			return network.Config{}, fmt.Errorf("failed to format wallet X-chain address: %w", err)
 		}
-		// Build P-chain address for wallet
 		walletPAddr, err := address.Format("P", hrp, walletKey.PChainAddr[:])
 		if err != nil {
 			return network.Config{}, fmt.Errorf("failed to format wallet P-chain address: %w", err)
 		}
 
-		// X-chain allocation for wallet (2B LUX)
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":        walletKey.CChainAddrHex(),
 			"luxAddr":        walletXAddr,
-			"initialAmount":  uint64(2000000000000000000), // 2B LUX
-			"unlockSchedule": []map[string]interface{}{},
+			"initialAmount":  uint64(2000000000000000000),
+			"unlockSchedule": []interface{}{},
 		})
-
-		// P-chain allocation for wallet (2B LUX) - MUST use unlockSchedule
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":       walletKey.CChainAddrHex(),
 			"luxAddr":       walletPAddr,
 			"initialAmount": uint64(0),
 			"unlockSchedule": []map[string]interface{}{
-				{
-					"amount":   uint64(2000000000000000000), // 2B LUX
-					"locktime": uint64(0),                   // locktime 0 = immediately unlocked
-				},
+				{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
 			},
 		})
-
 		fmt.Printf("  Wallet: %s -> X:%s P:%s (2B each)\n", walletKey.PChainAddr.String(), walletXAddr, walletPAddr)
 	}
 
-	// Also add allocations for LUX_PRIVATE_KEY if set and different from wallet key
-	// This is needed when getDefaultKey() in blockchain.go uses LUX_PRIVATE_KEY
+	// Add LUX_PRIVATE_KEY allocations if set and different from wallet key
 	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
 		privKeyBytes, err := hex.DecodeString(privKeyHex)
 		if err == nil && len(privKeyBytes) == 32 {
@@ -966,92 +955,44 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 				pubKey := luxPrivKey.PublicKey()
 				privKeyAddr := ids.ShortID(pubKey.Address())
 
-				// Check if this is different from wallet key
 				if privKeyAddr != walletKey.PChainAddr {
 					privKeyXAddr, errX := address.Format("X", hrp, privKeyAddr[:])
 					privKeyPAddr, errP := address.Format("P", hrp, privKeyAddr[:])
 					if errX == nil && errP == nil {
-						fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations (with %s HRP): X=%s P=%s (2B each)\n", hrp, privKeyXAddr, privKeyPAddr)
+						fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s P=%s (2B each)\n", privKeyXAddr, privKeyPAddr)
 						ethAddr := "0x" + hex.EncodeToString(privKeyAddr[:])
-
-						// X-chain allocation
 						allocations = append(allocations, map[string]interface{}{
 							"ethAddr":        ethAddr,
 							"luxAddr":        privKeyXAddr,
-							"initialAmount":  uint64(2000000000000000000), // 2B LUX
-							"unlockSchedule": []map[string]interface{}{},
+							"initialAmount":  uint64(2000000000000000000),
+							"unlockSchedule": []interface{}{},
 						})
-
-						// P-chain allocation - MUST use unlockSchedule
 						allocations = append(allocations, map[string]interface{}{
 							"ethAddr":       ethAddr,
 							"luxAddr":       privKeyPAddr,
 							"initialAmount": uint64(0),
 							"unlockSchedule": []map[string]interface{}{
-								{
-									"amount":   uint64(2000000000000000000), // 2B LUX
-									"locktime": uint64(0),                   // locktime 0 = immediately unlocked
-								},
+								{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
 							},
 						})
 					}
-				} else {
-					fmt.Printf("🔑 LUX_PRIVATE_KEY matches wallet key, no extra allocation needed\n")
 				}
 			}
 		}
 	}
 
-	genesis["initialStakers"] = initialStakers
-	genesis["allocations"] = allocations
-
-	// CRITICAL: Also update xChainGenesis.allocations!
-	// The X-chain reads allocations from the embedded xChainGenesis JSON string,
-	// NOT from the top-level allocations array. We must update both.
-	if xChainGenesisStr, ok := genesis["xChainGenesis"].(string); ok {
-		var xChainGenesis map[string]interface{}
-		if err := json.Unmarshal([]byte(xChainGenesisStr), &xChainGenesis); err == nil {
-			// Build X-chain specific allocations (only X-chain addresses, use avaxAddr format)
-			xAllocations := make([]map[string]interface{}, 0)
-			for _, alloc := range allocations {
-				allocMap := alloc.(map[string]interface{})
-				luxAddr, _ := allocMap["luxAddr"].(string)
-				// Only include X-chain allocations (start with "X-")
-				if strings.HasPrefix(luxAddr, "X-") {
-					initialAmount, _ := allocMap["initialAmount"].(uint64)
-					if initialAmount > 0 {
-						xAllocations = append(xAllocations, map[string]interface{}{
-							"avaxAddr":       luxAddr, // X-chain uses avaxAddr field name
-							"ethAddr":        allocMap["ethAddr"],
-							"initialAmount":  initialAmount,
-							"unlockSchedule": []interface{}{},
-						})
-					}
-				}
-			}
-			xChainGenesis["allocations"] = xAllocations
-			if updatedXChain, err := json.Marshal(xChainGenesis); err == nil {
-				genesis["xChainGenesis"] = string(updatedXChain)
-				fmt.Printf("✅ Updated xChainGenesis with %d allocations\n", len(xAllocations))
-			}
-		}
-	}
-
-	// IMPORTANT: Set initialStakedFunds to EMPTY so that P-chain allocations
-	// are NOT filtered by the builder. The builder filters allocations where
-	// the underlying ShortID matches initialStakedFunds, which would incorrectly
-	// filter P-chain allocations that share the same address as X-chain validators.
-	// We use explicit weight in initialStakers instead of deriving from stakes.
-	genesis["initialStakedFunds"] = []string{}
-
-	// Update start time to now
+	// Patch genesis using RawMessage to preserve cChainGenesis byte-exact
+	// CRITICAL: Never use map[string]interface{} for genesis - it causes float64 precision loss!
 	now := time.Now().Unix()
-	genesis["startTime"] = uint64(now)
-
-	// Re-serialize genesis
-	updatedGenesis, err := json.MarshalIndent(genesis, "", "  ")
+	updatedGenesis, err := patchGenesisPreservingRaw(genesisJSON, evmGenesisKeys, func(m map[string]json.RawMessage) error {
+		m["initialStakers"] = mustJSON(initialStakers)
+		m["allocations"] = mustJSON(allocations)
+		m["initialStakedFunds"] = mustJSON([]string{})
+		m["startTime"] = mustJSON(uint64(now))
+		return nil
+	})
 	if err != nil {
-		return network.Config{}, fmt.Errorf("failed to serialize genesis: %w", err)
+		return network.Config{}, fmt.Errorf("failed to patch genesis: %w", err)
 	}
 	netConfig.Genesis = string(updatedGenesis)
 

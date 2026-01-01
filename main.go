@@ -1,4 +1,4 @@
-// Copyright (C) 2025, Lux Industries Inc. All rights reserved.
+// Copyright (C) 2021-2025, Lux Industries Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 package main
 
