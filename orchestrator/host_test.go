@@ -169,7 +169,7 @@ func TestPortManager(t *testing.T) {
 
 	t.Run("ReservePorts", func(t *testing.T) {
 		pm := orchestrator.NewPortManager()
-		
+
 		// Reserve specific ports
 		err := pm.Reserve(20000, 20001, 20002)
 		require.NoError(t, err)

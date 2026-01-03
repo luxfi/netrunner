@@ -8,13 +8,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
 )
 
 const (

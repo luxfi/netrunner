@@ -17,23 +17,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luxfi/node/api/admin"
-	"github.com/luxfi/node/message"
-	luxd_constants "github.com/luxfi/const"
 	"maps"
 	"slices"
 
+	luxd_constants "github.com/luxfi/const"
+	"github.com/luxfi/node/api/admin"
+	"github.com/luxfi/node/message"
+
 	"github.com/luxfi/node/vms/platformvm"
 
+	"github.com/luxfi/ids"
+	"github.com/luxfi/log"
+	"github.com/luxfi/metric"
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/server"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/ids"
-	"github.com/luxfi/log"
-	"github.com/luxfi/metric"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
@@ -55,7 +56,7 @@ var (
 	gRPCGatewayEp   string
 	execPath1       string
 	execPath2       string
-	evmPath   string
+	evmPath         string
 	genesisPath     string
 	genesisContents string
 
@@ -332,8 +333,8 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:     "evm",
-						Genesis:    genesisContents,
+						VmName:           "evm",
+						Genesis:          genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: subnetParticipants},
 					},
 				},
@@ -364,8 +365,8 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:     "evm",
-						Genesis:    genesisContents,
+						VmName:           "evm",
+						Genesis:          genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: subnetParticipants2},
 					},
 				},
@@ -423,13 +424,13 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:     "evm",
-						Genesis:    genesisContents,
+						VmName:           "evm",
+						Genesis:          genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: disjointNewSubnetParticipants[0]},
 					},
 					{
-						VmName:     "evm",
-						Genesis:    genesisContents,
+						VmName:           "evm",
+						Genesis:          genesisContents,
 						ParticipantsSpec: &rpcpb.ParticipantsSpec{Participants: disjointNewSubnetParticipants[1]},
 					},
 				},

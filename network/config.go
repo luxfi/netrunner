@@ -8,11 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/luxfi/const"
+	"maps"
+
+	constants "github.com/luxfi/const"
 	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
-	"maps"
 
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/utils/formatting/address"
@@ -152,8 +153,8 @@ func NewGenesis(
 		NetworkID: networkID,
 		Allocations: []genesis.UnparsedAllocation{
 			{
-				ETHAddr:       zeroEthAddr,          // Zero address as hex string
-				LUXAddr:       genesisVdrStakeAddr,  // Bech32 formatted address
+				ETHAddr:       zeroEthAddr,         // Zero address as hex string
+				LUXAddr:       genesisVdrStakeAddr, // Bech32 formatted address
 				InitialAmount: 0,
 				UnlockSchedule: []genesis.LockedAmount{ // Provides stake to validators
 					{

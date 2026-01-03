@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/ids"
+	"github.com/luxfi/netrunner/network/node"
 )
 
 var (

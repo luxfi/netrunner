@@ -9,16 +9,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"maps"
+	"slices"
+
 	luxconfig "github.com/luxfi/config"
-	"github.com/luxfi/const"
+	constants "github.com/luxfi/const"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"maps"
-	"slices"
 
 	"github.com/luxfi/node/config"
 	dircopy "github.com/otiai10/copy"

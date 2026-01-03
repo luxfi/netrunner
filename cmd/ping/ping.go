@@ -7,11 +7,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
 )
 

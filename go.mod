@@ -15,11 +15,11 @@ require (
 	github.com/luxfi/consensus v1.22.47
 	github.com/luxfi/const v1.4.0
 	github.com/luxfi/crypto v1.17.32
-	github.com/luxfi/genesis v1.5.18
+	github.com/luxfi/genesis v1.5.19
 	github.com/luxfi/geth v1.16.67
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.6
-	github.com/luxfi/keys v1.0.5
+	github.com/luxfi/keys v1.0.6
 	github.com/luxfi/log v1.2.1
 	github.com/luxfi/math v1.2.0
 	github.com/luxfi/metric v1.4.8

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
+	"github.com/luxfi/netrunner/network"
 )
 
 // NetworkType represents the type of network
@@ -19,29 +19,29 @@ type NetworkType string
 
 const (
 	NetworkTypePrimary NetworkType = "primary" // Mainnet or Testnet
-	NetworkTypeChain  NetworkType = "chain"  // L1/L2 chains
+	NetworkTypeChain   NetworkType = "chain"   // L1/L2 chains
 )
 
 // NetworkConfig defines configuration for a single network
 type NetworkConfig struct {
-	NetworkID   uint32      `json:"networkID"`
-	Name        string      `json:"name"`
-	Type        NetworkType `json:"type"`
-	ParentID    uint32      `json:"parentID,omitempty"` // For chains
-	HTTPPort    int         `json:"httpPort"`
-	StakingPort int         `json:"stakingPort"`
-	DataDir     string      `json:"dataDir"`
-	Validators  int         `json:"validators"`
+	NetworkID   uint32        `json:"networkID"`
+	Name        string        `json:"name"`
+	Type        NetworkType   `json:"type"`
+	ParentID    uint32        `json:"parentID,omitempty"` // For chains
+	HTTPPort    int           `json:"httpPort"`
+	StakingPort int           `json:"stakingPort"`
+	DataDir     string        `json:"dataDir"`
+	Validators  int           `json:"validators"`
 	ChainConfig []ChainConfig `json:"chains,omitempty"`
 }
 
 // ChainConfig defines configuration for a chain within a network
 type ChainConfig struct {
-	ChainID   string `json:"chainID"`
-	VMID      string `json:"vmID"`
-	PChainID  string `json:"pChainID,omitempty"`
-	Genesis   []byte `json:"genesis,omitempty"`
-	IsEVM     bool   `json:"isEVM"`
+	ChainID  string `json:"chainID"`
+	VMID     string `json:"vmID"`
+	PChainID string `json:"pChainID,omitempty"`
+	Genesis  []byte `json:"genesis,omitempty"`
+	IsEVM    bool   `json:"isEVM"`
 }
 
 // MultiNetworkManager manages multiple networks running in parallel
@@ -73,7 +73,7 @@ type NetworkInstance struct {
 	Config    NetworkConfig
 	Network   network.Network
 	Status    NetworkStatus
-	Chains   map[string]*ChainInstance
+	Chains    map[string]*ChainInstance
 	StartTime time.Time
 }
 
@@ -107,13 +107,13 @@ type ConsensusManager struct {
 
 // ConsensusParams defines consensus parameters
 type ConsensusParams struct {
-	K                int           `json:"k"`
-	Alpha            int           `json:"alpha"`
-	BetaVirtuous     int           `json:"betaVirtuous"`
-	BetaRogue        int           `json:"betaRogue"`
-	ConcurrentPolls  int           `json:"concurrentPolls"`
-	OptimalProcessing int          `json:"optimalProcessing"`
-	MaxProcessing    int           `json:"maxProcessing"`
+	K                 int           `json:"k"`
+	Alpha             int           `json:"alpha"`
+	BetaVirtuous      int           `json:"betaVirtuous"`
+	BetaRogue         int           `json:"betaRogue"`
+	ConcurrentPolls   int           `json:"concurrentPolls"`
+	OptimalProcessing int           `json:"optimalProcessing"`
+	MaxProcessing     int           `json:"maxProcessing"`
 	MaxTimeProcessing time.Duration `json:"maxTimeProcessing"`
 }
 
@@ -146,10 +146,10 @@ type CrossChainTx struct {
 type TxStatus string
 
 const (
-	TxStatusPending   TxStatus = "pending"
+	TxStatusPending    TxStatus = "pending"
 	TxStatusValidating TxStatus = "validating"
-	TxStatusCommitted TxStatus = "committed"
-	TxStatusFailed    TxStatus = "failed"
+	TxStatusCommitted  TxStatus = "committed"
+	TxStatusFailed     TxStatus = "failed"
 )
 
 // NewMultiNetworkManager creates a new multi-network manager
@@ -170,7 +170,7 @@ func NewMultiNetworkManager(logger log.Logger, sharedDBPath string) (*MultiNetwo
 		networks:          make(map[uint32]*NetworkInstance),
 		consensusManagers: make(map[uint32]*ConsensusManager),
 		txCoordinator:     NewCrossChainTxCoordinator(sharedDB),
-		logger: logger,
+		logger:            logger,
 		ctx:               ctx,
 		cancel:            cancel,
 	}, nil
@@ -195,8 +195,8 @@ func (m *MultiNetworkManager) AddNetwork(config NetworkConfig) error {
 	}
 
 	instance := &NetworkInstance{
-		Config:  config,
-		Status:  NetworkStatusStopped,
+		Config: config,
+		Status: NetworkStatusStopped,
 		Chains: make(map[string]*ChainInstance),
 	}
 

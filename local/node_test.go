@@ -15,18 +15,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luxfi/netrunner/network/node"
+	constants "github.com/luxfi/const"
+	"github.com/luxfi/geth/metrics"
 	"github.com/luxfi/ids"
+	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/const"
 	"github.com/luxfi/node/utils/ips"
-	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/node/utils/wrappers"
 	"github.com/luxfi/node/version"
-	"github.com/luxfi/metric"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
