@@ -31,10 +31,10 @@ func (w *walletClient) IssueTx(tx *txs.Tx, options ...common.Option) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	
+
 	// Serialize the transaction
 	txBytes := tx.Bytes()
-	
+
 	// Issue through platform client
 	_, err := w.platformClient.IssueTx(ctx, txBytes)
 	return err

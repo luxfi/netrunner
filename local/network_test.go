@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/luxfi/ids"
+	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"
 	apimocks "github.com/luxfi/netrunner/api/mocks"
 	"github.com/luxfi/netrunner/local/mocks"
@@ -23,10 +25,8 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/api/health"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/ids"
 	"github.com/luxfi/node/message"
 	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/log"
 	"github.com/luxfi/node/utils/rpc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -38,12 +38,12 @@ const (
 )
 
 var (
-	_ NodeProcessCreator    = &localTestSuccessfulNodeProcessCreator{}
-	_ NodeProcessCreator    = &localTestFailedStartProcessCreator{}
-	_ NodeProcessCreator    = &localTestProcessUndefNodeProcessCreator{}
-	_ NodeProcessCreator    = &localTestFlagCheckProcessCreator{}
-	_ api.NewAPIClientF     = newMockAPISuccessful
-	_ api.NewAPIClientF     = newMockAPIUnhealthy
+	_ NodeProcessCreator  = &localTestSuccessfulNodeProcessCreator{}
+	_ NodeProcessCreator  = &localTestFailedStartProcessCreator{}
+	_ NodeProcessCreator  = &localTestProcessUndefNodeProcessCreator{}
+	_ NodeProcessCreator  = &localTestFlagCheckProcessCreator{}
+	_ api.NewAPIClientF   = newMockAPISuccessful
+	_ api.NewAPIClientF   = newMockAPIUnhealthy
 	_ peer.InboundHandler = &noOpInboundHandler{}
 )
 
@@ -1185,9 +1185,9 @@ func TestWriteFiles(t *testing.T) {
 				config.StakingTLSKeyPathKey:    stakingKeyPath,
 				config.StakingCertPathKey:      stakingCertPath,
 				config.StakingSignerKeyPathKey: stakingSigningKeyPath,
-				config.GenesisFileKey:    genesisPath,
+				config.GenesisFileKey:          genesisPath,
 				config.ChainConfigDirKey:       chainConfigDir,
-				config.NetConfigDirKey:      subnetConfigDir,
+				config.NetConfigDirKey:         subnetConfigDir,
 			},
 		},
 		{
@@ -1203,9 +1203,9 @@ func TestWriteFiles(t *testing.T) {
 				config.StakingTLSKeyPathKey:    stakingKeyPath,
 				config.StakingCertPathKey:      stakingCertPath,
 				config.StakingSignerKeyPathKey: stakingSigningKeyPath,
-				config.GenesisFileKey:    genesisPath,
+				config.GenesisFileKey:          genesisPath,
 				config.ChainConfigDirKey:       chainConfigDir,
-				config.NetConfigDirKey:      subnetConfigDir,
+				config.NetConfigDirKey:         subnetConfigDir,
 				config.ConfigFileKey:           configFilePath,
 			},
 		},
@@ -1223,9 +1223,9 @@ func TestWriteFiles(t *testing.T) {
 				config.StakingTLSKeyPathKey:    stakingKeyPath,
 				config.StakingCertPathKey:      stakingCertPath,
 				config.StakingSignerKeyPathKey: stakingSigningKeyPath,
-				config.GenesisFileKey:    genesisPath,
+				config.GenesisFileKey:          genesisPath,
 				config.ChainConfigDirKey:       chainConfigDir,
-				config.NetConfigDirKey:      subnetConfigDir,
+				config.NetConfigDirKey:         subnetConfigDir,
 				config.ConfigFileKey:           configFilePath,
 			},
 		},

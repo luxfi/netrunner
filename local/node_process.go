@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"sync"
 
+	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/log"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -81,10 +81,10 @@ func (npc *nodeProcessCreator) NewNodeProcess(config node.Config, args ...string
 }
 
 type nodeProcess struct {
-	name string
-	logger  log.Logger
-	lock sync.RWMutex
-	cmd  *exec.Cmd
+	name   string
+	logger log.Logger
+	lock   sync.RWMutex
+	cmd    *exec.Cmd
 	// Process status
 	state status.Status
 	// Closed when the process exits.

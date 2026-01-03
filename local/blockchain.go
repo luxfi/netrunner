@@ -26,26 +26,27 @@ import (
 	"github.com/luxfi/node/vms/components/verify"
 	"github.com/luxfi/node/wallet/chain/x"
 
+	"maps"
+	"slices"
+
+	luxconfig "github.com/luxfi/config"
+	constants "github.com/luxfi/const"
+	"github.com/luxfi/crypto/bls"
+	"github.com/luxfi/crypto/secp256k1"
+	"github.com/luxfi/ids"
+	"github.com/luxfi/log"
+	"github.com/luxfi/math/set"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/node/api/admin"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/crypto/secp256k1"
-	"github.com/luxfi/ids"
-	"github.com/luxfi/const"
-	"github.com/luxfi/math/set"
-	"github.com/luxfi/crypto/bls"
-	"github.com/luxfi/log"
 	"github.com/luxfi/node/vms/platformvm"
 	"github.com/luxfi/node/vms/platformvm/signer"
 	"github.com/luxfi/node/vms/platformvm/txs"
 	"github.com/luxfi/node/vms/secp256k1fx"
 	pwallet "github.com/luxfi/node/wallet/chain/p"
 	pwalletwallet "github.com/luxfi/node/wallet/chain/p/wallet"
-	"maps"
-	"slices"
 
 	pbuilder "github.com/luxfi/node/wallet/chain/p/builder"
 	psigner "github.com/luxfi/node/wallet/chain/p/signer"
@@ -73,7 +74,7 @@ const (
 	// Most P-chain API calls should complete in <5s on localhost
 	defaultTimeout         = 30 * time.Second
 	stakingMinimumLeadTime = 25 * time.Second
-	minStakeDuration               = 24 * 14 * time.Hour
+	minStakeDuration       = 24 * 14 * time.Hour
 	// FAIL FAST: Reduced from 45s to 30s for local deployments
 	// For local networks, validators activate quickly (5-10s). If it takes longer,
 	// something is wrong - fail fast with clear error rather than waiting forever.
@@ -88,7 +89,7 @@ var (
 type blockchainInfo struct {
 	chainName    string
 	vmID         ids.ID
-	chainID     ids.ID
+	chainID      ids.ID
 	blockchainID ids.ID
 }
 
@@ -963,16 +964,16 @@ func (ln *localNetwork) installCustomChains(
 	// This ensures P-Chain is synchronized across all nodes after blockchain creation
 	// TEMPORARILY DISABLED - debugging P-Chain sync issue
 	/*
-	blockchainIDs := make([]ids.ID, len(blockchainTxs))
-	for i, tx := range blockchainTxs {
-		blockchainIDs[i] = tx.ID()
-	}
-	if err := ln.waitForBlockchainOnPChain(ctx, blockchainIDs); err != nil {
-		ln.logger.Error("installCustomChains: P-Chain sync failed",
-			"error", err.Error(),
-		)
-		return nil, fmt.Errorf("P-Chain sync failed: %w", err)
-	}
+		blockchainIDs := make([]ids.ID, len(blockchainTxs))
+		for i, tx := range blockchainTxs {
+			blockchainIDs[i] = tx.ID()
+		}
+		if err := ln.waitForBlockchainOnPChain(ctx, blockchainIDs); err != nil {
+			ln.logger.Error("installCustomChains: P-Chain sync failed",
+				"error", err.Error(),
+			)
+			return nil, fmt.Errorf("P-Chain sync failed: %w", err)
+		}
 	*/
 
 	// Nodes need to be restarted after blockchain creation to discover the new chains
@@ -1032,7 +1033,7 @@ func (ln *localNetwork) installCustomChains(
 			// as there is no way to recover VM name from VM ID
 			chainName:    chainSpec.VMName,
 			vmID:         vmID,
-			chainID:     chainID,
+			chainID:      chainID,
 			blockchainID: blockchainTxs[i].ID(),
 		}
 	}
@@ -1333,7 +1334,7 @@ func getDefaultKey() (*secp256k1.PrivateKey, error) {
 	// (keys.DeriveValidatorFromMnemonic uses m/44'/9000'/0'/0/{index})
 	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
 		fmt.Printf("🔑 getDefaultKey: Using LUX_MNEMONIC (len=%d)\n", len(mnemonic))
-		
+
 		// Use the SAME derivation function as genesis allocations
 		// This ensures wallet operations use keys that have funds allocated in genesis
 		vk, err := keys.DeriveValidatorFromMnemonic(mnemonic, 0)
@@ -1344,11 +1345,11 @@ func getDefaultKey() (*secp256k1.PrivateKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert key: %w", err)
 		}
-		
+
 		pubKey := privKey.PublicKey()
 		walletAddr := ids.ShortID(pubKey.Address())
 		fmt.Printf("🔑 Wallet address (from mnemonic m/44'/9000'/0'/0/0): %s\n", walletAddr.String())
-		
+
 		return privKey, nil
 	}
 
@@ -1435,9 +1436,9 @@ func newWallet(
 		}
 		pTXs[id] = tx
 	}
- 	pUTXOs := common.NewChainUTXOs(constants.PlatformChainID, luxState.UTXOs)
+	pUTXOs := common.NewChainUTXOs(constants.PlatformChainID, luxState.UTXOs)
 	xChainID := luxState.XCTX.BlockchainID
- 	xUTXOs := common.NewChainUTXOs(xChainID, luxState.UTXOs)
+	xUTXOs := common.NewChainUTXOs(xChainID, luxState.UTXOs)
 	var w wallet
 	w.addr = privKey.PublicKey().Address()
 	// TODO: Create owners map instead of pTXs

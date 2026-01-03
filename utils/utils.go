@@ -8,11 +8,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/luxfi/ids"
+	"github.com/luxfi/log"
 	rpcb "github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/ids"
 	"github.com/luxfi/node/staking"
-	"github.com/luxfi/log"
 )
 
 const (

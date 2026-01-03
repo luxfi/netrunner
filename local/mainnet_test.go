@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/luxfi/genesis/configs"
-	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
+	"github.com/luxfi/netrunner/local"
 	"github.com/stretchr/testify/require"
 )
 

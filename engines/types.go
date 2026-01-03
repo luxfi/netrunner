@@ -15,10 +15,10 @@ import (
 type EngineType string
 
 const (
-	EngineLux       EngineType = "lux"
-	EngineGeth      EngineType = "geth"
-	EngineOP        EngineType = "op"
-	EngineEth2      EngineType = "eth2"
+	EngineLux  EngineType = "lux"
+	EngineGeth EngineType = "geth"
+	EngineOP   EngineType = "op"
+	EngineEth2 EngineType = "eth2"
 )
 
 // ChainInfo describes a blockchain's network properties
@@ -58,22 +58,22 @@ type Engine interface {
 	Start(ctx context.Context, config *NodeConfig) error
 	Stop(ctx context.Context) error
 	Restart(ctx context.Context) error
-	
+
 	// Status
 	Health(ctx context.Context) (*HealthStatus, error)
 	IsRunning() bool
 	Uptime() time.Duration
-	
+
 	// Network info
 	NetworkID() uint32
 	ChainID() ids.ID
 	RPCEndpoint() string
 	WSEndpoint() string
 	P2PEndpoint() string
-	
+
 	// Chain relationships
 	ParentChain() *ChainInfo // nil for L1s
-	
+
 	// Metrics
 	Metrics() map[string]interface{}
 }

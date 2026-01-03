@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"github.com/luxfi/log"
 	"context"
 	"fmt"
 	"os"
@@ -12,8 +11,9 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/luxfi/log"
+
 	"github.com/luxfi/netrunner/engines"
-	_ "github.com/luxfi/netrunner/engines/lux"
 	_ "github.com/luxfi/netrunner/engines/geth"
 	_ "github.com/luxfi/netrunner/engines/lux"
 	"github.com/spf13/cobra"
@@ -48,11 +48,11 @@ func newEngineStartCmd(logger log.Logger) *cobra.Command {
 		dataDir     string
 		binary      string
 		logLevel    string
-		
+
 		// OP Stack specific
 		l1RPC     string
 		sequencer bool
-		
+
 		// Eth2 specific
 		consensusClient string
 		executionClient string
@@ -65,7 +65,7 @@ func newEngineStartCmd(logger log.Logger) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			
+
 			// Create engine configuration
 			config := &engines.NodeConfig{
 				NetworkID:   networkID,
@@ -76,7 +76,7 @@ func newEngineStartCmd(logger log.Logger) *cobra.Command {
 				LogLevel:    logLevel,
 				Extra:       make(map[string]interface{}),
 			}
-			
+
 			// Add engine-specific configuration
 			switch engineType {
 			case "op":
@@ -87,39 +87,39 @@ func newEngineStartCmd(logger log.Logger) *cobra.Command {
 				config.Extra["execution_client"] = executionClient
 				config.Extra["validator_enabled"] = validator
 			}
-			
+
 			// Create the engine
 			engine, err := createEngine(engineType, name, binary)
 			if err != nil {
 				return fmt.Errorf("failed to create engine: %w", err)
 			}
-			
+
 			// Start the engine
 			ctx := cmd.Context()
-			logger.Info("Starting engine", 
+			logger.Info("Starting engine",
 				log.String("name", name),
 				log.String("type", engineType),
 				log.Uint32("network_id", networkID))
-			
+
 			if err := engine.Start(ctx, config); err != nil {
 				return fmt.Errorf("failed to start engine: %w", err)
 			}
-			
+
 			// Wait for engine to be healthy
 			logger.Info("Waiting for engine to be healthy...")
 			ticker := time.NewTicker(2 * time.Second)
 			defer ticker.Stop()
-			
+
 			timeout := time.After(2 * time.Minute)
 			for {
 				select {
 				case <-ticker.C:
 					health, err := engine.Health(ctx)
 					if err == nil && health.Healthy {
-						logger.Info("Engine is healthy", 
+						logger.Info("Engine is healthy",
 							log.String("name", name),
 							log.String("version", health.Version))
-						
+
 						fmt.Printf("✅ Engine '%s' started successfully\n", name)
 						fmt.Printf("  Type: %s\n", engineType)
 						fmt.Printf("  RPC: %s\n", engine.RPCEndpoint())
@@ -137,7 +137,7 @@ func newEngineStartCmd(logger log.Logger) *cobra.Command {
 			}
 		},
 	}
-	
+
 	// General flags
 	cmd.Flags().StringVarP(&engineType, "type", "t", "lux", "Engine type (lux, lux, geth, op, eth2)")
 	cmd.Flags().Uint32Var(&networkID, "network-id", 1337, "Network ID")
@@ -147,16 +147,16 @@ func newEngineStartCmd(logger log.Logger) *cobra.Command {
 	cmd.Flags().StringVar(&dataDir, "data-dir", "", "Data directory (auto-generated if empty)")
 	cmd.Flags().StringVar(&binary, "binary", "", "Path to engine binary")
 	cmd.Flags().StringVar(&logLevel, "log-level", "info", "Log level")
-	
+
 	// OP Stack flags
 	cmd.Flags().StringVar(&l1RPC, "l1-rpc", "", "L1 RPC endpoint (OP Stack only)")
 	cmd.Flags().BoolVar(&sequencer, "sequencer", false, "Enable sequencer mode (OP Stack only)")
-	
+
 	// Eth2 flags
 	cmd.Flags().StringVar(&consensusClient, "consensus-client", "lighthouse", "Consensus client (eth2 only)")
 	cmd.Flags().StringVar(&executionClient, "execution-client", "geth", "Execution client (eth2 only)")
 	cmd.Flags().BoolVar(&validator, "validator", false, "Enable validator (eth2 only)")
-	
+
 	return cmd
 }
 
@@ -167,10 +167,10 @@ func newEngineStopCmd(logger log.Logger) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			
+
 			// TODO: Implement engine registry to track running engines
 			fmt.Printf("⏹ Stopping engine '%s'...\n", name)
-			
+
 			return nil
 		},
 	}
@@ -183,10 +183,10 @@ func newEngineStatusCmd(logger log.Logger) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			
+
 			// TODO: Implement engine registry
 			fmt.Printf("📊 Status of engine '%s':\n", name)
-			
+
 			return nil
 		},
 	}
@@ -199,7 +199,7 @@ func newEngineListCmd(logger log.Logger) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("Available engine types:")
 			fmt.Println()
-			
+
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "TYPE\tDESCRIPTION\tSTATUS")
 			fmt.Fprintln(w, "----\t-----------\t------")
@@ -209,7 +209,7 @@ func newEngineListCmd(logger log.Logger) *cobra.Command {
 			fmt.Fprintln(w, "op\tOP Stack L2\t✅ Ready")
 			fmt.Fprintln(w, "eth2\tEthereum 2.0\t✅ Ready")
 			w.Flush()
-			
+
 			return nil
 		},
 	}
@@ -223,7 +223,7 @@ func newEngineTestCmd(logger log.Logger) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			engineType := args[0]
-			
+
 			// Test configuration
 			config := &engines.NodeConfig{
 				NetworkID:   99999,
@@ -234,7 +234,7 @@ func newEngineTestCmd(logger log.Logger) *cobra.Command {
 				LogLevel:    "debug",
 				Extra:       make(map[string]interface{}),
 			}
-			
+
 			// Add type-specific test config
 			switch engineType {
 			case "op":
@@ -246,24 +246,24 @@ func newEngineTestCmd(logger log.Logger) *cobra.Command {
 				config.Extra["execution_client"] = "geth"
 				config.Extra["network_name"] = "testnet"
 			}
-			
+
 			// Create test engine
 			name := fmt.Sprintf("test-%s-%d", engineType, time.Now().Unix())
 			engine, err := createEngine(engineType, name, "")
 			if err != nil {
 				return fmt.Errorf("failed to create engine: %w", err)
 			}
-			
+
 			// Start engine
 			ctx := cmd.Context()
-			logger.Info("Starting test engine", 
+			logger.Info("Starting test engine",
 				log.String("type", engineType),
 				log.String("name", name))
-			
+
 			if err := engine.Start(ctx, config); err != nil {
 				return fmt.Errorf("failed to start engine: %w", err)
 			}
-			
+
 			// Defer cleanup
 			defer func() {
 				logger.Info("Cleaning up test engine")
@@ -272,11 +272,11 @@ func newEngineTestCmd(logger log.Logger) *cobra.Command {
 				}
 				os.RemoveAll(config.DataDir)
 			}()
-			
+
 			// Test health check
 			fmt.Printf("🧪 Testing %s engine...\n", engineType)
 			fmt.Println("  ⏳ Waiting for engine to be healthy...")
-			
+
 			// Poll for health
 			maxAttempts := 30
 			for i := 0; i < maxAttempts; i++ {
@@ -287,7 +287,7 @@ func newEngineTestCmd(logger log.Logger) *cobra.Command {
 					fmt.Printf("  🔗 RPC: %s\n", engine.RPCEndpoint())
 					fmt.Printf("  🌐 WebSocket: %s\n", engine.WSEndpoint())
 					fmt.Printf("  ⏱️ Uptime: %s\n", engine.Uptime())
-					
+
 					// Type-specific tests
 					switch engineType {
 					case "lux":
@@ -306,14 +306,14 @@ func newEngineTestCmd(logger log.Logger) *cobra.Command {
 							fmt.Printf("  ⚙️ Execution: %s\n", ec)
 						}
 					}
-					
+
 					fmt.Println("\n✅ Test passed!")
 					return nil
 				}
-				
+
 				time.Sleep(2 * time.Second)
 			}
-			
+
 			return fmt.Errorf("engine failed to become healthy after %d attempts", maxAttempts)
 		},
 	}
@@ -336,7 +336,7 @@ func createEngine(engineType, name, binary string) (engines.Engine, error) {
 			return nil, fmt.Errorf("unknown engine type: %s", engineType)
 		}
 	}
-	
+
 	// For multi-binary engines, validate format
 	if strings.Contains(engineType, "op") || strings.Contains(engineType, "eth2") {
 		parts := strings.Split(binary, ":")
@@ -344,7 +344,7 @@ func createEngine(engineType, name, binary string) (engines.Engine, error) {
 			return nil, fmt.Errorf("%s requires two binaries separated by colon (e.g., 'op-node:op-geth')", engineType)
 		}
 	}
-	
+
 	// Create engine using factory
 	return engines.New(engines.EngineType(engineType), name, binary)
 }

@@ -68,7 +68,7 @@ type Client interface {
 	PChainAPI() *platformvm.Client
 	XChainAPI() *exchangevm.Client
 	XChainWalletAPI() *exchangevm.WalletClient
-	CChainAPI() interface{} // evmclient.Client
+	CChainAPI() interface{}  // evmclient.Client
 	CChainEthAPI() EthClient // ethclient websocket wrapper that adds mutexed calls, and lazy conn init (on first call)
 	InfoAPI() *info.Client
 	HealthAPI() HealthClient

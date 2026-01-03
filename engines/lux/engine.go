@@ -36,7 +36,7 @@ type LuxEngine struct {
 	infoClient   *info.Client
 	healthClient *health.Client
 	startTime    time.Time
-	
+
 	// Cached info
 	networkID uint32
 	chainID   ids.ID
@@ -53,26 +53,26 @@ func NewLuxEngine(name string, binary string) (engines.Engine, error) {
 	}, nil
 }
 
-func (e *LuxEngine) Name() string                   { return e.name }
-func (e *LuxEngine) Type() engines.EngineType       { return engines.EngineLux }
-func (e *LuxEngine) NetworkID() uint32              { return e.networkID }
-func (e *LuxEngine) ChainID() ids.ID                { return e.chainID }
+func (e *LuxEngine) Name() string                    { return e.name }
+func (e *LuxEngine) Type() engines.EngineType        { return engines.EngineLux }
+func (e *LuxEngine) NetworkID() uint32               { return e.networkID }
+func (e *LuxEngine) ChainID() ids.ID                 { return e.chainID }
 func (e *LuxEngine) ParentChain() *engines.ChainInfo { return nil } // L1
 
 func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error {
 	e.config = config
 	e.networkID = config.NetworkID
-	
+
 	// Setup data directory
 	if config.DataDir == "" {
 		config.DataDir = filepath.Join(os.TempDir(), "lux", e.name)
 	}
 	e.dataDir = config.DataDir
-	
+
 	if err := os.MkdirAll(e.dataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create data dir: %w", err)
 	}
-	
+
 	// Build command arguments
 	args := []string{
 		fmt.Sprintf("--network-id=%d", config.NetworkID),
@@ -83,23 +83,23 @@ func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error
 		"--http-host=0.0.0.0",
 		"--http-allowed-hosts=*",
 	}
-	
+
 	// Add bootstrap nodes
 	if len(config.BootstrapIPs) > 0 {
 		for _, ip := range config.BootstrapIPs {
 			args = append(args, fmt.Sprintf("--bootstrap-ips=%s", ip))
 		}
 	}
-	
+
 	// Add extra configs
 	for k, v := range config.Extra {
 		args = append(args, fmt.Sprintf("--%s=%v", k, v))
 	}
-	
+
 	// Start the process
 	e.process = exec.CommandContext(ctx, e.binary, args...)
 	e.process.Dir = e.dataDir
-	
+
 	// Setup logs
 	logFile, err := os.Create(filepath.Join(e.dataDir, "node.log"))
 	if err != nil {
@@ -107,21 +107,21 @@ func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error
 	}
 	e.process.Stdout = logFile
 	e.process.Stderr = logFile
-	
+
 	if err := e.process.Start(); err != nil {
 		return fmt.Errorf("failed to start luxd: %w", err)
 	}
-	
+
 	e.startTime = time.Now()
-	
+
 	// Setup RPC clients
 	e.infoClient = info.NewClient(e.RPCEndpoint())
 	e.healthClient = health.NewClient(e.RPCEndpoint())
-	
+
 	// Wait for node to be responsive
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	timeout := time.After(30 * time.Second)
 	for {
 		select {
@@ -145,17 +145,17 @@ func (e *LuxEngine) Stop(ctx context.Context) error {
 	if e.process == nil || e.process.Process == nil {
 		return nil
 	}
-	
+
 	// Try graceful shutdown first
 	if err := e.process.Process.Signal(os.Interrupt); err != nil {
 		return e.process.Process.Kill()
 	}
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- e.process.Wait()
 	}()
-	
+
 	select {
 	case <-done:
 		return nil
@@ -178,29 +178,29 @@ func (e *LuxEngine) Health(ctx context.Context) (*engines.HealthStatus, error) {
 	if e.healthClient == nil || e.infoClient == nil {
 		return &engines.HealthStatus{Healthy: false}, nil
 	}
-	
+
 	// Get node health
 	healthResp, err := e.healthClient.Health(ctx, nil)
 	if err != nil {
 		return &engines.HealthStatus{Healthy: false}, nil
 	}
-	
+
 	// Get peers
 	peers, err := e.infoClient.Peers(ctx, nil)
 	if err != nil {
 		peers = []info.Peer{}
 	}
-	
+
 	// Get version
 	versions, err := e.infoClient.GetNodeVersion(ctx)
 	if err != nil {
 		versions = &info.GetNodeVersionReply{}
 	}
-	
+
 	return &engines.HealthStatus{
-		Healthy:     healthResp.Healthy,
-		PeerCount:   len(peers),
-		Version:     versions.Version,
+		Healthy:   healthResp.Healthy,
+		PeerCount: len(peers),
+		Version:   versions.Version,
 		// BlockHeight from C-Chain would require eth client
 	}, nil
 }
