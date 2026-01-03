@@ -25,15 +25,15 @@ func init() {
 
 // LuxEngine wraps luxd node management
 type LuxEngine struct {
-	name         string
-	binary       string
-	dataDir      string
-	config       *engines.NodeConfig
-	process      *exec.Cmd
-	httpClient   *http.Client
-	rpcEndpoint  string
-	startTime    time.Time
-	
+	name        string
+	binary      string
+	dataDir     string
+	config      *engines.NodeConfig
+	process     *exec.Cmd
+	httpClient  *http.Client
+	rpcEndpoint string
+	startTime   time.Time
+
 	// Cached info
 	networkID uint32
 	chainID   ids.ID
@@ -50,26 +50,26 @@ func NewLuxEngine(name string, binary string) (engines.Engine, error) {
 	}, nil
 }
 
-func (e *LuxEngine) Name() string                   { return e.name }
-func (e *LuxEngine) Type() engines.EngineType       { return engines.EngineLux }
-func (e *LuxEngine) NetworkID() uint32              { return e.networkID }
-func (e *LuxEngine) ChainID() ids.ID                { return e.chainID }
+func (e *LuxEngine) Name() string                    { return e.name }
+func (e *LuxEngine) Type() engines.EngineType        { return engines.EngineLux }
+func (e *LuxEngine) NetworkID() uint32               { return e.networkID }
+func (e *LuxEngine) ChainID() ids.ID                 { return e.chainID }
 func (e *LuxEngine) ParentChain() *engines.ChainInfo { return nil } // L1
 
 func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error {
 	e.config = config
 	e.networkID = config.NetworkID
-	
+
 	// Setup data directory
 	if config.DataDir == "" {
 		config.DataDir = filepath.Join(os.TempDir(), "lux", e.name)
 	}
 	e.dataDir = config.DataDir
-	
+
 	if err := os.MkdirAll(e.dataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create data dir: %w", err)
 	}
-	
+
 	// Build command arguments
 	args := []string{
 		fmt.Sprintf("--network-id=%s", getLuxNetwork(config.NetworkID)),
@@ -81,23 +81,23 @@ func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error
 		"--http-allowed-hosts=*",
 		"--http-allowed-origins=*",
 	}
-	
+
 	// Add bootstrap nodes if custom network
 	if len(config.BootstrapIPs) > 0 {
 		for _, ip := range config.BootstrapIPs {
 			args = append(args, fmt.Sprintf("--bootstrap-ips=%s", ip))
 		}
 	}
-	
+
 	// Add extra configs
 	for k, v := range config.Extra {
 		args = append(args, fmt.Sprintf("--%s=%v", k, v))
 	}
-	
+
 	// Start the process
 	e.process = exec.CommandContext(ctx, e.binary, args...)
 	e.process.Dir = e.dataDir
-	
+
 	// Setup logs
 	logFile, err := os.Create(filepath.Join(e.dataDir, "node.log"))
 	if err != nil {
@@ -105,19 +105,19 @@ func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error
 	}
 	e.process.Stdout = logFile
 	e.process.Stderr = logFile
-	
+
 	if err := e.process.Start(); err != nil {
 		return fmt.Errorf("failed to start luxd: %w", err)
 	}
-	
+
 	e.startTime = time.Now()
 	e.rpcEndpoint = e.RPCEndpoint()
 	e.httpClient = &http.Client{Timeout: 10 * time.Second}
-	
+
 	// Wait for node to be responsive
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	timeout := time.After(60 * time.Second) // Lux can take longer
 	for {
 		select {
@@ -141,17 +141,17 @@ func (e *LuxEngine) Stop(ctx context.Context) error {
 	if e.process == nil || e.process.Process == nil {
 		return nil
 	}
-	
+
 	// Try graceful shutdown first
 	if err := e.process.Process.Signal(os.Interrupt); err != nil {
 		return e.process.Process.Kill()
 	}
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- e.process.Wait()
 	}()
-	
+
 	select {
 	case <-done:
 		return nil
@@ -174,23 +174,23 @@ func (e *LuxEngine) Health(ctx context.Context) (*engines.HealthStatus, error) {
 	if e.httpClient == nil {
 		return &engines.HealthStatus{Healthy: false}, nil
 	}
-	
+
 	// Get node health
 	healthy, err := e.getHealth(ctx)
 	if err != nil {
 		return &engines.HealthStatus{Healthy: false}, nil
 	}
-	
+
 	// Get peers
 	peerCount, _ := e.getPeerCount(ctx)
-	
+
 	// Get version
 	version, _ := e.getNodeVersion(ctx)
-	
+
 	return &engines.HealthStatus{
-		Healthy:     healthy,
-		PeerCount:   peerCount,
-		Version:     version,
+		Healthy:   healthy,
+		PeerCount: peerCount,
+		Version:   version,
 		// BlockHeight from C-Chain would require eth client
 	}, nil
 }
@@ -262,29 +262,29 @@ func (e *LuxEngine) callRPC(ctx context.Context, endpoint string, method string,
 		"method":  method,
 		"params":  params,
 	}
-	
+
 	data, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", e.rpcEndpoint+endpoint, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result struct {
 		Result json.RawMessage `json:"result"`
 		Error  *struct {
@@ -292,15 +292,15 @@ func (e *LuxEngine) callRPC(ctx context.Context, endpoint string, method string,
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	
+
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, err
 	}
-	
+
 	if result.Error != nil {
 		return nil, fmt.Errorf("RPC error %d: %s", result.Error.Code, result.Error.Message)
 	}
-	
+
 	return result.Result, nil
 }
 
@@ -309,14 +309,14 @@ func (e *LuxEngine) getNodeID(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	var resp struct {
 		NodeID string `json:"nodeID"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
 		return "", err
 	}
-	
+
 	return resp.NodeID, nil
 }
 
@@ -325,14 +325,14 @@ func (e *LuxEngine) getBlockchainID(ctx context.Context, alias string) (ids.ID, 
 	if err != nil {
 		return ids.Empty, err
 	}
-	
+
 	var resp struct {
 		BlockchainID string `json:"blockchainID"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
 		return ids.Empty, err
 	}
-	
+
 	return ids.FromString(resp.BlockchainID)
 }
 
@@ -341,14 +341,14 @@ func (e *LuxEngine) getHealth(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	var resp struct {
 		Healthy bool `json:"healthy"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
 		return false, err
 	}
-	
+
 	return resp.Healthy, nil
 }
 
@@ -357,9 +357,9 @@ func (e *LuxEngine) getPeerCount(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	var resp struct {
-		NumPeers int `json:"numPeers"`
+		NumPeers int           `json:"numPeers"`
 		Peers    []interface{} `json:"peers"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
@@ -370,7 +370,7 @@ func (e *LuxEngine) getPeerCount(ctx context.Context) (int, error) {
 		}
 		return len(peers), nil
 	}
-	
+
 	if resp.NumPeers > 0 {
 		return resp.NumPeers, nil
 	}
@@ -382,13 +382,13 @@ func (e *LuxEngine) getNodeVersion(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	var resp struct {
 		Version string `json:"version"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
 		return "", err
 	}
-	
+
 	return resp.Version, nil
 }

@@ -21,6 +21,11 @@ import (
 
 	"go.uber.org/multierr"
 
+	"maps"
+	"slices"
+
+	"github.com/luxfi/consensus/core"
+	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/rpcpb"
@@ -28,15 +33,11 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/node/config"
 	"github.com/luxfi/node/message"
-	"github.com/luxfi/consensus/core"
 	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/ids"
-	"maps"
-	"slices"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/luxfi/log"
 	"github.com/luxfi/math/set"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -51,8 +52,8 @@ const (
 	MinNodes     uint32 = 1
 	DefaultNodes uint32 = 5
 
-	stopTimeout           = 5 * time.Second
-	defaultStartTimeout   = 5 * time.Minute
+	stopTimeout         = 5 * time.Second
+	defaultStartTimeout = 5 * time.Minute
 	// waitForHealthyTimeout - 60s for local 5-node network bootstrap
 	// First startup takes longer as nodes need to establish consensus
 	// Subsequent restarts are faster (<10s) but initial bootstrap needs time
@@ -75,9 +76,9 @@ var (
 	ErrNodeNotFound           = errors.New("node not found")
 	ErrPeerNotFound           = errors.New("peer not found")
 	ErrStatusCanceled         = errors.New("gRPC stream status canceled")
-	ErrNoChainSpec       = errors.New("no blockchain spec was provided")
-	ErrNoChainID             = errors.New("chainID is missing")
-	ErrNoElasticChainSpec    = errors.New("no elastic chain spec was provided")
+	ErrNoChainSpec            = errors.New("no blockchain spec was provided")
+	ErrNoChainID              = errors.New("chainID is missing")
+	ErrNoElasticChainSpec     = errors.New("no elastic chain spec was provided")
 	ErrNoValidatorSpec        = errors.New("no validator spec was provided")
 )
 
@@ -175,7 +176,7 @@ type Server interface {
 type server struct {
 	mu *sync.RWMutex
 
-	cfg Config
+	cfg    Config
 	logger log.Logger
 
 	rootCtx    context.Context
@@ -221,7 +222,7 @@ func New(cfg Config, logger log.Logger) (Server, error) {
 
 	s := &server{
 		cfg:        cfg,
-		logger: logger,
+		logger:     logger,
 		closed:     make(chan struct{}),
 		ln:         listener,
 		gRPCServer: grpc.NewServer(),
@@ -381,7 +382,7 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	var (
 		execPath          = req.GetExecPath()
 		numNodes          = req.GetNumNodes()
-		trackChains      = req.GetWhitelistedChains()
+		trackChains       = req.GetWhitelistedChains()
 		rootDataDir       = req.GetRootDataDir()
 		pid               = int32(os.Getpid())
 		globalNodeConfig  = req.GetGlobalNodeConfig()
@@ -410,7 +411,7 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 	} else {
 		// CLI provided a specific rootDataDir - use it directly
 		// Trust the CLI to provide a properly structured path
-		networkName = getNetworkNameFromRootDir(rootDataDir)
+		_ = getNetworkNameFromRootDir(rootDataDir)
 
 		// Ensure the provided directory exists
 		if err = os.MkdirAll(rootDataDir, os.ModePerm); err != nil {
@@ -432,7 +433,7 @@ func (s *server) Start(_ context.Context, req *rpcpb.StartRequest) (*rpcpb.Start
 		execPath:            execPath,
 		rootDataDir:         rootDataDir,
 		numNodes:            numNodes,
-		trackChains:        trackChains,
+		trackChains:         trackChains,
 		redirectNodesOutput: s.cfg.RedirectNodesOutput,
 		pluginDir:           pluginDir,
 		globalNodeConfig:    globalNodeConfig,
@@ -1278,7 +1279,7 @@ var _ peer.InboundHandler = &loggingInboundHandler{}
 
 type loggingInboundHandler struct {
 	nodeName string
-	logger log.Logger
+	logger   log.Logger
 }
 
 func (lh *loggingInboundHandler) HandleInbound(_ context.Context, msg message.InboundMessage) {
@@ -1601,7 +1602,7 @@ func getNetworkElasticChainSpec(
 	maxStakeDuration := time.Duration(spec.MaxStakeDuration) * time.Hour
 
 	elasticParticipantsSpec := network.ElasticChainSpec{
-		ChainID:                 &spec.ChainId,
+		ChainID:                  &spec.ChainId,
 		AssetName:                spec.AssetName,
 		AssetSymbol:              spec.AssetSymbol,
 		InitialSupply:            spec.InitialSupply,
@@ -1638,7 +1639,7 @@ func getPermissionlessValidatorSpec(
 	stakeDuration := time.Duration(spec.StakeDuration) * time.Hour
 
 	validatorSpec := network.PermissionlessValidatorSpec{
-		ChainID:      spec.ChainId,
+		ChainID:       spec.ChainId,
 		AssetID:       spec.AssetId,
 		NodeName:      spec.NodeName,
 		StakedAmount:  spec.StakedTokenAmount,
@@ -1652,7 +1653,7 @@ func getRemoveChainValidatorSpec(
 	spec *rpcpb.RemoveChainValidatorSpec,
 ) network.RemoveChainValidatorSpec {
 	validatorSpec := network.RemoveChainValidatorSpec{
-		ChainID:  spec.ChainId,
+		ChainID:   spec.ChainId,
 		NodeNames: spec.GetNodeNames(),
 	}
 	return validatorSpec
@@ -1730,13 +1731,13 @@ func getNetworkChainSpec(
 		PerNodeChainConfig: perNodeChainConfig,
 		// Use BlockchainAlias as the blockchain name for the P-Chain transaction
 		// This allows multiple chains to use the same VM (e.g., multiple EVM chains)
-		BlockchainName:     spec.BlockchainAlias,
+		BlockchainName: spec.BlockchainAlias,
 	}
 
 	if spec.ChainSpec != nil {
 		participantsSpec := network.ParticipantsSpec{
 			Participants: spec.ChainSpec.Participants,
-			ChainConfig: chainConfigBytes,
+			ChainConfig:  chainConfigBytes,
 		}
 		chainSpec.ParticipantsSpec = &participantsSpec
 	}

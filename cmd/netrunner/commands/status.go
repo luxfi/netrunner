@@ -4,10 +4,11 @@
 package commands
 
 import (
-	"github.com/luxfi/log"
 	"fmt"
 	"os"
 	"text/tabwriter"
+
+	"github.com/luxfi/log"
 
 	"github.com/spf13/cobra"
 )
@@ -20,21 +21,21 @@ func NewStatusCmd(logger log.Logger) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("🔍 Netrunner System Status")
 			fmt.Println()
-			
+
 			// Show running engines
 			fmt.Println("Running Engines:")
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "NAME\tTYPE\tSTATUS\tUPTIME\tRPC")
 			fmt.Fprintln(w, "----\t----\t------\t------\t---")
-			
+
 			// TODO: Implement global registry
 			fmt.Fprintln(w, "(No engines running)")
 			w.Flush()
-			
+
 			fmt.Println()
 			fmt.Println("Deployed Stacks: 0")
 			fmt.Println("Active Bridges: 0")
-			
+
 			return nil
 		},
 	}

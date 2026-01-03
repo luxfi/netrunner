@@ -40,7 +40,7 @@ func main() {
 			return nil
 		})
 	})
-	
+
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -54,7 +54,7 @@ func main() {
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		
+
 		prefix := []byte("n")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			key := it.Item().Key()

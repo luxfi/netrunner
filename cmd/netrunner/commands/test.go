@@ -4,10 +4,11 @@
 package commands
 
 import (
-	"github.com/luxfi/log"
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/luxfi/log"
 
 	"github.com/luxfi/netrunner/engines"
 	"github.com/spf13/cobra"
@@ -20,13 +21,13 @@ func NewTestCmd(logger log.Logger) *cobra.Command {
 		Short: "Run integration tests",
 		Long:  "Run various integration tests to verify engine functionality",
 	}
-	
+
 	cmd.AddCommand(
 		newTestAllCmd(logger),
 		newTestEngineCmd(logger),
 		newTestStackCmd(logger),
 	)
-	
+
 	return cmd
 }
 
@@ -36,23 +37,23 @@ func newTestAllCmd(logger log.Logger) *cobra.Command {
 		Short: "Test all engine types",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			
+
 			fmt.Println("🧪 Testing all engine types...")
 			fmt.Println()
-			
+
 			engineTypes := []string{"lux", "lux", "geth", "op", "eth2"}
 			results := make(map[string]bool)
-			
+
 			for _, engineType := range engineTypes {
 				fmt.Printf("Testing %s...\n", engineType)
-				
+
 				// Skip engines that need additional setup
 				if engineType == "op" {
 					fmt.Println("  ⏭️ Skipping (requires L1)")
 					results[engineType] = false
 					continue
 				}
-				
+
 				if err := testEngine(ctx, logger, engineType); err != nil {
 					fmt.Printf("  ❌ Failed: %v\n", err)
 					results[engineType] = false
@@ -62,7 +63,7 @@ func newTestAllCmd(logger log.Logger) *cobra.Command {
 				}
 				fmt.Println()
 			}
-			
+
 			// Summary
 			fmt.Println("📊 Test Summary:")
 			passed := 0
@@ -74,13 +75,13 @@ func newTestAllCmd(logger log.Logger) *cobra.Command {
 				}
 				fmt.Printf("  %s: %s\n", engine, status)
 			}
-			
+
 			fmt.Printf("\nTotal: %d/%d passed\n", passed, len(engineTypes))
-			
+
 			if passed < len(engineTypes) {
 				return fmt.Errorf("some tests failed")
 			}
-			
+
 			return nil
 		},
 	}
@@ -94,14 +95,14 @@ func newTestEngineCmd(logger log.Logger) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			engineType := args[0]
 			ctx := cmd.Context()
-			
+
 			fmt.Printf("🧪 Testing %s engine...\n", engineType)
-			
+
 			if err := testEngine(ctx, logger, engineType); err != nil {
 				fmt.Printf("❌ Test failed: %v\n", err)
 				return err
 			}
-			
+
 			fmt.Println("✅ Test passed!")
 			return nil
 		},
@@ -114,10 +115,10 @@ func newTestStackCmd(logger log.Logger) *cobra.Command {
 		Short: "Test multi-engine stack deployment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			
+
 			fmt.Println("🧪 Testing multi-engine stack...")
 			fmt.Println()
-			
+
 			// Test simple two-engine stack
 			fmt.Println("1. Testing Lux + Geth stack...")
 			if err := testSimpleStack(ctx, logger); err != nil {
@@ -126,7 +127,7 @@ func newTestStackCmd(logger log.Logger) *cobra.Command {
 			}
 			fmt.Println("✅ Passed")
 			fmt.Println()
-			
+
 			// Test dependency ordering
 			fmt.Println("2. Testing dependency ordering...")
 			if err := testDependencyStack(ctx, logger); err != nil {
@@ -134,7 +135,7 @@ func newTestStackCmd(logger log.Logger) *cobra.Command {
 				return err
 			}
 			fmt.Println("✅ Passed")
-			
+
 			fmt.Println("\n✅ All stack tests passed!")
 			return nil
 		},
@@ -153,7 +154,7 @@ func testEngine(ctx context.Context, logger log.Logger, engineType string) error
 		LogLevel:    "info",
 		Extra:       make(map[string]interface{}),
 	}
-	
+
 	// Type-specific config
 	var binary string
 	switch engineType {
@@ -172,26 +173,26 @@ func testEngine(ctx context.Context, logger log.Logger, engineType string) error
 	default:
 		return fmt.Errorf("unknown engine type: %s", engineType)
 	}
-	
+
 	// Create engine
 	name := fmt.Sprintf("test-%s", engineType)
 	engine, err := engines.New(engines.EngineType(engineType), name, binary)
 	if err != nil {
 		return fmt.Errorf("failed to create engine: %w", err)
 	}
-	
+
 	// Start engine
 	if err := engine.Start(ctx, config); err != nil {
 		return fmt.Errorf("failed to start engine: %w", err)
 	}
-	
+
 	// Defer cleanup
 	defer func() {
 		if err := engine.Stop(context.Background()); err != nil {
 			logger.Error("Failed to stop test engine", log.Err(err))
 		}
 	}()
-	
+
 	// Wait for health
 	maxAttempts := 30
 	for i := 0; i < maxAttempts; i++ {
@@ -207,10 +208,10 @@ func testEngine(ctx context.Context, logger log.Logger, engineType string) error
 			if engine.NetworkID() != config.NetworkID {
 				return fmt.Errorf("network ID mismatch")
 			}
-			
+
 			return nil
 		}
-		
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -218,7 +219,7 @@ func testEngine(ctx context.Context, logger log.Logger, engineType string) error
 			// Continue
 		}
 	}
-	
+
 	return fmt.Errorf("engine failed to become healthy")
 }
 

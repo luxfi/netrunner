@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/server"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
 )
 

@@ -16,12 +16,12 @@ import (
 
 // Host manages multiple consensus engines
 type Host struct {
-	mu        sync.RWMutex
-	engines   map[string]engines.Engine
-	ports     *PortManager
-	indexer   *Indexer
-	metrics   *MetricsCollector
-	networks  map[string]*NetworkInfo
+	mu       sync.RWMutex
+	engines  map[string]engines.Engine
+	ports    *PortManager
+	indexer  *Indexer
+	metrics  *MetricsCollector
+	networks map[string]*NetworkInfo
 }
 
 // NetworkInfo describes a network's properties
@@ -62,12 +62,12 @@ type EngineOptions struct {
 func (h *Host) StartEngine(ctx context.Context, name string, typ string, options *EngineOptions) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Check if already running
 	if _, exists := h.engines[name]; exists {
 		return fmt.Errorf("engine %s already running", name)
 	}
-	
+
 	// Convert options to NodeConfig
 	config := &engines.NodeConfig{
 		NetworkID:    options.NetworkID,
@@ -79,7 +79,7 @@ func (h *Host) StartEngine(ctx context.Context, name string, typ string, options
 		BootstrapIPs: options.BootstrapIPs,
 		Extra:        options.Extra,
 	}
-	
+
 	// Allocate ports if not specified
 	if config.HTTPPort == 0 {
 		config.HTTPPort = h.ports.AllocateHTTP()
@@ -90,22 +90,22 @@ func (h *Host) StartEngine(ctx context.Context, name string, typ string, options
 	if config.StakingPort == 0 {
 		config.StakingPort = h.ports.AllocateP2P()
 	}
-	
+
 	// Create engine using factory
 	engine, err := engines.New(engines.EngineType(typ), name, options.Binary)
 	if err != nil {
 		return fmt.Errorf("failed to create engine: %w", err)
 	}
-	
+
 	// Start engine
 	if err := engine.Start(ctx, config); err != nil {
 		h.ports.Release(config.HTTPPort)
 		h.ports.Release(config.StakingPort)
 		return fmt.Errorf("failed to start engine: %w", err)
 	}
-	
+
 	h.engines[name] = engine
-	
+
 	// Register network info
 	h.networks[name] = &NetworkInfo{
 		Name:      name,
@@ -115,10 +115,10 @@ func (h *Host) StartEngine(ctx context.Context, name string, typ string, options
 		RPC:       engine.RPCEndpoint(),
 		WS:        engine.WSEndpoint(),
 	}
-	
+
 	// Start metrics collection
 	go h.collectMetrics(name, engine)
-	
+
 	return nil
 }
 
@@ -126,19 +126,19 @@ func (h *Host) StartEngine(ctx context.Context, name string, typ string, options
 func (h *Host) StopEngine(ctx context.Context, name string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	engine, exists := h.engines[name]
 	if !exists {
 		return fmt.Errorf("engine %s not found", name)
 	}
-	
+
 	if err := engine.Stop(ctx); err != nil {
 		return fmt.Errorf("failed to stop engine: %w", err)
 	}
-	
+
 	delete(h.engines, name)
 	delete(h.networks, name)
-	
+
 	return nil
 }
 
@@ -146,7 +146,7 @@ func (h *Host) StopEngine(ctx context.Context, name string) error {
 func (h *Host) ListEngines() []EngineInfo {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	var infos []EngineInfo
 	for name, engine := range h.engines {
 		health, _ := engine.Health(context.Background())
@@ -182,7 +182,7 @@ func (h *Host) StartStack(ctx context.Context, manifest *StackManifest) error {
 	if err := manifest.Validate(); err != nil {
 		return fmt.Errorf("invalid manifest: %w", err)
 	}
-	
+
 	// Start engines in order (L1 first, then L2, then L3)
 	for _, engine := range manifest.Engines {
 		config := &engines.NodeConfig{
@@ -194,7 +194,7 @@ func (h *Host) StartStack(ctx context.Context, manifest *StackManifest) error {
 			BootstrapIPs: engine.BootstrapIPs,
 			Extra:        engine.Extra,
 		}
-		
+
 		options := &EngineOptions{
 			NetworkID:    config.NetworkID,
 			HTTPPort:     config.HTTPPort,
@@ -207,26 +207,26 @@ func (h *Host) StartStack(ctx context.Context, manifest *StackManifest) error {
 		}
 		if err := h.StartEngine(ctx, engine.Name, engine.Type, options); err != nil {
 			// Rollback on failure
-			h.StopStack(ctx, manifest.Name)
+			_ = h.StopStack(ctx, manifest.Name)
 			return fmt.Errorf("failed to start %s: %w", engine.Name, err)
 		}
-		
+
 		// Wait for health before starting dependent engines
 		if engine.WaitHealthy {
 			if err := h.waitHealthy(ctx, engine.Name, 30*time.Second); err != nil {
-				h.StopStack(ctx, manifest.Name)
+				_ = h.StopStack(ctx, manifest.Name)
 				return fmt.Errorf("engine %s failed health check: %w", engine.Name, err)
 			}
 		}
 	}
-	
+
 	// Configure bridges if specified
 	if manifest.Bridge != nil {
 		if err := h.configureBridge(ctx, manifest.Bridge); err != nil {
 			return fmt.Errorf("failed to configure bridge: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -240,7 +240,7 @@ func (h *Host) StopStack(ctx context.Context, stackName string) error {
 		engines = append(engines, name)
 	}
 	h.mu.Unlock()
-	
+
 	var lastErr error
 	for _, name := range engines {
 		if err := h.StopEngine(ctx, name); err != nil {
@@ -255,15 +255,15 @@ func (h *Host) waitHealthy(ctx context.Context, name string, timeout time.Durati
 	h.mu.RLock()
 	engine, exists := h.engines[name]
 	h.mu.RUnlock()
-	
+
 	if !exists {
 		return fmt.Errorf("engine %s not found", name)
 	}
-	
+
 	deadline := time.Now().Add(timeout)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -294,7 +294,7 @@ func (h *Host) configureBridge(ctx context.Context, bridge *BridgeConfig) error 
 func (h *Host) collectMetrics(name string, engine engines.Engine) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		h.mu.RLock()
 		if _, exists := h.engines[name]; !exists {
@@ -302,7 +302,7 @@ func (h *Host) collectMetrics(name string, engine engines.Engine) {
 			return // Engine stopped
 		}
 		h.mu.RUnlock()
-		
+
 		metrics := engine.Metrics()
 		h.metrics.Record(name, metrics)
 	}
@@ -328,7 +328,7 @@ func (h *Host) StopAll(ctx context.Context) error {
 		engines = append(engines, name)
 	}
 	h.mu.Unlock()
-	
+
 	var lastErr error
 	for _, name := range engines {
 		if err := h.StopEngine(ctx, name); err != nil {
@@ -348,7 +348,7 @@ type EngineStatus struct {
 func (h *Host) GetAllStatus(ctx context.Context) (map[string]*EngineStatus, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	statuses := make(map[string]*EngineStatus)
 	for name, engine := range h.engines {
 		health, err := engine.Health(ctx)
@@ -375,12 +375,12 @@ func (h *Host) GetMetrics() map[string]*EngineMetrics {
 func (h *Host) SaveState(path string) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	state := &HostState{
 		Engines:  make(map[string]*EngineState),
 		Networks: h.networks,
 	}
-	
+
 	for name, engine := range h.engines {
 		state.Engines[name] = &EngineState{
 			Name:      name,
@@ -392,12 +392,12 @@ func (h *Host) SaveState(path string) error {
 			Uptime:    engine.Uptime().Seconds(),
 		}
 	}
-	
+
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	return os.WriteFile(path, data, 0644)
 }
 
@@ -407,25 +407,25 @@ func (h *Host) LoadState(path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	var state HostState
 	if err := json.Unmarshal(data, &state); err != nil {
 		return err
 	}
-	
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	h.networks = state.Networks
 	// Note: Engines need to be restarted separately
-	
+
 	return nil
 }
 
 // HostState represents the persistent state of the host
 type HostState struct {
-	Engines  map[string]*EngineState  `json:"engines"`
-	Networks map[string]*NetworkInfo  `json:"networks"`
+	Engines  map[string]*EngineState `json:"engines"`
+	Networks map[string]*NetworkInfo `json:"networks"`
 }
 
 // EngineState represents the state of an engine

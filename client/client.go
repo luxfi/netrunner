@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/rpcpb"
-	"github.com/luxfi/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -59,7 +59,7 @@ type Client interface {
 }
 
 type client struct {
-	cfg Config
+	cfg    Config
 	logger log.Logger
 
 	conn *grpc.ClientConn
@@ -88,7 +88,7 @@ func New(cfg Config, logger log.Logger) (Client, error) {
 
 	return &client{
 		cfg:      cfg,
-		logger: logger,
+		logger:   logger,
 		conn:     conn,
 		pingc:    rpcpb.NewPingServiceClient(conn),
 		controlc: rpcpb.NewControlServiceClient(conn),
@@ -114,11 +114,11 @@ func (c *client) Start(ctx context.Context, execPath string, opts ...OpOption) (
 	ret.applyOpts(opts)
 
 	req := &rpcpb.StartRequest{
-		ExecPath:       execPath,
-		NumNodes:       &ret.numNodes,
-		ChainConfigs:   ret.chainConfigs,
-		UpgradeConfigs: ret.upgradeConfigs,
-		ChainConfigFiles:  ret.chainConfigs,
+		ExecPath:         execPath,
+		NumNodes:         &ret.numNodes,
+		ChainConfigs:     ret.chainConfigs,
+		UpgradeConfigs:   ret.upgradeConfigs,
+		ChainConfigFiles: ret.chainConfigs,
 	}
 	if ret.trackChains != "" {
 		req.WhitelistedChains = &ret.trackChains
@@ -271,12 +271,12 @@ func (c *client) AddNode(ctx context.Context, name string, execPath string, opts
 	ret.applyOpts(opts)
 
 	req := &rpcpb.AddNodeRequest{
-		Name:           name,
-		ExecPath:       execPath,
-		NodeConfig:     &ret.globalNodeConfig,
-		ChainConfigs:   ret.chainConfigs,
-		UpgradeConfigs: ret.upgradeConfigs,
-		ChainConfigFiles:  ret.chainConfigs,
+		Name:             name,
+		ExecPath:         execPath,
+		NodeConfig:       &ret.globalNodeConfig,
+		ChainConfigs:     ret.chainConfigs,
+		UpgradeConfigs:   ret.upgradeConfigs,
+		ChainConfigFiles: ret.chainConfigs,
 	}
 
 	if ret.pluginDir != "" {
@@ -354,10 +354,10 @@ func (c *client) LoadSnapshot(ctx context.Context, snapshotName string, opts ...
 	ret := &Op{}
 	ret.applyOpts(opts)
 	req := rpcpb.LoadSnapshotRequest{
-		SnapshotName:   snapshotName,
-		ChainConfigs:   ret.chainConfigs,
-		UpgradeConfigs: ret.upgradeConfigs,
-		ChainConfigFiles:  ret.chainConfigs,
+		SnapshotName:     snapshotName,
+		ChainConfigs:     ret.chainConfigs,
+		UpgradeConfigs:   ret.upgradeConfigs,
+		ChainConfigFiles: ret.chainConfigs,
 	}
 	if ret.execPath != "" {
 		req.ExecPath = &ret.execPath
@@ -399,13 +399,13 @@ func (c *client) Close() error {
 type Op struct {
 	numNodes            uint32
 	execPath            string
-	trackChains        string
+	trackChains         string
 	globalNodeConfig    string
 	rootDataDir         string
 	pluginDir           string
-	chainSpecs     []*rpcpb.BlockchainSpec
+	chainSpecs          []*rpcpb.BlockchainSpec
 	customNodeConfigs   map[string]string
-	numChains          uint32
+	numChains           uint32
 	chainConfigs        map[string]string
 	upgradeConfigs      map[string]string
 	pChainConfigs       map[string]string

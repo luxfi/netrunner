@@ -51,14 +51,14 @@ func main() {
 
 	for i, vk := range validators {
 		name := fmt.Sprintf("node%d", i)
-		
+
 		fmt.Printf("--- Validator %d (%s) ---\n", i, name)
 		fmt.Printf("  NodeID:       %s\n", vk.NodeID.String())
 		fmt.Printf("  P-Chain Addr: %s\n", vk.PChainAddr.String())
 		fmt.Printf("  C-Chain Addr: %s\n", vk.CChainAddrHex())
 		fmt.Printf("  BLS PubKey:   %s\n", vk.BLSPublicKeyHex())
 		fmt.Printf("  BLS PoP:      %s\n", vk.BLSPoPHex())
-		
+
 		// Save to disk
 		if err := ks.Save(name, vk); err != nil {
 			fmt.Printf("  ERROR saving: %v\n", err)
@@ -117,6 +117,12 @@ func main() {
       "proofOfPossession": "%s"
     }
   }%s
-`, vk.NodeID.String(), vk.BLSPublicKeyHex(), vk.BLSPoPHex(), func() string { if i < 4 { return "," } else { return "" } }())
+`, vk.NodeID.String(), vk.BLSPublicKeyHex(), vk.BLSPoPHex(), func() string {
+			if i < 4 {
+				return ","
+			} else {
+				return ""
+			}
+		}())
 	}
 }

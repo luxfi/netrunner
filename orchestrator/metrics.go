@@ -39,7 +39,7 @@ func NewMetricsCollector() *MetricsCollector {
 func (mc *MetricsCollector) Record(engine string, values map[string]interface{}) {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
-	
+
 	em, exists := mc.metrics[engine]
 	if !exists {
 		em = &EngineMetrics{
@@ -48,10 +48,10 @@ func (mc *MetricsCollector) Record(engine string, values map[string]interface{})
 		}
 		mc.metrics[engine] = em
 	}
-	
+
 	em.LastUpdated = time.Now()
 	em.Values = values
-	
+
 	// Add to history (keep last 100 snapshots)
 	snapshot := MetricSnapshot{
 		Timestamp: em.LastUpdated,
@@ -67,7 +67,7 @@ func (mc *MetricsCollector) Record(engine string, values map[string]interface{})
 func (mc *MetricsCollector) Get(engine string) *EngineMetrics {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	return mc.metrics[engine]
 }
 
@@ -75,7 +75,7 @@ func (mc *MetricsCollector) Get(engine string) *EngineMetrics {
 func (mc *MetricsCollector) GetAll() map[string]*EngineMetrics {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	result := make(map[string]*EngineMetrics)
 	for k, v := range mc.metrics {
 		result[k] = v
@@ -87,7 +87,7 @@ func (mc *MetricsCollector) GetAll() map[string]*EngineMetrics {
 func (mc *MetricsCollector) Clear(engine string) {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
-	
+
 	delete(mc.metrics, engine)
 }
 
@@ -95,13 +95,13 @@ func (mc *MetricsCollector) Clear(engine string) {
 func (mc *MetricsCollector) Summary() map[string]interface{} {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	summary := make(map[string]interface{})
 	summary["engines"] = len(mc.metrics)
-	
+
 	var totalUptime float64
 	var healthyCount int
-	
+
 	for _, em := range mc.metrics {
 		if uptime, ok := em.Values["uptime_seconds"].(float64); ok {
 			totalUptime += uptime
@@ -110,9 +110,9 @@ func (mc *MetricsCollector) Summary() map[string]interface{} {
 			healthyCount++
 		}
 	}
-	
+
 	summary["total_uptime_seconds"] = totalUptime
 	summary["healthy_engines"] = healthyCount
-	
+
 	return summary
 }

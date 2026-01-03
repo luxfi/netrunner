@@ -33,7 +33,7 @@ type GethEngine struct {
 	config    *engines.NodeConfig
 	process   *exec.Cmd
 	startTime time.Time
-	
+
 	// Cached info
 	networkID uint32
 	chainID   ids.ID
@@ -50,32 +50,32 @@ func NewGethEngine(name string, binary string) (engines.Engine, error) {
 	}, nil
 }
 
-func (e *GethEngine) Name() string                   { return e.name }
-func (e *GethEngine) Type() engines.EngineType       { return engines.EngineGeth }
-func (e *GethEngine) NetworkID() uint32              { return e.networkID }
-func (e *GethEngine) ChainID() ids.ID                { return e.chainID }
+func (e *GethEngine) Name() string                    { return e.name }
+func (e *GethEngine) Type() engines.EngineType        { return engines.EngineGeth }
+func (e *GethEngine) NetworkID() uint32               { return e.networkID }
+func (e *GethEngine) ChainID() ids.ID                 { return e.chainID }
 func (e *GethEngine) ParentChain() *engines.ChainInfo { return nil } // L1
 
 func (e *GethEngine) Start(ctx context.Context, config *engines.NodeConfig) error {
 	e.config = config
 	e.networkID = config.NetworkID
-	
+
 	// Generate chain ID from network ID
 	chainIDBytes := make([]byte, 32)
 	chainIDBig := big.NewInt(int64(config.NetworkID))
 	chainIDBig.FillBytes(chainIDBytes)
 	copy(e.chainID[:], chainIDBytes)
-	
+
 	// Setup data directory
 	if config.DataDir == "" {
 		config.DataDir = filepath.Join(os.TempDir(), "geth", e.name)
 	}
 	e.dataDir = config.DataDir
-	
+
 	if err := os.MkdirAll(e.dataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create data dir: %w", err)
 	}
-	
+
 	// Initialize genesis if needed
 	if _, err := os.Stat(filepath.Join(e.dataDir, "geth", "chaindata")); os.IsNotExist(err) {
 		// Create simple genesis
@@ -99,19 +99,19 @@ func (e *GethEngine) Start(ctx context.Context, config *engines.NodeConfig) erro
 			"gasLimit": "0x8000000",
 			"alloc": {}
 		}`, config.NetworkID)
-		
+
 		genesisPath := filepath.Join(e.dataDir, "genesis.json")
 		if err := os.WriteFile(genesisPath, []byte(genesis), 0644); err != nil {
 			return fmt.Errorf("failed to write genesis: %w", err)
 		}
-		
+
 		// Initialize geth with genesis
 		initCmd := exec.CommandContext(ctx, e.binary, "init", genesisPath, "--datadir", e.dataDir)
 		if err := initCmd.Run(); err != nil {
 			return fmt.Errorf("failed to init geth: %w", err)
 		}
 	}
-	
+
 	// Build command arguments
 	args := []string{
 		"--datadir", e.dataDir,
@@ -133,17 +133,17 @@ func (e *GethEngine) Start(ctx context.Context, config *engines.NodeConfig) erro
 		"--syncmode", "full",
 		"--gcmode", "archive",
 	}
-	
+
 	// Add dev mode for testing
 	if config.NetworkID > 90000 {
 		args = append(args, "--dev", "--dev.period", "1")
 	}
-	
+
 	// Add bootstrap nodes
 	for _, bootnode := range config.BootstrapIPs {
 		args = append(args, "--bootnodes", bootnode)
 	}
-	
+
 	// Add extra configs
 	for k, v := range config.Extra {
 		switch k {
@@ -157,11 +157,11 @@ func (e *GethEngine) Start(ctx context.Context, config *engines.NodeConfig) erro
 			args = append(args, "--password", v.(string))
 		}
 	}
-	
+
 	// Start the process
 	e.process = exec.CommandContext(ctx, e.binary, args...)
 	e.process.Dir = e.dataDir
-	
+
 	// Setup logs
 	logFile, err := os.Create(filepath.Join(e.dataDir, "geth.log"))
 	if err != nil {
@@ -169,17 +169,17 @@ func (e *GethEngine) Start(ctx context.Context, config *engines.NodeConfig) erro
 	}
 	e.process.Stdout = logFile
 	e.process.Stderr = logFile
-	
+
 	if err := e.process.Start(); err != nil {
 		return fmt.Errorf("failed to start geth: %w", err)
 	}
-	
+
 	e.startTime = time.Now()
-	
+
 	// Wait for node to be responsive
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	timeout := time.After(30 * time.Second)
 	for {
 		select {
@@ -200,17 +200,17 @@ func (e *GethEngine) Stop(ctx context.Context) error {
 	if e.process == nil || e.process.Process == nil {
 		return nil
 	}
-	
+
 	// Try graceful shutdown first
 	if err := e.process.Process.Signal(os.Interrupt); err != nil {
 		return e.process.Process.Kill()
 	}
-	
+
 	done := make(chan error, 1)
 	go func() {
 		done <- e.process.Wait()
 	}()
-	
+
 	select {
 	case <-done:
 		return nil
@@ -233,10 +233,10 @@ func (e *GethEngine) Health(ctx context.Context) (*engines.HealthStatus, error) 
 	if !e.IsRunning() {
 		return &engines.HealthStatus{Healthy: false}, nil
 	}
-	
+
 	// Check if RPC is responsive
 	healthy := e.checkRPC()
-	
+
 	return &engines.HealthStatus{
 		Healthy:   healthy,
 		PeerCount: 0, // Would need JSON-RPC client to get real peer count
@@ -292,11 +292,11 @@ func (e *GethEngine) checkRPC() bool {
 	if e.process == nil || e.process.Process == nil {
 		return false
 	}
-	
+
 	// Check if process is still alive
 	if err := e.process.Process.Signal(os.Signal(nil)); err != nil {
 		return false
 	}
-	
+
 	return true
 }

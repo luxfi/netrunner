@@ -12,16 +12,16 @@ const (
 
 	// Network run directory structure (flat, no nesting)
 	// Structure: ~/.lux/runs/<networkName>/run_<timestamp>/node1/, node2/, ...
-	RunsDir       = "runs"       // Top-level runs directory
-	RunDirPrefix  = "run"        // Prefix for timestamped run directories
-	DefaultNetwork = "local"     // Default network name
+	RunsDir        = "runs"  // Top-level runs directory
+	RunDirPrefix   = "run"   // Prefix for timestamped run directories
+	DefaultNetwork = "local" // Default network name
 
 	// Unified chain config directory (shared across all nodes)
 	// Structure: ~/.lux/chains/<chainName>/genesis.json, config.json, upgrade.json
-	ChainsDir         = "chains"
-	ChainGenesisFile  = "genesis.json"
-	ChainConfigFile   = "config.json"
-	ChainUpgradeFile  = "upgrade.json"
+	ChainsDir        = "chains"
+	ChainGenesisFile = "genesis.json"
+	ChainConfigFile  = "config.json"
+	ChainUpgradeFile = "upgrade.json"
 
 	// Unified plugins directory
 	// Structure: ~/.lux/plugins/current/<vmid> (symlinks to actual binaries)
