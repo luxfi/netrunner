@@ -10,8 +10,8 @@ import (
 
 // Indexer provides cross-engine blockchain indexing
 type Indexer struct {
-	mu    sync.RWMutex
-	data  map[string]*IndexData
+	mu   sync.RWMutex
+	data map[string]*IndexData
 }
 
 // IndexData contains indexed blockchain data
@@ -35,7 +35,7 @@ func NewIndexer() *Indexer {
 func (i *Indexer) Update(engine string, data *IndexData) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	
+
 	data.Engine = engine
 	data.LastUpdate = time.Now()
 	i.data[engine] = data
@@ -45,7 +45,7 @@ func (i *Indexer) Update(engine string, data *IndexData) {
 func (i *Indexer) Get(engine string) *IndexData {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	
+
 	return i.data[engine]
 }
 
@@ -53,7 +53,7 @@ func (i *Indexer) Get(engine string) *IndexData {
 func (i *Indexer) GetAll() map[string]*IndexData {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
-	
+
 	result := make(map[string]*IndexData)
 	for k, v := range i.data {
 		result[k] = v
@@ -65,6 +65,6 @@ func (i *Indexer) GetAll() map[string]*IndexData {
 func (i *Indexer) Clear(engine string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	
+
 	delete(i.data, engine)
 }

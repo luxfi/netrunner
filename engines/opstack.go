@@ -29,7 +29,7 @@ type OPStackEngine struct {
 	startTime    time.Time
 	running      bool
 	dataDir      string
-	
+
 	// OP Stack specific
 	l1RPC        string
 	sequencer    bool
@@ -38,14 +38,14 @@ type OPStackEngine struct {
 
 // RollupConfig contains OP Stack rollup configuration
 type RollupConfig struct {
-	Genesis         RollupGenesis         `json:"genesis"`
-	BlockTime       uint64                `json:"block_time"`
-	MaxSequencerDrift uint64              `json:"max_sequencer_drift"`
-	SeqWindowSize   uint64                `json:"seq_window_size"`
-	ChannelTimeout  uint64                `json:"channel_timeout"`
-	L1ChainID       uint64                `json:"l1_chain_id"`
-	L2ChainID       uint64                `json:"l2_chain_id"`
-	P2PSequencerAddress string            `json:"p2p_sequencer_address"`
+	Genesis             RollupGenesis `json:"genesis"`
+	BlockTime           uint64        `json:"block_time"`
+	MaxSequencerDrift   uint64        `json:"max_sequencer_drift"`
+	SeqWindowSize       uint64        `json:"seq_window_size"`
+	ChannelTimeout      uint64        `json:"channel_timeout"`
+	L1ChainID           uint64        `json:"l1_chain_id"`
+	L2ChainID           uint64        `json:"l2_chain_id"`
+	P2PSequencerAddress string        `json:"p2p_sequencer_address"`
 }
 
 // RollupGenesis contains OP Stack genesis configuration
@@ -195,7 +195,7 @@ func (e *OPStackEngine) startNode(ctx context.Context) error {
 	}
 
 	if e.sequencer {
-		args = append(args, 
+		args = append(args,
 			"--sequencer.enabled",
 			"--sequencer.l1-confs", "3",
 			"--verifier.l1-confs", "3",
@@ -233,14 +233,14 @@ func (e *OPStackEngine) loadRollupConfig() error {
 			L1ChainID:         uint64(e.config.NetworkID),
 			L2ChainID:         uint64(e.config.NetworkID) + 10000,
 		}
-		
+
 		// Set genesis
 		e.rollupConfig.Genesis.L1.Number = 0
 		e.rollupConfig.Genesis.L1.Hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 		e.rollupConfig.Genesis.L2.Number = 0
 		e.rollupConfig.Genesis.L2.Hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 		e.rollupConfig.Genesis.L2Time = uint64(time.Now().Unix())
-		
+
 		// Save config
 		data, err := json.MarshalIndent(e.rollupConfig, "", "  ")
 		if err != nil {
@@ -254,7 +254,7 @@ func (e *OPStackEngine) loadRollupConfig() error {
 	if err != nil {
 		return err
 	}
-	
+
 	return json.Unmarshal(data, &e.rollupConfig)
 }
 
@@ -273,7 +273,7 @@ func (e *OPStackEngine) Stop(ctx context.Context) error {
 		go func() {
 			done <- e.nodeCmd.Wait()
 		}()
-		
+
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
@@ -295,7 +295,7 @@ func (e *OPStackEngine) stopGeth() {
 		go func() {
 			done <- e.gethCmd.Wait()
 		}()
-		
+
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
@@ -408,20 +408,20 @@ func (e *OPStackEngine) ParentChain() *ChainInfo {
 func (e *OPStackEngine) Metrics() map[string]interface{} {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	metrics := map[string]interface{}{
 		"running":   e.running,
 		"uptime":    e.Uptime().Seconds(),
 		"type":      "op-stack",
 		"sequencer": e.sequencer,
 	}
-	
+
 	if e.rollupConfig != nil {
 		metrics["l1_chain_id"] = e.rollupConfig.L1ChainID
 		metrics["l2_chain_id"] = e.rollupConfig.L2ChainID
 		metrics["block_time"] = e.rollupConfig.BlockTime
 	}
-	
+
 	return metrics
 }
 

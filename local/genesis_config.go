@@ -13,10 +13,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/luxfi/const"
+	"maps"
+
+	constants "github.com/luxfi/const"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/bls/signer/localsigner"
-	"github.com/luxfi/node/vms/platformvm/signer"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/genesis/configs"
 	"github.com/luxfi/ids"
@@ -25,7 +26,7 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/node/config"
-	"maps"
+	"github.com/luxfi/node/vms/platformvm/signer"
 
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/formatting/address"
@@ -267,12 +268,10 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 			m["allocations"] = mustJSON(newAllocations)
 		}
 
-		// Check if we need to generate initialStakers
-		var existingStakers []interface{}
-		if raw, ok := m["initialStakers"]; ok {
-			json.Unmarshal(raw, &existingStakers)
-		}
-		if len(existingStakers) == 0 {
+		// ALWAYS replace initialStakers with embedded validator keys for local network testing.
+		// The genesis file may have different validators than netrunner's embedded keys,
+		// so we must replace them to ensure nodes can actually validate.
+		{
 			// Generate initialStakers from embedded validator keys
 			var generatedStakers []map[string]interface{}
 			for i := uint32(0); i < numEmbeddedToUse; i++ {
@@ -423,6 +422,10 @@ func NewCanonicalCustomConfig(binaryPath string, numNodes uint32) (network.Confi
 
 // newCanonicalConfig creates a network config with canonical (pre-serialized) genesis bytes
 // and loads validator keys from ~/.lux/keys/node{0..n-1}/
+//
+// IMPORTANT: This function patches the genesis initialStakers with the BLS keys from the
+// loaded validator keys. This ensures the validators' BLS Proof of Possession (PoP) in genesis
+// matches the actual signer.key files the nodes will use.
 func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, portBase int) (network.Config, error) {
 	// Load CANONICAL genesis bytes - no parsing/re-serialization
 	originalGenesisBytes, err := configs.GetCanonicalGenesisBytes(networkID)
@@ -430,13 +433,61 @@ func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, po
 		return network.Config{}, fmt.Errorf("failed to load canonical genesis: %w", err)
 	}
 
-	// For LOCAL TESTING: Update startTime to now so bootstrap starts immediately.
+	// Load validator keys from ~/.lux/keys/ FIRST so we can patch genesis with them
+	keysDir := os.Getenv("LUX_KEYS_DIR")
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
+	ks := keys.NewKeyStore(keysDir)
+
+	// Load all validator keys and build initialStakers
+	hrp := constants.GetHRP(networkID)
+	validatorKeys := make([]*keys.ValidatorKey, numNodes)
+	initialStakers := make([]map[string]interface{}, numNodes)
+
+	for i := uint32(0); i < numNodes; i++ {
+		name := fmt.Sprintf("node%d", i)
+		vk, err := ks.Load(name)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to load validator key %s from %s: %w (run 'lux key generate' first)", name, keysDir, err)
+		}
+		validatorKeys[i] = vk
+
+		// Build initialStaker entry with BLS keys from loaded validator
+		rewardAddr, err := address.Format("P", hrp, vk.PChainAddr[:])
+		if err != nil {
+			return network.Config{}, fmt.Errorf("couldn't format reward address for node %d: %w", i, err)
+		}
+
+		staker := map[string]interface{}{
+			"nodeID":        vk.NodeID.String(),
+			"rewardAddress": rewardAddr,
+			"delegationFee": 20000,
+			"weight":        GigaLux, // 1 billion nLUX = 1000 LUX
+		}
+
+		if len(vk.BLSPublicKey) > 0 && len(vk.BLSPoP) > 0 {
+			staker["signer"] = map[string]interface{}{
+				"publicKey":         vk.BLSPublicKeyHex(),
+				"proofOfPossession": vk.BLSPoPHex(),
+			}
+			fmt.Printf("  Validator %d: %s (BLS: %s...)\n", i, vk.NodeID.String(), vk.BLSPublicKeyHex()[:20])
+		} else {
+			fmt.Printf("  Validator %d: %s (no BLS key)\n", i, vk.NodeID.String())
+		}
+
+		initialStakers[i] = staker
+	}
+
+	// For LOCAL TESTING: Update startTime to now AND patch initialStakers with our keys
 	// CRITICAL: Use patchGenesisPreservingRaw to preserve cChainGenesis exact bytes.
 	now := time.Now().Unix()
 	fmt.Printf("📅 Updated genesis startTime to %d (now) for local testing\n", now)
+	fmt.Printf("🔑 Patching genesis initialStakers with %d validators from %s\n", numNodes, keysDir)
 
 	genesisBytes, err := patchGenesisPreservingRaw(originalGenesisBytes, evmGenesisKeys, func(m map[string]json.RawMessage) error {
 		m["startTime"] = mustJSON(uint64(now))
+		m["initialStakers"] = mustJSON(initialStakers)
 		return nil
 	})
 	if err != nil {
@@ -447,22 +498,10 @@ func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, po
 	netConfig := NewDefaultConfig(binaryPath)
 	netConfig.Genesis = string(genesisBytes)
 
-	// Load validator keys from ~/.lux/keys/
-	keysDir := os.Getenv("LUX_KEYS_DIR")
-	if keysDir == "" {
-		keysDir = validatorKeysDir()
-	}
-	ks := keys.NewKeyStore(keysDir)
-
-	// Load keys for each node
+	// Build node configs from loaded keys
 	nodeConfigs := make([]node.Config, numNodes)
 	for i := uint32(0); i < numNodes; i++ {
-		name := fmt.Sprintf("node%d", i)
-		vk, err := ks.Load(name)
-		if err != nil {
-			return network.Config{}, fmt.Errorf("failed to load validator key %s from %s: %w (run 'lux key generate' first)", name, keysDir, err)
-		}
-
+		vk := validatorKeys[i]
 		port := portBase + int(i)*2
 		nodeConfigs[i] = node.Config{
 			Flags: map[string]interface{}{
@@ -477,11 +516,10 @@ func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, po
 			UpgradeConfigFiles: map[string]string{},
 			PChainConfigFiles:  map[string]string{},
 		}
-		fmt.Printf("  Loaded validator %d: %s\n", i, vk.NodeID.String())
 	}
 	netConfig.NodeConfigs = nodeConfigs
 
-	fmt.Printf("✅ Loaded canonical genesis for network %d with %d validators\n", networkID, numNodes)
+	fmt.Printf("✅ Loaded canonical genesis for network %d with %d validators (BLS keys patched)\n", networkID, numNodes)
 	return netConfig, nil
 }
 
@@ -724,13 +762,13 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 				config.HTTPPortKey:    port,
 				config.StakingPortKey: port + 1,
 			},
-			StakingKey:        string(vk.StakerKey),
-			StakingCert:       string(vk.StakerCert),
-			StakingSigningKey: base64.StdEncoding.EncodeToString(vk.BLSSecretKey),
-			IsBeacon:          true,
-			ChainConfigFiles:  map[string]string{},
+			StakingKey:         string(vk.StakerKey),
+			StakingCert:        string(vk.StakerCert),
+			StakingSigningKey:  base64.StdEncoding.EncodeToString(vk.BLSSecretKey),
+			IsBeacon:           true,
+			ChainConfigFiles:   map[string]string{},
 			UpgradeConfigFiles: map[string]string{},
-			PChainConfigFiles: map[string]string{},
+			PChainConfigFiles:  map[string]string{},
 		}
 	}
 
@@ -1016,8 +1054,7 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		// Add per-node specific flags
 		nodeFlags[config.HTTPPortKey] = port
 		nodeFlags[config.StakingPortKey] = port + 1
-		// Enable sybil protection for mainnet - validators have proper keys
-		// The genesis validators have matching NodeIDs from deterministic TLS certs
+		// Sybil protection MUST be enabled - validators come from genesis initialStakers
 		nodeFlags[config.SybilProtectionEnabledKey] = true
 
 		netConfig.NodeConfigs[i] = node.Config{

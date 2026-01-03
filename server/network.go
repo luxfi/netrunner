@@ -13,6 +13,10 @@ import (
 	"strings"
 	"sync"
 
+	"maps"
+	"slices"
+
+	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
@@ -20,9 +24,6 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/ids"
-	"maps"
-	"slices"
 
 	luxd_constants "github.com/luxfi/const"
 	"github.com/luxfi/log"
@@ -80,7 +81,7 @@ type localNetwork struct {
 
 type chainInfo struct {
 	info         *rpcpb.CustomChainInfo
-	chainID     ids.ID
+	chainID      ids.ID
 	blockchainID ids.ID
 }
 
@@ -88,7 +89,7 @@ type localNetworkOptions struct {
 	execPath            string
 	rootDataDir         string
 	numNodes            uint32
-	trackChains        string
+	trackChains         string
 	redirectNodesOutput bool
 	globalNodeConfig    string
 
@@ -132,7 +133,7 @@ func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 		customChainIDToInfo: make(map[ids.ID]chainInfo),
 		stopCh:              make(chan struct{}),
 		nodeInfos:           make(map[string]*rpcpb.NodeInfo),
-		chains:             make(map[string]*rpcpb.ChainInfo),
+		chains:              make(map[string]*rpcpb.ChainInfo),
 	}, nil
 }
 
@@ -705,12 +706,12 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 		}
 		lc.customChainIDToInfo[blockchain.ID] = chainInfo{
 			info: &rpcpb.CustomChainInfo{
-				ChainName: blockchain.Name,
-				VmId:      blockchain.VMID.String(),
-				PchainId:  blockchain.NetID.String(),
-				BlockchainId:   blockchain.ID.String(),
+				ChainName:    blockchain.Name,
+				VmId:         blockchain.VMID.String(),
+				PchainId:     blockchain.NetID.String(),
+				BlockchainId: blockchain.ID.String(),
 			},
-			chainID:     blockchain.NetID,
+			chainID:      blockchain.NetID,
 			blockchainID: blockchain.ID,
 		}
 	}
@@ -758,7 +759,7 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 		}
 
 		lc.chains[chainIDStr] = &rpcpb.ChainInfo{
-			IsElastic:          isElastic,
+			IsElastic:         isElastic,
 			ElasticChainId:    elasticChainID.String(),
 			ChainParticipants: &rpcpb.ChainParticipants{NodeNames: nodeNameList},
 		}
@@ -858,16 +859,16 @@ func (lc *localNetwork) updateNodeInfo() error {
 		}
 
 		lc.nodeInfos[name] = &rpcpb.NodeInfo{
-			Name:               node.GetName(),
-			Uri:                node.GetURL(),
-			Id:                 node.GetNodeID().String(),
-			ExecPath:           node.GetBinaryPath(),
-			LogDir:             node.GetLogsDir(),
-			DbDir:              node.GetDbDir(),
-			Config:             []byte(node.GetConfigFile()),
-			PluginDir:          node.GetPluginDir(),
+			Name:              node.GetName(),
+			Uri:               node.GetURL(),
+			Id:                node.GetNodeID().String(),
+			ExecPath:          node.GetBinaryPath(),
+			LogDir:            node.GetLogsDir(),
+			DbDir:             node.GetDbDir(),
+			Config:            []byte(node.GetConfigFile()),
+			PluginDir:         node.GetPluginDir(),
 			WhitelistedChains: trackChains,
-			Paused:             node.GetPaused(),
+			Paused:            node.GetPaused(),
 		}
 
 		// update default exec and pluginDir if empty (snapshots started without these params)

@@ -14,14 +14,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
 	"github.com/spf13/cobra"
 )
 
@@ -34,11 +34,11 @@ const clientRootDirPrefix = "client"
 var (
 	logLevel       string
 	logDir         string
-	trackChains   string
+	trackChains    string
 	endpoint       string
 	dialTimeout    time.Duration
 	requestTimeout time.Duration
-	logger log.Logger
+	logger         log.Logger
 )
 
 // NOTE: Naming convention for node names is currently `node` + number, i.e. `node1,node2,node3,...node101`
@@ -86,12 +86,12 @@ func NewCommand() *cobra.Command {
 }
 
 var (
-	luxdBinPath  string
+	luxdBinPath         string
 	numNodes            uint32
 	pluginDir           string
 	globalNodeConfig    string
 	addNodeConfig       string
-	chainSpecsStr  string
+	chainSpecsStr       string
 	customNodeConfigs   string
 	rootDataDir         string
 	chainConfigs        string

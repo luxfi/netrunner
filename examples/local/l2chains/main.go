@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/luxfi/log"
+	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/node/config"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
 )
 
 const (
@@ -209,9 +209,9 @@ func run(logger log.Logger) error {
 		createCtx, createCancel := context.WithTimeout(context.Background(), createBlockchainTimeout)
 		chainSpec := []network.ChainSpec{
 			{
-				VMName:      chain.VMName,
-				Genesis:     genesis,
-				Alias:       chain.Alias,
+				VMName:         chain.VMName,
+				Genesis:        genesis,
+				Alias:          chain.Alias,
 				BlockchainName: chain.Alias, // Use unique name for each chain
 			},
 		}

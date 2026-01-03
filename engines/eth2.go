@@ -23,17 +23,17 @@ import (
 
 // Eth2Engine implements Ethereum 2.0 consensus (Beacon Chain + Execution Layer)
 type Eth2Engine struct {
-	mu               sync.RWMutex
-	name             string
-	beaconBinary     string // Consensus client (e.g., Prysm, Lighthouse, Teku)
-	executionBinary  string // Execution client (e.g., Geth, Erigon, Nethermind)
-	beaconCmd        *exec.Cmd
-	executionCmd     *exec.Cmd
-	config           *NodeConfig
-	startTime        time.Time
-	running          bool
-	dataDir          string
-	
+	mu              sync.RWMutex
+	name            string
+	beaconBinary    string // Consensus client (e.g., Prysm, Lighthouse, Teku)
+	executionBinary string // Execution client (e.g., Geth, Erigon, Nethermind)
+	beaconCmd       *exec.Cmd
+	executionCmd    *exec.Cmd
+	config          *NodeConfig
+	startTime       time.Time
+	running         bool
+	dataDir         string
+
 	// Eth2 specific
 	chainID          uint64
 	networkName      string
@@ -66,27 +66,27 @@ const (
 
 // Eth2Config contains Ethereum 2.0 specific configuration
 type Eth2Config struct {
-	ChainID               uint64          `json:"chain_id"`
-	NetworkName           string          `json:"network_name"`
-	ConsensusClient       ConsensusClient `json:"consensus_client"`
-	ExecutionClient       ExecutionClient `json:"execution_client"`
-	ValidatorEnabled      bool            `json:"validator_enabled"`
-	ValidatorKeys         []string        `json:"validator_keys,omitempty"`
-	InitialValidators     []string        `json:"initial_validators,omitempty"`
-	TerminalTotalDifficulty string        `json:"terminal_total_difficulty"`
-	GenesisTime           uint64          `json:"genesis_time"`
+	ChainID                 uint64          `json:"chain_id"`
+	NetworkName             string          `json:"network_name"`
+	ConsensusClient         ConsensusClient `json:"consensus_client"`
+	ExecutionClient         ExecutionClient `json:"execution_client"`
+	ValidatorEnabled        bool            `json:"validator_enabled"`
+	ValidatorKeys           []string        `json:"validator_keys,omitempty"`
+	InitialValidators       []string        `json:"initial_validators,omitempty"`
+	TerminalTotalDifficulty string          `json:"terminal_total_difficulty"`
+	GenesisTime             uint64          `json:"genesis_time"`
 }
 
 // BeaconNodeStatus represents beacon chain status
 type BeaconNodeStatus struct {
-	HeadSlot           uint64 `json:"head_slot"`
-	SyncDistance       uint64 `json:"sync_distance"`
-	IsSyncing          bool   `json:"is_syncing"`
-	IsOptimistic       bool   `json:"is_optimistic"`
-	ElOffline          bool   `json:"el_offline"`
-	CurrentEpoch       uint64 `json:"current_epoch"`
-	FinalizedEpoch     uint64 `json:"finalized_epoch"`
-	JustifiedEpoch     uint64 `json:"justified_epoch"`
+	HeadSlot       uint64 `json:"head_slot"`
+	SyncDistance   uint64 `json:"sync_distance"`
+	IsSyncing      bool   `json:"is_syncing"`
+	IsOptimistic   bool   `json:"is_optimistic"`
+	ElOffline      bool   `json:"el_offline"`
+	CurrentEpoch   uint64 `json:"current_epoch"`
+	FinalizedEpoch uint64 `json:"finalized_epoch"`
+	JustifiedEpoch uint64 `json:"justified_epoch"`
 }
 
 // NewEth2Engine creates a new Ethereum 2.0 engine
@@ -185,7 +185,7 @@ func (e *Eth2Engine) loadEth2Config() error {
 
 func (e *Eth2Engine) generateJWTSecret() error {
 	jwtPath := filepath.Join(e.dataDir, "jwt.hex")
-	
+
 	// Check if already exists
 	if _, err := os.Stat(jwtPath); err == nil {
 		data, err := os.ReadFile(jwtPath)
@@ -201,14 +201,14 @@ func (e *Eth2Engine) generateJWTSecret() error {
 	if _, err := rand.Read(secret); err != nil {
 		return fmt.Errorf("failed to generate random JWT secret: %w", err)
 	}
-	
+
 	e.jwtSecret = hex.EncodeToString(secret)
 	return os.WriteFile(jwtPath, []byte(e.jwtSecret), 0600)
 }
 
 func (e *Eth2Engine) startExecutionClient(ctx context.Context) error {
 	var args []string
-	
+
 	switch e.executionClient {
 	case Geth:
 		args = e.getGethArgs()
@@ -305,7 +305,7 @@ func (e *Eth2Engine) getBesuArgs() []string {
 
 func (e *Eth2Engine) startConsensusClient(ctx context.Context) error {
 	var args []string
-	
+
 	switch e.consensusClient {
 	case Prysm:
 		args = e.getPrysmArgs()
@@ -424,7 +424,7 @@ func (e *Eth2Engine) Stop(ctx context.Context) error {
 		go func() {
 			done <- e.beaconCmd.Wait()
 		}()
-		
+
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
@@ -446,7 +446,7 @@ func (e *Eth2Engine) stopExecutionClient() {
 		go func() {
 			done <- e.executionCmd.Wait()
 		}()
-		
+
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
@@ -499,7 +499,7 @@ func (e *Eth2Engine) Health(ctx context.Context) (*HealthStatus, error) {
 
 func (e *Eth2Engine) getBeaconNodeStatus() (*BeaconNodeStatus, error) {
 	url := fmt.Sprintf("http://localhost:%d/eth/v1/node/syncing", e.config.HTTPPort+2000)
-	
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -578,7 +578,7 @@ func (e *Eth2Engine) ParentChain() *ChainInfo {
 func (e *Eth2Engine) Metrics() map[string]interface{} {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	metrics := map[string]interface{}{
 		"running":          e.running,
 		"uptime":           e.Uptime().Seconds(),
@@ -589,7 +589,7 @@ func (e *Eth2Engine) Metrics() map[string]interface{} {
 		"network":          e.networkName,
 		"validator":        e.validatorEnabled,
 	}
-	
+
 	return metrics
 }
 

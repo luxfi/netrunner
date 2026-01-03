@@ -19,6 +19,9 @@ import (
 	"sync"
 	"time"
 
+	"maps"
+	"slices"
+
 	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/crypto/bls"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
@@ -36,8 +39,6 @@ import (
 	"github.com/luxfi/node/network/peer"
 	"github.com/luxfi/node/staking"
 	"github.com/luxfi/node/utils/beacon"
-	"maps"
-	"slices"
 
 	"github.com/luxfi/node/utils/formatting/address"
 	"github.com/luxfi/node/utils/wrappers"
@@ -55,12 +56,12 @@ const (
 	genesisFileName           = "genesis.json"
 	stopTimeout               = 30 * time.Second
 	// healthCheckFreq reduced from 3s to 1s for faster health polling
-	healthCheckFreq           = 1 * time.Second
-	DefaultNumNodes           = 5
-	snapshotPrefix            = "lux-snapshot-"
-	networkRootDirPrefix      = "network"
-	defaultDBSubdir           = "db"
-	defaultLogsSubdir         = "logs"
+	healthCheckFreq      = 1 * time.Second
+	DefaultNumNodes      = 5
+	snapshotPrefix       = "lux-snapshot-"
+	networkRootDirPrefix = "network"
+	defaultDBSubdir      = "db"
+	defaultLogsSubdir    = "logs"
 	// difference between unlock schedule locktime and startime in original genesis
 	genesisLocktimeStartimeDelta = 2836800
 )
@@ -75,8 +76,8 @@ var (
 		config.BootstrapIPsKey: {},
 		config.BootstrapIDsKey: {},
 	}
-	chainConfigSubDir   = "chainConfigs"
-	pChainConfigSubDir  = "pChainConfigs"
+	chainConfigSubDir  = "chainConfigs"
+	pChainConfigSubDir = "pChainConfigs"
 
 	snapshotsRelPath = filepath.Join(".netrunner", "snapshots")
 
@@ -85,7 +86,7 @@ var (
 
 // network keeps information uses for network management, and accessing all the nodes
 type localNetwork struct {
-	lock sync.RWMutex
+	lock   sync.RWMutex
 	logger log.Logger
 	// This network's ID.
 	networkID uint32
@@ -261,7 +262,7 @@ func init() {
 			"C": string(cChainConfig),
 		},
 		UpgradeConfigFiles: map[string]string{},
-		PChainConfigFiles: map[string]string{},
+		PChainConfigFiles:  map[string]string{},
 	}
 
 	for i := 0; i < len(defaultNetworkConfig.NodeConfigs); i++ {
@@ -366,16 +367,16 @@ func newNetwork(
 	}
 	// Create the network
 	net := &localNetwork{
-		nextNodeSuffix:           1,
-		nodes:                    map[string]*localNode{},
-		onStopCh:                 make(chan struct{}),
-		logger: logger,
-		bootstraps:               beacon.NewSet(),
-		newAPIClientF:            newAPIClientF,
-		nodeProcessCreator:       nodeProcessCreator,
-		rootDir:                  rootDir,
-		snapshotsDir:             snapshotsDir,
-		reassignPortsIfUsed:      reassignPortsIfUsed,
+		nextNodeSuffix:         1,
+		nodes:                  map[string]*localNode{},
+		onStopCh:               make(chan struct{}),
+		logger:                 logger,
+		bootstraps:             beacon.NewSet(),
+		newAPIClientF:          newAPIClientF,
+		nodeProcessCreator:     nodeProcessCreator,
+		rootDir:                rootDir,
+		snapshotsDir:           snapshotsDir,
+		reassignPortsIfUsed:    reassignPortsIfUsed,
 		chainID2ElasticChainID: map[ids.ID]ids.ID{},
 	}
 	return net, nil
