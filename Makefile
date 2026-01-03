@@ -10,8 +10,11 @@ BUILD_DIR := build
 # Go build flags
 GOARCH := $(shell go env GOARCH)
 GOOS := $(shell go env GOOS)
+CGO_ENABLED ?= 1
 CGO_CFLAGS := -O -D__BLST_PORTABLE__
 LDFLAGS := -X github.com/luxfi/netrunner/cmd.Version=$(VERSION) -X github.com/luxfi/netrunner/cmd.Commit=$(COMMIT) -X github.com/luxfi/netrunner/cmd.BuildDate=$(BUILD_DATE)
+
+export CGO_ENABLED
 
 # Default target
 .PHONY: all
