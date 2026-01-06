@@ -58,10 +58,9 @@ const (
 	// First startup takes longer as nodes need to establish consensus
 	// Subsequent restarts are faster (<10s) but initial bootstrap needs time
 	waitForHealthyTimeout = 60 * time.Second
-	// chainDeployTimeout - 30s MAX for chain deploy operations
-	// FAIL FAST: If chain deploy takes longer than 30s, something is wrong
-	// Most P-chain API calls complete in <5s on localhost
-	chainDeployTimeout = 30 * time.Second
+	// chainDeployTimeout - time for chain deploy operations including node restarts
+	// Subnet creation, chain creation, node restart, and P-chain sync can take 60-90s
+	chainDeployTimeout = 120 * time.Second
 
 	TimeParseLayout        = "2006-01-02 15:04:05"
 	StakingMinimumLeadTime = 25 * time.Second
@@ -557,7 +556,7 @@ func (s *server) WaitForHealthy(ctx context.Context, _ *rpcpb.WaitForHealthyRequ
 			return nil, ErrNotBootstrapped
 		}
 		s.mu.RUnlock()
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond) // Reduced from 1s for faster health polling
 	}
 }
 

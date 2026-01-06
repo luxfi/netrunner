@@ -1,0 +1,17 @@
+{
+  "network-peer-list-pull-gossip-frequency":"250ms",
+  "network-max-reconnect-delay":"1s",
+  "public-ip":"127.0.0.1",
+  "health-check-frequency":"2s",
+  "api-admin-enabled":true,
+  "index-enabled":true,
+  "log-display-level":"ERROR",
+  "log-level": "INFO",
+  "sybil-protection-enabled": true,
+  "network-health-min-conn-peers": 0,
+  "track-all-chains": true,
+  "consensus-sample-size": 5,
+  "consensus-preference-quorum-size": 4,
+  "consensus-confidence-quorum-size": 4,
+  "consensus-commit-threshold": 4
+}
