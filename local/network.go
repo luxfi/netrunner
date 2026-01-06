@@ -55,8 +55,8 @@ const (
 	stakingSigningKeyFileName = "signer.key"
 	genesisFileName           = "genesis.json"
 	stopTimeout               = 30 * time.Second
-	// healthCheckFreq reduced from 3s to 1s for faster health polling
-	healthCheckFreq      = 1 * time.Second
+	// healthCheckFreq reduced from 3s to 100ms for ultra-fast health polling
+	healthCheckFreq      = 100 * time.Millisecond
 	DefaultNumNodes      = 5
 	snapshotPrefix       = "lux-snapshot-"
 	networkRootDirPrefix = "network"

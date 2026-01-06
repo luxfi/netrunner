@@ -1,0 +1,63 @@
+{
+  "profile-name": "turbo-3of5",
+  "notes": "Aggressive 5-node local perf profile. 3/5 quorum for faster polls. Not for public networks.",
+
+  "log-display-level": "ERROR",
+  "log-level": "ERROR",
+
+  "api-admin-enabled": true,
+  "index-enabled": false,
+  "track-all-chains": false,
+
+  "network-allow-private-ips": true,
+  "sybil-protection-enabled": true,
+
+  "network-health-min-conn-peers": 0,
+  "network-health-max-time-since-msg-sent": "3s",
+  "network-health-max-time-since-msg-received": "3s",
+  "network-health-max-portion-send-queue-full": 0.98,
+  "network-health-max-send-fail-rate": 0.75,
+
+  "network-peer-list-pull-gossip-frequency": "100ms",
+  "network-peer-list-num-validator-ips": 10,
+  "network-peer-list-bloom-reset-frequency": "30s",
+
+  "network-max-reconnect-delay": "100ms",
+  "network-initial-reconnect-delay": "25ms",
+
+  "network-initial-timeout": "250ms",
+  "network-minimum-timeout": "100ms",
+  "network-maximum-timeout": "1s",
+  "network-timeout-halflife": "1s",
+  "network-timeout-coefficient": 1.5,
+  "network-read-handshake-timeout": "250ms",
+
+  "network-ping-timeout": "3s",
+  "network-ping-frequency": "1s",
+
+  "network-outbound-connection-timeout": "250ms",
+
+  "health-check-frequency": "250ms",
+  "health-check-averager-halflife": "1s",
+
+  "bootstrap-beacon-connection-timeout": "500ms",
+  "bootstrap-max-time-get-ancestors": "10ms",
+  "bootstrap-ancestors-max-containers-sent": 50000,
+  "bootstrap-ancestors-max-containers-received": 50000,
+
+  "consensus-sample-size": 5,
+  "consensus-preference-quorum-size": 3,
+  "consensus-confidence-quorum-size": 3,
+
+  "consensus-commit-threshold": 4,
+  "consensus-concurrent-repolls": 64,
+
+  "consensus-optimal-processing": 4096,
+  "consensus-max-processing": 32768,
+  "consensus-max-time-processing": "0s",
+
+  "consensus-frontier-poll-frequency": "20ms",
+
+  "consensus-app-concurrency": 128,
+  "consensus-shutdown-timeout": "1s"
+}

@@ -1,13 +1,57 @@
 {
-  "network-peer-list-pull-gossip-frequency":"250ms",
-  "network-max-reconnect-delay":"1s",
-  "public-ip":"127.0.0.1",
-  "health-check-frequency":"2s",
-  "api-admin-enabled":true,
-  "index-enabled":true,
-  "log-display-level":"ERROR",
-  "log-level": "INFO",
+  "public-ip": "127.0.0.1",
+  "api-admin-enabled": true,
+  "index-enabled": true,
+  "log-display-level": "ERROR",
+  "log-level": "ERROR",
+  "track-all-chains": false,
+
+  "network-allow-private-ips": true,
   "sybil-protection-enabled": true,
   "network-health-min-conn-peers": 0,
-  "track-all-chains": true
+
+  "consensus-sample-size": 5,
+  "consensus-preference-quorum-size": 4,
+  "consensus-confidence-quorum-size": 4,
+  "consensus-commit-threshold": 4,
+
+  "consensus-concurrent-repolls": 32,
+  "consensus-optimal-processing": 2048,
+  "consensus-max-processing": 16384,
+  "consensus-max-time-processing": "0s",
+  "consensus-frontier-poll-frequency": "50ms",
+
+  "health-check-frequency": "500ms",
+  "health-check-averager-halflife": "2s",
+
+  "network-peer-list-pull-gossip-frequency": "250ms",
+  "network-peer-list-num-validator-ips": 10,
+  "network-peer-list-bloom-reset-frequency": "30s",
+
+  "network-max-reconnect-delay": "250ms",
+  "network-initial-reconnect-delay": "50ms",
+
+  "network-initial-timeout": "500ms",
+  "network-minimum-timeout": "250ms",
+  "network-maximum-timeout": "2s",
+  "network-timeout-halflife": "2s",
+  "network-timeout-coefficient": 1.5,
+  "network-read-handshake-timeout": "750ms",
+  "network-ping-timeout": "5s",
+  "network-ping-frequency": "2s",
+
+  "network-health-max-time-since-msg-sent": "5s",
+  "network-health-max-time-since-msg-received": "5s",
+  "network-health-max-portion-send-queue-full": 0.95,
+  "network-health-max-send-fail-rate": 0.5,
+
+  "bootstrap-beacon-connection-timeout": "1s",
+  "bootstrap-max-time-get-ancestors": "25ms",
+  "bootstrap-ancestors-max-containers-sent": 20000,
+  "bootstrap-ancestors-max-containers-received": 20000,
+
+  "consensus-shutdown-timeout": "2s",
+  "consensus-app-concurrency": 64,
+
+  "network-outbound-connection-timeout": "500ms"
 }
