@@ -1,0 +1,63 @@
+{
+  "public-ip": "127.0.0.1",
+  "api-admin-enabled": true,
+  "index-enabled": true,
+  "log-display-level": "ERROR",
+  "log-level": "WARN",
+  "track-all-chains": true,
+
+  "network-allow-private-ips": true,
+  "sybil-protection-enabled": true,
+  "network-health-min-conn-peers": 0,
+
+  "consensus-sample-size": 5,
+  "consensus-preference-quorum-size": 4,
+  "consensus-confidence-quorum-size": 4,
+  "consensus-commit-threshold": 4,
+  "consensus-concurrent-repolls": 8,
+  "consensus-optimal-processing": 50,
+  "consensus-max-processing": 256,
+  "consensus-max-time-processing": "30s",
+  "consensus-frontier-poll-frequency": "100ms",
+
+  "health-check-frequency": "200ms",
+  "health-check-averager-halflife": "5s",
+
+  "network-peer-list-pull-gossip-frequency": "100ms",
+  "network-peer-list-num-validator-ips": 10,
+  "network-peer-list-bloom-reset-frequency": "30s",
+  "network-max-reconnect-delay": "500ms",
+  "network-initial-reconnect-delay": "100ms",
+
+  "network-initial-timeout": "2s",
+  "network-minimum-timeout": "1s",
+  "network-maximum-timeout": "5s",
+  "network-timeout-halflife": "2s",
+  "network-timeout-coefficient": 1.5,
+  "network-read-handshake-timeout": "5s",
+  "network-ping-timeout": "10s",
+  "network-ping-frequency": "15s",
+
+  "network-health-max-time-since-msg-sent": "10s",
+  "network-health-max-time-since-msg-received": "10s",
+  "network-health-max-portion-send-queue-full": 0.9,
+  "network-health-min-conn-peers": 0,
+  "network-health-max-send-fail-rate": 0.5,
+  "network-health-max-outstanding-duration": "30s",
+
+  "bootstrap-beacon-connection-timeout": "5s",
+  "bootstrap-max-time-get-ancestors": "100ms",
+  "bootstrap-ancestors-max-containers-sent": 2000,
+  "bootstrap-ancestors-max-containers-received": 2000,
+
+  "benchlist-fail-threshold": 20,
+  "benchlist-duration": "10s",
+  "benchlist-min-failing-duration": "5s",
+
+  "proposer-vm-min-block-delay": "0s",
+
+  "consensus-shutdown-timeout": "5s",
+  "consensus-app-concurrency": 16,
+
+  "network-outbound-connection-timeout": "2s"
+}

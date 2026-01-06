@@ -210,12 +210,12 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 				xLuxAddr, errX := address.Format("X", hrp, addr[:])
 				pLuxAddr, errP := address.Format("P", hrp, addr[:])
 				if errX == nil && errP == nil {
-					fmt.Printf("🔑 Setting X+P allocations for LUX_MNEMONIC: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
+					fmt.Printf("🔑 Setting X+P allocations for LUX_MNEMONIC: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
 					// X-chain allocation
 					newAllocations = append(newAllocations, map[string]interface{}{
 						"ethAddr":        vk.CChainAddrHex(),
 						"luxAddr":        xLuxAddr,
-						"initialAmount":  uint64(2000000000000000000),
+						"initialAmount":  GigaLux,
 						"unlockSchedule": []interface{}{},
 					})
 					// P-chain allocation
@@ -224,7 +224,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 						"luxAddr":       pLuxAddr,
 						"initialAmount": uint64(0),
 						"unlockSchedule": []map[string]interface{}{
-							{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+							{"amount": GigaLux, "locktime": uint64(0)},
 						},
 					})
 				}
@@ -242,12 +242,12 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 					xLuxAddr, errX := address.Format("X", hrp, addr[:])
 					pLuxAddr, errP := address.Format("P", hrp, addr[:])
 					if errX == nil && errP == nil {
-						fmt.Printf("🔑 Adding X+P allocations for LUX_PRIVATE_KEY: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
+						fmt.Printf("🔑 Adding X+P allocations for LUX_PRIVATE_KEY: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
 						ethAddr := "0x" + hex.EncodeToString(addr[:])
 						newAllocations = append(newAllocations, map[string]interface{}{
 							"ethAddr":        ethAddr,
 							"luxAddr":        xLuxAddr,
-							"initialAmount":  uint64(2000000000000000000),
+							"initialAmount":  GigaLux,
 							"unlockSchedule": []interface{}{},
 						})
 						newAllocations = append(newAllocations, map[string]interface{}{
@@ -255,7 +255,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 							"luxAddr":       pLuxAddr,
 							"initialAmount": uint64(0),
 							"unlockSchedule": []map[string]interface{}{
-								{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+								{"amount": GigaLux, "locktime": uint64(0)},
 							},
 						})
 					}
@@ -711,11 +711,11 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 				pLuxAddr, errP := address.Format("P", hrp, pChainAddr[:])
 				if errX == nil && errP == nil {
 					ethAddr := "0x" + hex.EncodeToString(pChainAddr[:])
-					fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
+					fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
 					allocations = append(allocations, map[string]interface{}{
 						"ethAddr":        ethAddr,
 						"luxAddr":        xLuxAddr,
-						"initialAmount":  uint64(2000000000000000000),
+						"initialAmount":  GigaLux,
 						"unlockSchedule": []interface{}{},
 					})
 					allocations = append(allocations, map[string]interface{}{
@@ -723,7 +723,7 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 						"luxAddr":       pLuxAddr,
 						"initialAmount": uint64(0),
 						"unlockSchedule": []map[string]interface{}{
-							{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+							{"amount": GigaLux, "locktime": uint64(0)},
 						},
 					})
 					initialStakedFunds = append(initialStakedFunds, xLuxAddr)
@@ -941,7 +941,7 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":        vk.CChainAddrHex(),
 			"luxAddr":        xChainAddr,
-			"initialAmount":  uint64(2000000000000000000),
+			"initialAmount":  GigaLux, // 1B LUX (1e15 nLUX)
 			"unlockSchedule": []interface{}{},
 		})
 		allocations = append(allocations, map[string]interface{}{
@@ -949,11 +949,11 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 			"luxAddr":       pChainAddr,
 			"initialAmount": uint64(0),
 			"unlockSchedule": []map[string]interface{}{
-				{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+				{"amount": GigaLux, "locktime": uint64(0)}, // 1B LUX (1e15 nLUX)
 			},
 		})
 
-		fmt.Printf("  Validator %d: %s -> X:%s P:%s (2B each)\n", i+1, vk.NodeID.String(), xChainAddr, pChainAddr)
+		fmt.Printf("  Validator %d: %s -> X:%s P:%s (1B each)\n", i+1, vk.NodeID.String(), xChainAddr, pChainAddr)
 	}
 
 	// Add wallet key allocation if different from validators
@@ -970,7 +970,7 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":        walletKey.CChainAddrHex(),
 			"luxAddr":        walletXAddr,
-			"initialAmount":  uint64(2000000000000000000),
+			"initialAmount":  GigaLux, // 1B LUX (1e15 nLUX)
 			"unlockSchedule": []interface{}{},
 		})
 		allocations = append(allocations, map[string]interface{}{
@@ -978,10 +978,10 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 			"luxAddr":       walletPAddr,
 			"initialAmount": uint64(0),
 			"unlockSchedule": []map[string]interface{}{
-				{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+				{"amount": GigaLux, "locktime": uint64(0)}, // 1B LUX (1e15 nLUX)
 			},
 		})
-		fmt.Printf("  Wallet: %s -> X:%s P:%s (2B each)\n", walletKey.PChainAddr.String(), walletXAddr, walletPAddr)
+		fmt.Printf("  Wallet: %s -> X:%s P:%s (1B each)\n", walletKey.PChainAddr.String(), walletXAddr, walletPAddr)
 	}
 
 	// Add LUX_PRIVATE_KEY allocations if set and different from wallet key
@@ -997,12 +997,12 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 					privKeyXAddr, errX := address.Format("X", hrp, privKeyAddr[:])
 					privKeyPAddr, errP := address.Format("P", hrp, privKeyAddr[:])
 					if errX == nil && errP == nil {
-						fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s P=%s (2B each)\n", privKeyXAddr, privKeyPAddr)
+						fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s P=%s (1B each)\n", privKeyXAddr, privKeyPAddr)
 						ethAddr := "0x" + hex.EncodeToString(privKeyAddr[:])
 						allocations = append(allocations, map[string]interface{}{
 							"ethAddr":        ethAddr,
 							"luxAddr":        privKeyXAddr,
-							"initialAmount":  uint64(2000000000000000000),
+							"initialAmount":  GigaLux,
 							"unlockSchedule": []interface{}{},
 						})
 						allocations = append(allocations, map[string]interface{}{
@@ -1010,7 +1010,7 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 							"luxAddr":       privKeyPAddr,
 							"initialAmount": uint64(0),
 							"unlockSchedule": []map[string]interface{}{
-								{"amount": uint64(2000000000000000000), "locktime": uint64(0)},
+								{"amount": GigaLux, "locktime": uint64(0)},
 							},
 						})
 					}

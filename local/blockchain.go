@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -862,9 +863,9 @@ func (ln *localNetwork) installCustomChains(
 
 	// Wait for subnet creation transactions to be fully committed before adding validators
 	// The P-Chain needs time to commit the subnet creation blocks and propagate state to all nodes
-	// For local networks, this should be very fast (1-2s). For public networks, may need longer.
+	// For local networks with fast consensus (K=5), 500ms is sufficient
 	ln.logger.Info("waiting for subnet creation to be committed...")
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
 	if err = ln.addChainValidators(ctx, platformCli, w, chainIDs, participantsSpecs); err != nil {
 		ln.logger.Error("installCustomChains: failed to add chain validators",
@@ -894,54 +895,22 @@ func (ln *localNetwork) installCustomChains(
 		return nil, fmt.Errorf("failed to set blockchain config files: %w", err)
 	}
 
-	// First try to hot-reload VM plugins without restart
-	// This is the preferred path - no node restart needed
+	// Hot-reload VM plugins - this is the ONLY path now (no restarts)
+	// VMs are loaded dynamically without requiring node restart
+	ln.logger.Info(log.Blue.Wrap("hot-reloading VM plugins (no restart needed)..."))
 	if err := ln.reloadVMPlugins(ctx); err != nil {
-		ln.logger.Warn("VM hot-reload failed, will try restart path",
+		ln.logger.Error("VM hot-reload failed",
 			"error", err.Error(),
 			"errorDetail", fmt.Sprintf("%+v", err),
 		)
+		return nil, fmt.Errorf("VM hot-reload failed: %w", err)
 	}
 
-	// Only restart if there are config file updates that require restart
-	// Skip restart for new chains - VMs are hot-loaded above
+	// Log if there were config file updates (we skip restart now)
 	if len(nodesToRestartForBlockchainConfigUpdate) > 0 {
-		ln.logger.Info("restarting nodes for config file updates",
-			"numNodesToRestart", len(nodesToRestartForBlockchainConfigUpdate),
+		ln.logger.Info("skipping node restart for config file updates (using hot-reload instead)",
+			"numNodesWithUpdates", len(nodesToRestartForBlockchainConfigUpdate),
 		)
-		if err := ln.restartNodes(ctx, chainIDs, participantsSpecs, nil, nil, nodesToRestartForBlockchainConfigUpdate); err != nil {
-			ln.logger.Error("installCustomChains: failed to restart nodes for config update",
-				"error", err.Error(),
-				"nodesToRestart", nodesToRestartForBlockchainConfigUpdate.List(),
-			)
-			return nil, fmt.Errorf("failed to restart nodes for config update: %w", err)
-		}
-		clientURI, err = ln.getClientURI()
-		if err != nil {
-			ln.logger.Error("installCustomChains: failed to get client URI after restart",
-				"error", err.Error(),
-			)
-			return nil, fmt.Errorf("failed to get client URI after restart: %w", err)
-		}
-		w.reload(clientURI)
-		// Reload VMs again after restart
-		if err := ln.reloadVMPlugins(ctx); err != nil {
-			ln.logger.Error("installCustomChains: failed to reload VM plugins after restart",
-				"error", err.Error(),
-				"errorDetail", fmt.Sprintf("%+v", err),
-			)
-			return nil, fmt.Errorf("failed to reload VM plugins after restart: %w", err)
-		}
-
-		// CRITICAL: After restart, wait for P-Chain to sync across all nodes
-		// The blockchain was created before restart, so we need nodes to sync those blocks
-		ln.logger.Info(log.Blue.Wrap("waiting for P-Chain to sync after node restart..."))
-		if err := ln.waitForPChainHeightSync(ctx); err != nil {
-			ln.logger.Error("installCustomChains: P-Chain sync failed after restart",
-				"error", err.Error(),
-			)
-			return nil, fmt.Errorf("P-Chain sync failed after restart: %w", err)
-		}
 	}
 
 	if err = ln.waitChainValidators(ctx, platformCli, chainIDs, participantsSpecs); err != nil {
@@ -960,48 +929,30 @@ func (ln *localNetwork) installCustomChains(
 		return nil, fmt.Errorf("failed to create blockchains from transactions: %w", err)
 	}
 
-	// Wait for all nodes to see the blockchain on their P-Chain before proceeding
-	// This ensures P-Chain is synchronized across all nodes after blockchain creation
-	// TEMPORARILY DISABLED - debugging P-Chain sync issue
-	/*
-		blockchainIDs := make([]ids.ID, len(blockchainTxs))
-		for i, tx := range blockchainTxs {
-			blockchainIDs[i] = tx.ID()
-		}
-		if err := ln.waitForBlockchainOnPChain(ctx, blockchainIDs); err != nil {
-			ln.logger.Error("installCustomChains: P-Chain sync failed",
-				"error", err.Error(),
-			)
-			return nil, fmt.Errorf("P-Chain sync failed: %w", err)
-		}
-	*/
-
-	// Nodes need to be restarted after blockchain creation to discover the new chains
-	// The track-all-chains flag alone doesn't work for dynamically created chains
-	// because the node's chain manager doesn't re-scan P-Chain for new blockchains
-	// IMPORTANT: We pass blockchain IDs (from blockchainTxs), NOT subnet IDs (chainIDs)
-	// The track-chains flag expects blockchain IDs, not subnet IDs
+	// Collect blockchain IDs for sync and hot-reload
 	blockchainIDs := make([]ids.ID, len(blockchainTxs))
 	for i, tx := range blockchainTxs {
 		blockchainIDs[i] = tx.ID()
 	}
-	ln.logger.Info(log.Blue.Wrap("restarting nodes to track newly created blockchains..."))
 	for i, blockchainID := range blockchainIDs {
-		ln.logger.Info("blockchain to track",
+		ln.logger.Info("blockchain created",
 			"index", i,
 			"blockchainID", blockchainID.String(),
 			"subnetID", *chainSpecs[i].ChainID,
 		)
 	}
-	if err := ln.restartNodes(ctx, blockchainIDs, participantsSpecs, nil, nil, nil); err != nil {
-		ln.logger.Error("installCustomChains: failed to restart nodes after blockchain creation",
+
+	// CRITICAL: Wait for all nodes to see the blockchain on P-Chain BEFORE hot-reload
+	// This prevents the race condition where hot-reload is called before P-Chain tx is finalized
+	if err := ln.waitForBlockchainOnPChain(ctx, blockchainIDs); err != nil {
+		ln.logger.Error("installCustomChains: P-Chain sync failed",
 			"error", err.Error(),
 		)
-		return nil, fmt.Errorf("failed to restart nodes after blockchain creation: %w", err)
+		return nil, fmt.Errorf("P-Chain sync failed: %w", err)
 	}
 
-	// Reload VMs after restart to ensure any new VMs are available
-	// CRITICAL FIX: Return error instead of swallowing - VM reload failure means chain won't work
+	// Now hot-reload VMs - P-Chain state is synchronized, chains will be discovered
+	ln.logger.Info(log.Blue.Wrap("hot-reloading VMs for newly created blockchains (no restart)..."))
 	if err := ln.reloadVMPlugins(ctx); err != nil {
 		ln.logger.Error("VM hot-reload after chain creation failed",
 			"error", err.Error(),
@@ -1216,6 +1167,11 @@ func (ln *localNetwork) restartNodes(
 
 		previousTrackedChains := ""
 		previousTrackedChainsIntf, ok := nodeConfig.Flags[config.TrackChainsKey]
+		ln.logger.Info("checking track-chains for node",
+			"nodeName", nodeName,
+			"hasFlag", ok,
+			"flagValue", previousTrackedChainsIntf,
+		)
 		if ok {
 			previousTrackedChains, ok = previousTrackedChainsIntf.(string)
 			if !ok {
@@ -1234,8 +1190,13 @@ func (ln *localNetwork) restartNodes(
 		// They don't need restart for new chain deployment - VM hot-reload is enough.
 		// This prevents race conditions where VMs are killed during initialization.
 		hasTrackAll := trackChainIDsSet.Contains("all")
+		ln.logger.Info("track-chains check result",
+			"nodeName", nodeName,
+			"previousTrackedChains", previousTrackedChains,
+			"hasTrackAll", hasTrackAll,
+		)
 		if hasTrackAll {
-			ln.logger.Debug("node has track-chains=all, skipping restart",
+			ln.logger.Info("node has track-chains=all, skipping restart",
 				"nodeName", nodeName,
 			)
 			continue
@@ -2501,7 +2462,7 @@ func (ln *localNetwork) setBlockchainConfigFiles(
 		// This is required for the EVM to load the chain configuration
 		if len(chainSpec.Genesis) > 0 {
 			for _, nodeName := range participants {
-				_, b := ln.nodes[nodeName]
+				node, b := ln.nodes[nodeName]
 				if !b {
 					return nil, fmt.Errorf("participant node %s is not in network nodes", nodeName)
 				}
@@ -2510,6 +2471,20 @@ func (ln *localNetwork) setBlockchainConfigFiles(
 					ln.nodes[nodeName].config.GenesisConfigFiles = make(map[string]string)
 				}
 				ln.nodes[nodeName].config.GenesisConfigFiles[chainAlias] = string(chainSpec.Genesis)
+
+				// Check if node has track-chains=all - if so, skip restart
+				// Nodes with track-chains=all auto-discover chains via hot-reload
+				trackChainsIntf, hasTrackChains := node.config.Flags[config.TrackChainsKey]
+				if hasTrackChains {
+					if trackChainsStr, ok := trackChainsIntf.(string); ok && trackChainsStr == "all" {
+						// Write genesis file directly to disk instead of waiting for restart
+						if err := ln.writeChainGenesisFile(nodeName, chainAlias, string(chainSpec.Genesis)); err != nil {
+							return nil, fmt.Errorf("failed to write genesis file for %s: %w", nodeName, err)
+						}
+						log.Debug("skipping restart for track-chains=all node", "nodeName", nodeName)
+						continue
+					}
+				}
 				nodesToRestart.Add(nodeName)
 			}
 			log.Info("set genesis config for chain",
@@ -2546,6 +2521,44 @@ func (ln *localNetwork) setBlockchainConfigFiles(
 		}
 	}
 	return nodesToRestart, nil
+}
+
+// writeChainGenesisFile writes the chain genesis file directly to disk for a running node.
+// This is used when track-chains=all is enabled, allowing chains to be deployed without restart.
+func (ln *localNetwork) writeChainGenesisFile(nodeName, chainAlias, genesis string) error {
+	node, ok := ln.nodes[nodeName]
+	if !ok {
+		return fmt.Errorf("node %s not found", nodeName)
+	}
+
+	// chainConfigDir = nodeDir/chainConfigs
+	chainConfigDir := filepath.Join(node.GetDataDir(), chainConfigSubDir)
+	if err := os.MkdirAll(filepath.Join(chainConfigDir, chainAlias), 0o750); err != nil {
+		return fmt.Errorf("failed to create chain config dir: %w", err)
+	}
+
+	genesisPath := filepath.Join(chainConfigDir, chainAlias, genesisFileName)
+
+	// Genesis is immutable - only write if file doesn't exist
+	if _, err := os.Stat(genesisPath); err == nil {
+		ln.logger.Info("genesis file already exists, skipping write (immutable)",
+			"nodeName", nodeName,
+			"chainAlias", chainAlias,
+			"path", genesisPath,
+		)
+		return nil
+	}
+
+	if err := os.WriteFile(genesisPath, []byte(genesis), 0o644); err != nil {
+		return fmt.Errorf("failed to write genesis file: %w", err)
+	}
+
+	ln.logger.Info("wrote genesis file for chain",
+		"nodeName", nodeName,
+		"chainAlias", chainAlias,
+		"path", genesisPath,
+	)
+	return nil
 }
 
 func (ln *localNetwork) setChainConfigFiles(
