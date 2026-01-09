@@ -20,7 +20,7 @@ import (
 	"maps"
 	"slices"
 
-	luxd_ "github.com/luxfi/constantsants"
+	luxd_ "github.com/luxfi/constants"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/sdk/api/admin"
 

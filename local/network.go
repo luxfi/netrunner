@@ -37,11 +37,11 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/p2p/peer"
-	"github.com/luxfi/sdk/utils/beacon"
+	"github.com/luxfi/vm/utils/beacon"
 	luxtls "github.com/luxfi/tls"
 
 	"github.com/luxfi/address"
-	"github.com/luxfi/sdk/utils/wrappers"
+	"github.com/luxfi/vm/utils/wrappers"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )

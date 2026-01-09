@@ -15,7 +15,7 @@ import (
 	"slices"
 
 	luxconfig "github.com/luxfi/config"
-	"github.com/luxfi/constantsants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"

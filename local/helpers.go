@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/luxfi/constantsants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
