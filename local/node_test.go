@@ -21,10 +21,10 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
-	"github.com/luxfi/vm/utils/ips"
-	"github.com/luxfi/vm/utils/wrappers"
 	luxtls "github.com/luxfi/tls"
 	"github.com/luxfi/version"
+	"github.com/luxfi/vm/utils/ips"
+	"github.com/luxfi/vm/utils/wrappers"
 	"github.com/stretchr/testify/require"
 )
 

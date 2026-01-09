@@ -7,13 +7,13 @@ import (
 	ethereum "github.com/luxfi/geth"
 	"github.com/luxfi/geth/common"
 	"github.com/luxfi/geth/core/types"
+	"github.com/luxfi/vm/vms/exchangevm"
+	"github.com/luxfi/vm/vms/platformvm"
+	"github.com/luxfi/rpc"
 	"github.com/luxfi/sdk/api/admin"
 	"github.com/luxfi/sdk/api/health"
 	"github.com/luxfi/sdk/api/indexer"
 	"github.com/luxfi/sdk/api/info"
-	"github.com/luxfi/rpc"
-	"github.com/luxfi/vm/vms/exchangevm"
-	"github.com/luxfi/vm/vms/platformvm"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 

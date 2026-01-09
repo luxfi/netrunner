@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/luxfi/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node/status"
-	"github.com/luxfi/config"
 	"github.com/luxfi/p2p/peer"
 )
 

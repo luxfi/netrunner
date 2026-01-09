@@ -37,8 +37,8 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/p2p/peer"
-	"github.com/luxfi/vm/utils/beacon"
 	luxtls "github.com/luxfi/tls"
+	"github.com/luxfi/vm/utils/beacon"
 
 	"github.com/luxfi/address"
 	"github.com/luxfi/vm/utils/wrappers"

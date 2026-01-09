@@ -23,10 +23,10 @@ import (
 	"github.com/luxfi/p2p/peer"
 	"github.com/luxfi/p2p/throttling"
 	"github.com/luxfi/p2p/tracker"
-	"github.com/luxfi/vm/utils"
-	"github.com/luxfi/vm/utils/compression"
 	luxtls "github.com/luxfi/tls"
 	"github.com/luxfi/version"
+	"github.com/luxfi/vm/utils"
+	"github.com/luxfi/vm/utils/compression"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
