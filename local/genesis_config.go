@@ -15,7 +15,8 @@ import (
 
 	"maps"
 
-	constants "github.com/luxfi/const"
+	"github.com/luxfi/config"
+	"github.com/luxfi/constantsants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/bls/signer/localsigner"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
@@ -25,11 +26,10 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/vms/platformvm/signer"
+	"github.com/luxfi/vm/vms/platformvm/signer"
 
-	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils/formatting/address"
+	"github.com/luxfi/address"
+	luxtls "github.com/luxfi/tls"
 )
 
 // patchGenesisPreservingRaw patches a top-level genesis JSON document while guaranteeing that
@@ -155,7 +155,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 			}
 			for i := 0; i < toAdd; i++ {
 				nodeConfig := refNodeConfig
-				stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+				stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 				if err != nil {
 					return netConfig, fmt.Errorf("couldn't generate staking Cert/Key: %w", err)
 				}
@@ -347,7 +347,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 			}
 		} else {
 			// Generate new keys for additional nodes beyond the 5 embedded ones
-			stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+			stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 			if err != nil {
 				return network.Config{}, fmt.Errorf("couldn't generate staking Cert/Key for node %d: %w", i, err)
 			}
@@ -552,7 +552,7 @@ func NewConfigForNetworkWithCustomGenesis(binaryPath string, numNodes uint32, ge
 		for i := 0; i < toAdd; i++ {
 			nodeConfig := node.Config{}
 			nodeConfig.Flags = maps.Clone(refNodeConfig.Flags)
-			stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+			stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 			if err != nil {
 				return netConfig, fmt.Errorf("couldn't generate staking Cert/Key: %w", err)
 			}

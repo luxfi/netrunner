@@ -12,7 +12,7 @@ import (
 	"github.com/luxfi/log"
 	rpcb "github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/node/staking"
+	luxtls "github.com/luxfi/tls"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 )
 
 func ToNodeID(stakingKey, stakingCert []byte) (ids.NodeID, error) {
-	cert, err := staking.LoadTLSCertFromBytes(stakingKey, stakingCert)
+	cert, err := luxtls.LoadTLSCertFromBytes(stakingKey, stakingCert)
 	if err != nil {
 		return ids.EmptyNodeID, err
 	}

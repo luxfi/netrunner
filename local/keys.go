@@ -13,7 +13,7 @@ import (
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/keys"
-	"github.com/luxfi/node/utils/formatting/address"
+	"github.com/luxfi/address"
 )
 
 // KeyInfo contains computed addresses from a private key.

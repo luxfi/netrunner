@@ -15,16 +15,16 @@ import (
 	"testing"
 	"time"
 
-	constants "github.com/luxfi/const"
+	"github.com/luxfi/constantsants"
 	"github.com/luxfi/geth/metrics"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
-	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils/ips"
-	"github.com/luxfi/node/utils/wrappers"
-	"github.com/luxfi/node/version"
+	"github.com/luxfi/p2p/message"
+	"github.com/luxfi/p2p/peer"
+	"github.com/luxfi/sdk/utils/ips"
+	"github.com/luxfi/sdk/utils/wrappers"
+	luxtls "github.com/luxfi/tls"
+	"github.com/luxfi/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,7 +55,7 @@ func verifyProtocol(
 	errCh chan error,
 ) {
 	// do the TLS handshake
-	myTLSCert, err := staking.NewTLSCert()
+	myTLSCert, err := luxtls.NewTLSCert()
 	if err != nil {
 		errCh <- err
 		return
