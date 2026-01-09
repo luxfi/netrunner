@@ -24,6 +24,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/luxfi/config"
 	"github.com/luxfi/consensus/core"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network"
@@ -31,7 +32,6 @@ import (
 	"github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
-	"github.com/luxfi/config"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
 

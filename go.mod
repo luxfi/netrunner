@@ -20,13 +20,13 @@ require (
 	github.com/luxfi/geth v1.16.69
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.8
-	github.com/luxfi/keys v1.0.6
+	github.com/luxfi/keys v1.0.7
 	github.com/luxfi/log v1.2.1
 	github.com/luxfi/math v1.2.2
 	github.com/luxfi/metric v1.4.10
-	github.com/luxfi/node v1.22.81
+	github.com/luxfi/node v1.22.83
 	github.com/luxfi/p2p v1.18.7
-	github.com/luxfi/sdk v1.16.40
+	github.com/luxfi/sdk v1.16.41
 	github.com/luxfi/sdk/api v0.0.2
 	github.com/luxfi/version v1.0.1
 	github.com/onsi/ginkgo/v2 v2.27.3
@@ -56,7 +56,6 @@ require (
 	github.com/luxfi/formatting v1.0.0 // indirect
 	github.com/luxfi/pubsub v1.0.0 // indirect
 	github.com/luxfi/staking v1.0.0 // indirect
-	github.com/luxfi/units v1.0.0 // indirect
 	github.com/melbahja/goph v1.4.0 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/posthog/posthog-go v1.6.1 // indirect
@@ -115,7 +114,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/cache v1.1.0 // indirect
 	github.com/luxfi/database v1.17.35 // indirect
-	github.com/luxfi/evm v0.8.28 // indirect
+	github.com/luxfi/evm v0.8.30 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
 	github.com/luxfi/keychain v1.0.1 // indirect
 	github.com/luxfi/math/big v0.1.0 // indirect
@@ -127,7 +126,7 @@ require (
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/upgrade v1.0.0 // indirect
 	github.com/luxfi/utils v1.1.0 // indirect
-	github.com/luxfi/vm v1.0.14
+	github.com/luxfi/vm v1.0.15
 	github.com/luxfi/warp v1.18.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect

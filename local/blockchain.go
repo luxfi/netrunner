@@ -24,8 +24,8 @@ import (
 	"github.com/luxfi/vm/vms/platformvm/reward"
 
 	"github.com/luxfi/sdk/wallet/chain/x"
-	"github.com/luxfi/vm/vms/components/lux"
-	"github.com/luxfi/vm/vms/components/verify"
+	"github.com/luxfi/vm/components/lux"
+	"github.com/luxfi/vm/components/verify"
 
 	"maps"
 	"slices"
@@ -41,13 +41,13 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
+	"github.com/luxfi/vm/vms/platformvm"
+	"github.com/luxfi/vm/vms/platformvm/txs"
 	"github.com/luxfi/sdk/api/admin"
 	pwallet "github.com/luxfi/sdk/wallet/chain/p"
 	pwalletwallet "github.com/luxfi/sdk/wallet/chain/p/wallet"
-	"github.com/luxfi/vm/vms/platformvm"
-	"github.com/luxfi/vm/vms/platformvm/signer"
-	"github.com/luxfi/vm/vms/platformvm/txs"
-	"github.com/luxfi/vm/vms/secp256k1fx"
+	"github.com/luxfi/vm/platformvm/signer"
+	"github.com/luxfi/vm/secp256k1fx"
 
 	pbuilder "github.com/luxfi/sdk/wallet/chain/p/builder"
 	psigner "github.com/luxfi/sdk/wallet/chain/p/signer"

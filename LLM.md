@@ -368,7 +368,7 @@ To achieve full 4-chain bootstrap, we need to:
 - **Files Affected**: Any manually created `genesis.json`
 - **Solution**: Use proper Bech32 encoding library:
   ```go
-  import "github.com/luxfi/address"
+  import "github.com/luxfi/crypto/address"
   addr, err := address.Format("lux", hrp, publicKeyHash)
   ```
 
@@ -584,9 +584,9 @@ When deploying manually (without netrunner):
 
 #### "invalid checksum (expected..., got...)"
 **Cause**: Manually created address without proper Bech32 encoding
-**Solution**: Use `github.com/luxfi/address` package
+**Solution**: Use `github.com/luxfi/crypto/address` package
 ```go
-import "github.com/luxfi/address"
+import "github.com/luxfi/crypto/address"
 addr, _ := address.Format("lux", hrp, pubKeyHash)
 ```
 

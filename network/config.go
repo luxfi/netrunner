@@ -15,15 +15,14 @@ import (
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
 
-	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/address"
-	"github.com/luxfi/units"
+	"github.com/luxfi/netrunner/utils"
 )
 
 var cChainConfig map[string]interface{}
 
 const (
-	validatorStake = units.MegaLux
+	validatorStake = constants.MegaLux
 )
 
 func init() {
@@ -184,8 +183,8 @@ func NewGenesis(
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
 					{
-						Amount:   100 * units.MegaLux, // Unlocked P-Chain balance for chain deployment
-						Locktime: 0,                   // Locktime 0 = immediately available
+						Amount:   100 * constants.MegaLux, // Unlocked P-Chain balance for chain deployment
+						Locktime: 0,                       // Locktime 0 = immediately available
 					},
 					{
 						Amount:   validatorStake * uint64(len(genesisVdrs)), // Stake

@@ -26,8 +26,8 @@ import (
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
-	"github.com/luxfi/sdk/api/health"
 	"github.com/luxfi/rpc"
+	"github.com/luxfi/sdk/api/health"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
