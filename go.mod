@@ -21,9 +21,10 @@ require (
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.9
 	github.com/luxfi/keys v1.0.7
-	github.com/luxfi/log v1.2.1
+	github.com/luxfi/log v1.2.5
 	github.com/luxfi/math v1.2.3
 	github.com/luxfi/metric v1.4.10
+	github.com/luxfi/node v1.22.81
 	github.com/luxfi/p2p v1.18.7
 	github.com/luxfi/sdk v1.16.44
 	github.com/luxfi/sdk/api v0.0.2
@@ -53,11 +54,13 @@ require (
 	github.com/luxfi/codec v1.1.2 // indirect
 	github.com/luxfi/compress v0.0.3 // indirect
 	github.com/luxfi/concurrent v0.0.2 // indirect
+	github.com/luxfi/const v1.4.1 // indirect
 	github.com/luxfi/container v0.0.2 // indirect
 	github.com/luxfi/formatting v1.0.0 // indirect
 	github.com/luxfi/pubsub v1.0.0 // indirect
 	github.com/luxfi/staking v1.1.0 // indirect
 	github.com/melbahja/goph v1.4.0 // indirect
+	github.com/pires/go-proxyproto v0.8.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/posthog/posthog-go v1.6.1 // indirect
 )
