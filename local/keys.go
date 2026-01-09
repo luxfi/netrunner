@@ -9,11 +9,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/luxfi/address"
 	ethcrypto "github.com/luxfi/crypto"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/keys"
-	"github.com/luxfi/address"
 )
 
 // KeyInfo contains computed addresses from a private key.
