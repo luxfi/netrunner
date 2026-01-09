@@ -10,13 +10,13 @@ import (
 
 	"maps"
 
-	constants "github.com/luxfi/const"
+	"github.com/luxfi/constantsants"
 	"github.com/luxfi/genesis/pkg/genesis"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
 
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/node/utils/formatting/address"
+	"github.com/luxfi/address"
 	"github.com/luxfi/units"
 )
 

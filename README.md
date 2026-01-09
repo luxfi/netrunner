@@ -120,7 +120,7 @@ To start a new Lux network with five nodes (a cluster):
 
 ```bash
 # replace execPath with the path to Lux on your machine
-# e.g., ${HOME}/go/src/github.com/luxfi/node/build/node
+# e.g., ${HOME}/go/src/github.com/luxfi/sdk/node/build/node
 LUXD_EXEC_PATH="node"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO"}'
@@ -259,6 +259,7 @@ curl -X POST -k http://localhost:8081/v1/control/savesnapshot -d '{"snapshot_nam
 
 # or
 netrunner control save-snapshot snapshotName
+netrunner control save-hot-snapshot snapshotName
 ```
 
 To load a network from a snapshot:
@@ -428,7 +429,7 @@ node5
 To restart a node (in this case, the one named `node1`):
 
 ```bash
-# e.g., ${HOME}/go/src/github.com/luxfi/node/build/node
+# e.g., ${HOME}/go/src/github.com/luxfi/sdk/node/build/node
 LUXD_EXEC_PATH="node"
 
 # Note that you can restart the node with a different binary by providing
@@ -447,7 +448,7 @@ node1
 To add a node (in this case, a new node named `node99`):
 
 ```bash
-# e.g., ${HOME}/go/src/github.com/luxfi/node/build/node
+# e.g., ${HOME}/go/src/github.com/luxfi/sdk/node/build/node
 LUXD_EXEC_PATH="node"
 
 # Note that you can add the new node with a different binary by providing
@@ -465,7 +466,7 @@ node99
 
 To pause a node (in this case, node named `node99`):
 ```bash
-# e.g., ${HOME}/go/src/github.com/luxfi/node/build/node
+# e.g., ${HOME}/go/src/github.com/luxfi/sdk/node/build/node
 LUXD_EXEC_PATH="node"
 
 
@@ -481,7 +482,7 @@ node99
 
 To resume a paused node (in this case, node named `node99`):
 ```bash
-# e.g., ${HOME}/go/src/github.com/luxfi/node/build/node
+# e.g., ${HOME}/go/src/github.com/luxfi/sdk/node/build/node
 LUXD_EXEC_PATH="node"
 
 
@@ -508,7 +509,7 @@ You can also provide additional flags that specify the node's config:
 `--db-dir`
 
 Lux exposes a "test peer", which you can attach to a node.
-(See [here](https://github.com/luxfi/node/blob/master/network/peer/test_peer.go) for more information.)
+(See [here](https://github.com/luxfi/sdk/node/blob/master/network/peer/test_peer.go) for more information.)
 You can send messages through the test peer to the node it is attached to.
 
 To attach a test peer to a node (in this case, `node1`):
@@ -574,20 +575,20 @@ go install -v .
 subnet-cli create VMID subnetevm
 # srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
 
-# download from https://github.com/luxfi/node/releases
+# download from https://github.com/luxfi/sdk/node/releases
 # or build
-rm -rf ${HOME}/go/src/github.com/luxfi/node/build
+rm -rf ${HOME}/go/src/github.com/luxfi/sdk/node/build
 cd ${HOME}/go/src/github.com/luxfi/node
 ./scripts/build.sh
 
 # ref. https://github.com/luxfi/subnet-evm/blob/b69e47e0398b5237cda0422f6a32969e64bde346/scripts/run.sh
 cd ${HOME}/go/src/github.com/luxfi/subnet-evm
 go build -v \
--o ${HOME}/go/src/github.com/luxfi/node/build/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
+-o ${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
 ./plugin
 
 # make sure binaries are built
-find ${HOME}/go/src/github.com/luxfi/node/build
+find ${HOME}/go/src/github.com/luxfi/sdk/node/build
 # for example
 # .../build
 # .../build/plugins
@@ -646,8 +647,8 @@ cat /tmp/subnet-evm.genesis.json
 
 ```bash
 # replace execPath with the path to Lux on your machine
-LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/node/build/node"
-LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/node/build/plugins"
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/node"
+LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"subnetevm","genesis":"/tmp/subnet-evm.genesis.json"}]}'
 
@@ -702,19 +703,19 @@ go install -v .
 subnet-cli create VMID blobvm
 # kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8
 
-# download from https://github.com/luxfi/node/releases
+# download from https://github.com/luxfi/sdk/node/releases
 # or build
-rm -rf ${HOME}/go/src/github.com/luxfi/node/build
+rm -rf ${HOME}/go/src/github.com/luxfi/sdk/node/build
 cd ${HOME}/go/src/github.com/luxfi/node
 ./scripts/build.sh
 
 cd ${HOME}/go/src/github.com/luxfi/blobvm
 go build -v \
--o ${HOME}/go/src/github.com/luxfi/node/build/plugins/kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8 \
+-o ${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins/kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8 \
 ./cmd/blobvm
 
 # make sure binaries are built
-find ${HOME}/go/src/github.com/luxfi/node/build
+find ${HOME}/go/src/github.com/luxfi/sdk/node/build
 # for example
 # .../build
 # .../build/plugins
@@ -732,8 +733,8 @@ cat /tmp/blobvm.genesis.json
 
 ```bash
 # replace execPath with the path to Lux on your machine
-LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/node/build/node"
-LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/node/build/plugins"
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/node"
+LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"blobvm","genesis":"/tmp/blobvm.genesis.json"}]}'
 
@@ -788,9 +789,9 @@ go install -v .
 subnet-cli create VMID timestampvm
 # tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc
 
-# download from https://github.com/luxfi/node/releases
+# download from https://github.com/luxfi/sdk/node/releases
 # or build
-rm -rf ${HOME}/go/src/github.com/luxfi/node/build
+rm -rf ${HOME}/go/src/github.com/luxfi/sdk/node/build
 cd ${HOME}/go/src/github.com/luxfi/node
 ./scripts/build.sh
 
@@ -799,11 +800,11 @@ cd ${HOME}/go/src/github.com/luxfi/node
 # ./scripts/build.sh
 cd ${HOME}/go/src/github.com/luxfi/timestampvm
 go build -v \
--o ${HOME}/go/src/github.com/luxfi/node/build/plugins/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc \
+-o ${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins/tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc \
 ./main
 
 # make sure binaries are built
-find ${HOME}/go/src/github.com/luxfi/node/build
+find ${HOME}/go/src/github.com/luxfi/sdk/node/build
 # for example
 # .../build
 # .../build/plugins
@@ -818,8 +819,8 @@ echo hello > /tmp/timestampvm.genesis.json
 
 ```bash
 # replace execPath with the path to Lux on your machine
-LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/node/build/node"
-LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/node/build/plugins"
+LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/node"
+LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins"
 
 curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vmName":"timestampvm","genesis":"/tmp/timestampvm.genesis.json","blockchain_alias":"timestamp"}]}'
 

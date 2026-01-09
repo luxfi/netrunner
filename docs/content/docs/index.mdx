@@ -232,7 +232,8 @@ curl -X POST -k http://localhost:8081/v1/control/savesnapshot -d '{
 - `netrunner control create-blockchains` - Deploy blockchains
 
 ### Snapshot Commands
-- `netrunner control save-snapshot` - Save network state
+- `netrunner control save-snapshot` - Save network state (stops network)
+- `netrunner control save-hot-snapshot` - Save network state without stopping
 - `netrunner control load-snapshot` - Load network state
 - `netrunner control get-snapshot-names` - List snapshots
 - `netrunner control remove-snapshot` - Delete snapshot

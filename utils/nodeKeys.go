@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/luxfi/crypto/bls/signer/localsigner"
-	"github.com/luxfi/node/staking"
+	luxtls "github.com/luxfi/tls"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -31,7 +31,7 @@ func EncodeNodeKeys(key *NodeKeys) *EncodedNodeKeys {
 }
 
 func generateNodeKeys() (*NodeKeys, error) {
-	stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+	stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't generate staking cert/key: %w", err)
 	}
