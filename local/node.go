@@ -10,7 +10,7 @@ import (
 	"time"
 
 	validators "github.com/luxfi/consensus/validator" // package name is validators
-	"github.com/luxfi/constantsants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
@@ -23,8 +23,8 @@ import (
 	"github.com/luxfi/p2p/peer"
 	"github.com/luxfi/p2p/throttling"
 	"github.com/luxfi/p2p/tracker"
-	"github.com/luxfi/sdk/utils"
-	"github.com/luxfi/sdk/utils/compression"
+	"github.com/luxfi/vm/utils"
+	"github.com/luxfi/vm/utils/compression"
 	luxtls "github.com/luxfi/tls"
 	"github.com/luxfi/version"
 	"github.com/prometheus/client_golang/prometheus"

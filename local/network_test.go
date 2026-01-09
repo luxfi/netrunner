@@ -27,7 +27,7 @@ import (
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
 	"github.com/luxfi/sdk/api/health"
-	"github.com/luxfi/sdk/utils/rpc"
+	"github.com/luxfi/rpc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

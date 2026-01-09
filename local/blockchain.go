@@ -32,7 +32,7 @@ import (
 
 	"github.com/luxfi/config"
 	luxconfig "github.com/luxfi/config"
-	"github.com/luxfi/constantsants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
