@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/luxfi/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"
@@ -23,11 +24,10 @@ import (
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/node/api/health"
-	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/node/utils/rpc"
+	"github.com/luxfi/p2p/message"
+	"github.com/luxfi/p2p/peer"
+	"github.com/luxfi/sdk/api/health"
+	"github.com/luxfi/sdk/utils/rpc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

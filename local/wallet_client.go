@@ -6,10 +6,10 @@ package local
 import (
 	"context"
 
-	"github.com/luxfi/node/vms/platformvm"
-	"github.com/luxfi/node/vms/platformvm/txs"
-	pwalletwallet "github.com/luxfi/node/wallet/chain/p/wallet"
-	"github.com/luxfi/node/wallet/net/primary/common"
+	pwalletwallet "github.com/luxfi/sdk/wallet/chain/p/wallet"
+	"github.com/luxfi/sdk/wallet/primary/common"
+	"github.com/luxfi/vm/vms/platformvm"
+	"github.com/luxfi/vm/vms/platformvm/txs"
 )
 
 // walletClient wraps platformvm.Client to implement wallet.Client

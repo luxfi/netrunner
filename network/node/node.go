@@ -9,8 +9,8 @@ import (
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node/status"
-	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/network/peer"
+	"github.com/luxfi/config"
+	"github.com/luxfi/p2p/peer"
 )
 
 // Node represents an Lux node
@@ -125,10 +125,10 @@ func validateConfigFile(configFile []byte, expectedNetworkID uint32) error {
 	if err := json.Unmarshal(configFile, &configMap); err != nil {
 		return fmt.Errorf("could not unmarshal config file: %w", err)
 	}
-	if networkIDIntf, ok := configMap[config.NetworkNameKey]; ok {
+	if networkIDIntf, ok := configMap[config.NetworkIDKey]; ok {
 		networkID, ok := networkIDIntf.(float64)
 		if !ok {
-			return fmt.Errorf("wrong type for field %q in config expected float64 got %T", config.NetworkNameKey, networkIDIntf)
+			return fmt.Errorf("wrong type for field %q in config expected float64 got %T", config.NetworkIDKey, networkIDIntf)
 		}
 		if uint32(networkID) != expectedNetworkID {
 			return fmt.Errorf("config file network id %d differs from genesis network id %d", int(networkID), expectedNetworkID)

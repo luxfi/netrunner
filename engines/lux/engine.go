@@ -14,7 +14,7 @@ import (
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/engines"
 	"github.com/luxfi/node/api/health"
-	"github.com/luxfi/node/api/info"
+	"github.com/luxfi/sdk/api/info"
 )
 
 func init() {

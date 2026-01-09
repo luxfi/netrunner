@@ -272,15 +272,24 @@ message ListOfAttachedPeerInfo {
 }
 
 message StartRequest {
-  string exec_path                    = 1;
-  optional uint32 num_nodes           = 2;
-  optional string whitelisted_chains = 3;
-  optional string global_node_config  = 4;
+  // Network identifier - name or ID
+  // Supported values: "mainnet" (1), "testnet" (2), "devnet" (3), "custom" (1337)
+  // or any custom network name
+  string network_name = 1;
+  
+  // Node consensus engine type
+  // Supported values: "luxd", "avalanchego", "geth", "op-node", "custom"
+  string node_type = 2;
+  
+  string exec_path                    = 4;
+  optional uint32 num_nodes           = 5;
+  optional string whitelisted_chains = 6;
+  optional string global_node_config  = 7;
   // Used for both database and log files.
-  optional string root_data_dir = 5;
+  optional string root_data_dir = 8;
 
   // Plugin dir from which to load all custom VM executables.
-  string plugin_dir = 6;
+  string plugin_dir = 9;
 
   // The list of:
   // - custom chain's VM name
@@ -299,30 +308,30 @@ message StartRequest {
   // If this field is set to none (by default), the node/network-runner
   // does not install the custom chain and does not create the chain,
   // even if the VM binary exists on the local plugins directory.
-  repeated BlockchainSpec blockchain_specs = 7;
+  repeated BlockchainSpec blockchain_specs = 10;
 
-  map<string, string> custom_node_configs = 8;
+  map<string, string> custom_node_configs = 11;
 
   // Map of chain name to config file contents.
   // If specified, will create a file "chainname/config.json" with
   // the contents provided here.
-  map<string, string> chain_configs = 9;
+  map<string, string> chain_configs = 12;
 
   // Map of chain name to upgrade file contents.
   // If specified, will create a file "chainname/upgrade.json" with
   // the contents provided here.
-  map<string, string> upgrade_configs = 10;
+  map<string, string> upgrade_configs = 13;
 
   // reassign default/custom ports if they are already taken
-  optional bool reassign_ports_if_used = 11;
+  optional bool reassign_ports_if_used = 14;
 
   // use dynamic ports instead of default ones
-  optional bool dynamic_ports = 12;
+  optional bool dynamic_ports = 15;
 
   // Map of chain id to chain config file contents.
   // If specified, will create a file "chainid.json" under chains config dir with
   // the contents provided here.
-  map<string, string> chain_config_files = 13;
+  map<string, string> chain_config_files = 16;
 }
 
 message RPCVersionRequest {}
@@ -451,10 +460,24 @@ message CreateChainsResponse {
   repeated string chain_ids = 2;
 }
 
-message HealthRequest {}
+message HealthRequest {
+  // Network name to check health for
+  // If empty, checks overall server health
+  optional string network_name = 1;
+}
 
 message HealthResponse {
   ClusterInfo cluster_info = 1;
+  // Network-specific health information
+  optional NetworkHealth network_health = 2;
+}
+
+message NetworkHealth {
+  string network_name = 1;
+  uint32 network_id = 2;
+  bool healthy = 3;
+  repeated string healthy_nodes = 4;
+  repeated string unhealthy_nodes = 5;
 }
 
 message URIsRequest {}
@@ -463,16 +486,35 @@ message URIsResponse {
   repeated string uris = 1;
 }
 
-message WaitForHealthyRequest {}
+message WaitForHealthyRequest {
+  // Network name to wait for
+  // If empty, waits for any network to be healthy
+  optional string network_name = 1;
+}
 
 message WaitForHealthyResponse {
   ClusterInfo cluster_info = 1;
 }
 
-message StatusRequest {}
+message StatusRequest {
+  // Network name to get status for
+  // If empty, returns overall server status
+  optional string network_name = 1;
+}
 
 message StatusResponse {
   ClusterInfo cluster_info = 1;
+  // Network-specific status information
+  optional NetworkStatus network_status = 2;
+}
+
+message NetworkStatus {
+  string network_name = 1;
+  uint32 network_id = 2;
+  string status = 3; // "running", "stopped", "starting", "error"
+  uint32 num_nodes = 4;
+  repeated rpcpb.NodeInfo nodes = 5;
+  repeated rpcpb.ChainInfo chains = 6;
 }
 
 message StreamStatusRequest {
@@ -593,7 +635,8 @@ message SendOutboundMessageResponse {
 }
 
 message SaveSnapshotRequest {
-  string snapshot_name = 1;
+  string network_name = 1;
+  string snapshot_name = 2;
 }
 
 message SaveSnapshotResponse {
@@ -601,15 +644,16 @@ message SaveSnapshotResponse {
 }
 
 message LoadSnapshotRequest {
-  string snapshot_name = 1;
-  optional string exec_path = 2;
-  string plugin_dir = 3;
-  optional string root_data_dir = 4;
-  map<string, string> chain_configs = 5;
-  map<string, string> upgrade_configs = 6;
-  optional string global_node_config  = 7;
-  optional bool reassign_ports_if_used = 8;
-  map<string, string> chain_config_files = 9;
+  string network_name = 1;
+  string snapshot_name = 2;
+  optional string exec_path = 3;
+  string plugin_dir = 4;
+  optional string root_data_dir = 5;
+  map<string, string> chain_configs = 6;
+  map<string, string> upgrade_configs = 7;
+  optional string global_node_config  = 8;
+  optional bool reassign_ports_if_used = 9;
+  map<string, string> chain_config_files = 10;
 }
 
 message LoadSnapshotResponse {
@@ -617,13 +661,15 @@ message LoadSnapshotResponse {
 }
 
 message RemoveSnapshotRequest {
-  string snapshot_name = 1;
+  string network_name = 1;
+  string snapshot_name = 2;
 }
 
 message RemoveSnapshotResponse {
 }
 
 message GetSnapshotNamesRequest {
+  string network_name = 1;
 }
 
 message GetSnapshotNamesResponse {

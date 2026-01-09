@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/luxfi/node/api/admin"
-	"github.com/luxfi/node/message"
-	luxd_constants "github.com/luxfi/node/utils/constants"
-	"github.com/luxfi/node/vms/platformvm"
+	"github.com/luxfi/sdk/node/api/admin"
+	"github.com/luxfi/p2p/message"
+	luxd_constants "github.com/luxfi/utils/constants"
+	"github.com/luxfi/sdk/node/vms/platformvm"
 	"golang.org/x/exp/maps"
 
 	"github.com/luxfi/netrunner/client"

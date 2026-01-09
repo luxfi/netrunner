@@ -8,13 +8,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/luxfi/config"
 	"github.com/luxfi/log"
 	"github.com/luxfi/log/level"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
-	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/staking"
+	luxtls "github.com/luxfi/tls"
 )
 
 const (
@@ -121,7 +121,7 @@ func run(logger log.Logger, binaryPath string) error {
 	logger.Info("one node's ID is", log.Stringer("nodeID", node1ID))
 
 	// Add a new node with generated cert/key/nodeid
-	stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+	stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 	if err != nil {
 		return err
 	}

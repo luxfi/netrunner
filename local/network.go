@@ -22,6 +22,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/luxfi/config"
 	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/crypto/bls"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
@@ -35,13 +36,12 @@ import (
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
-	"github.com/luxfi/node/config"
-	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils/beacon"
+	"github.com/luxfi/p2p/peer"
+	"github.com/luxfi/sdk/utils/beacon"
+	luxtls "github.com/luxfi/tls"
 
-	"github.com/luxfi/node/utils/formatting/address"
-	"github.com/luxfi/node/utils/wrappers"
+	"github.com/luxfi/address"
+	"github.com/luxfi/sdk/utils/wrappers"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )
@@ -50,8 +50,8 @@ const (
 	defaultNodeNamePrefix     = "node"
 	configFileName            = "config.json"
 	upgradeConfigFileName     = "upgrade.json"
-	stakingKeyFileName        = "staking.key"
-	stakingCertFileName       = "staking.crt"
+	stakingKeyFileName        = "luxtls.key"
+	stakingCertFileName       = "luxtls.crt"
 	stakingSigningKeyFileName = "signer.key"
 	genesisFileName           = "genesis.json"
 	stopTimeout               = 30 * time.Second
@@ -72,7 +72,7 @@ var (
 	_ NodeProcessCreator = (*nodeProcessCreator)(nil)
 
 	warnFlags = map[string]struct{}{
-		config.NetworkNameKey:  {},
+		config.NetworkIDKey:    {},
 		config.BootstrapIPsKey: {},
 		config.BootstrapIDsKey: {},
 	}
@@ -275,12 +275,12 @@ func init() {
 			panic(err)
 		}
 		defaultNetworkConfig.NodeConfigs[i].Flags = flags
-		stakingKey, err := fs.ReadFile(configsDir, fmt.Sprintf("node%d/staking.key", i+1))
+		stakingKey, err := fs.ReadFile(configsDir, fmt.Sprintf("node%d/luxtls.key", i+1))
 		if err != nil {
 			panic(err)
 		}
 		defaultNetworkConfig.NodeConfigs[i].StakingKey = string(stakingKey)
-		stakingCert, err := fs.ReadFile(configsDir, fmt.Sprintf("node%d/staking.crt", i+1))
+		stakingCert, err := fs.ReadFile(configsDir, fmt.Sprintf("node%d/luxtls.crt", i+1))
 		if err != nil {
 			panic(err)
 		}
@@ -444,7 +444,7 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 		}
 		for i := 0; i < toAdd; i++ {
 			nodeConfig := refNodeConfig
-			stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+			stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 			if err != nil {
 				return netConfig, fmt.Errorf("couldn't generate staking Cert/Key: %w", err)
 			}
@@ -644,7 +644,7 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 			log.String("node", nodeConfig.Name),
 			log.Int("certLen", len(nodeConfig.StakingCert)),
 			log.Int("keyLen", len(nodeConfig.StakingKey)))
-		stakingCert, stakingKey, err := staking.NewCertAndKeyBytes()
+		stakingCert, stakingKey, err := luxtls.NewCertAndKeyBytes()
 		if err != nil {
 			return nil, fmt.Errorf("couldn't generate staking Cert/Key: %w", err)
 		}
@@ -1249,7 +1249,7 @@ func (ln *localNetwork) buildArgs(
 
 	// Flags for Lux
 	flags := map[string]string{
-		config.NetworkNameKey:  fmt.Sprintf("%d", ln.networkID),
+		config.NetworkIDKey:    fmt.Sprintf("%d", ln.networkID),
 		config.DataDirKey:      dataDir,
 		config.DBPathKey:       dbDir,
 		config.LogsDirKey:      logsDir,
