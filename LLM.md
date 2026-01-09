@@ -1,6 +1,6 @@
 # Lux Netrunner - AI Assistant Knowledge Base
 
-**Last Updated**: 2025-11-12
+**Last Updated**: 2026-01-07
 **Project**: Lux Netrunner
 **Organization**: Lux Network
 **Documentation Score**: 85/100
@@ -42,6 +42,9 @@ netrunner control status
 
 # Save snapshot
 netrunner control save-snapshot snapshot-name
+
+# Save hot snapshot (no node stop)
+netrunner control save-hot-snapshot snapshot-name
 
 # Load snapshot
 netrunner control load-snapshot snapshot-name
@@ -365,7 +368,7 @@ To achieve full 4-chain bootstrap, we need to:
 - **Files Affected**: Any manually created `genesis.json`
 - **Solution**: Use proper Bech32 encoding library:
   ```go
-  import "github.com/luxfi/node/utils/formatting/address"
+  import "github.com/luxfi/address"
   addr, err := address.Format("lux", hrp, publicKeyHash)
   ```
 
@@ -581,9 +584,9 @@ When deploying manually (without netrunner):
 
 #### "invalid checksum (expected..., got...)"
 **Cause**: Manually created address without proper Bech32 encoding
-**Solution**: Use `github.com/luxfi/node/utils/formatting/address` package
+**Solution**: Use `github.com/luxfi/address` package
 ```go
-import "github.com/luxfi/node/utils/formatting/address"
+import "github.com/luxfi/address"
 addr, _ := address.Format("lux", hrp, pubKeyHash)
 ```
 
@@ -1116,4 +1119,3 @@ This architecture provides a clean, production-ready approach to mainnet network
 - **State management**: Snapshot save/restore for reproducible testing
 - **No confusion**: Removes legacy `lux local` command entirely
 - **Mainnet-first**: Defaults to mainnet configuration with 5 validators
-

@@ -16,16 +16,16 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/luxfi/config"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/rpcpb"
-	"github.com/luxfi/netrunner/utils/constants"
+	netconstants "github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
-	"github.com/luxfi/node/config"
 
-	luxd_constants "github.com/luxfi/const"
+	"github.com/luxfi/constantsants"
 	"github.com/luxfi/log"
 )
 
@@ -93,6 +93,10 @@ type localNetworkOptions struct {
 	redirectNodesOutput bool
 	globalNodeConfig    string
 
+	// Node consensus engine type
+	// Determines which binary to use and how to configure it
+	nodeType string // "luxd", "avalanchego", "geth", "op-node", etc.
+
 	pluginDir         string
 	customNodeConfigs map[string]string
 
@@ -120,7 +124,7 @@ func newLocalNetwork(opts localNetworkOptions) (*localNetwork, error) {
 		LogLevel:     opts.logLevel,
 		DisplayLevel: opts.logLevel,
 	})
-	logger, err := logFactory.Make(constants.LogNameMain)
+	logger, err := logFactory.Make(netconstants.LogNameMain)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +157,7 @@ func (lc *localNetwork) createConfig() error {
 	// If so, use the appropriate genesis configuration
 	var cfg network.Config
 	var err error
-	networkID := luxd_constants.CustomID // default to local (1337)
+	networkID := constants.CustomID // default to local (1337)
 	if networkIDVal, ok := globalConfig["network-id"]; ok {
 		switch v := networkIDVal.(type) {
 		case float64:
@@ -168,7 +172,7 @@ func (lc *localNetwork) createConfig() error {
 		}
 	}
 
-	lc.log.Info("createConfig networkID parsed", "networkID", networkID, "MainnetID", luxd_constants.MainnetID, "TestnetID", luxd_constants.TestnetID)
+	lc.log.Info("createConfig networkID parsed", "networkID", networkID, "MainnetID", constants.MainnetID, "TestnetID", constants.TestnetID)
 
 	// CRITICAL: Check if we're resuming from existing state.
 	// If node1/genesis.json exists AND node1/db has data, we MUST use the existing genesis
@@ -193,7 +197,7 @@ func (lc *localNetwork) createConfig() error {
 	useMnemonic := mnemonic != ""
 
 	switch networkID {
-	case luxd_constants.MainnetID: // LUX Mainnet (1)
+	case constants.MainnetID: // LUX Mainnet (1)
 		if useMnemonic {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading mainnet genesis FROM MNEMONIC (funds allocated to derived address)"))
 			cfg, err = local.NewMainnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
@@ -202,7 +206,7 @@ func (lc *localNetwork) createConfig() error {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL mainnet genesis (deterministic bytes)"))
 			cfg, err = local.NewCanonicalMainnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
-	case luxd_constants.TestnetID: // LUX Testnet (2)
+	case constants.TestnetID: // LUX Testnet (2)
 		if useMnemonic {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading testnet genesis FROM MNEMONIC (funds allocated to derived address)"))
 			cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
@@ -211,7 +215,7 @@ func (lc *localNetwork) createConfig() error {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL testnet genesis (deterministic bytes)"))
 			cfg, err = local.NewCanonicalTestnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
-	case luxd_constants.DevnetID: // LUX Devnet (3)
+	case constants.DevnetID: // LUX Devnet (3)
 		if useMnemonic {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading devnet genesis FROM MNEMONIC (funds allocated to derived address)"))
 			cfg, err = local.NewDevnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
@@ -219,7 +223,7 @@ func (lc *localNetwork) createConfig() error {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
 			cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
 		}
-	case luxd_constants.CustomID: // Custom/Local (1337)
+	case constants.CustomID: // Custom/Local (1337)
 		if useMnemonic {
 			ux.Print(lc.log, "%s", log.Green.Wrap("Loading custom genesis FROM MNEMONIC (funds allocated to derived address)"))
 			cfg, err = local.NewLocalConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
@@ -241,7 +245,7 @@ func (lc *localNetwork) createConfig() error {
 	// since canonical genesis is already deterministic)
 	if isResume && existingGenesis != "" {
 		if cfg.Genesis != existingGenesis {
-			if networkID == luxd_constants.MainnetID || networkID == luxd_constants.TestnetID {
+			if networkID == constants.MainnetID || networkID == constants.TestnetID {
 				// Log warning but use canonical - this shouldn't happen with proper setup
 				ux.Print(lc.log, "%s", log.Orange.Wrap("WARNING: Existing genesis differs from canonical. Using canonical."))
 				fmt.Fprintf(os.Stderr, "WARNING: Genesis mismatch detected. Using canonical genesis.\n")
@@ -724,7 +728,7 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 	chainIDList := []string{}
 	for _, chain := range chains {
 		// Skip both PlatformChainID and PrimaryNetworkID (which is ids.Empty)
-		if chain.ID != luxd_constants.PlatformChainID && chain.ID != luxd_constants.PrimaryNetworkID {
+		if chain.ID != constants.PlatformChainID && chain.ID != constants.PrimaryNetworkID {
 			chainIDList = append(chainIDList, chain.ID.String())
 		}
 	}

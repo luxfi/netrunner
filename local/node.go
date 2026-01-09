@@ -10,7 +10,7 @@ import (
 	"time"
 
 	validators "github.com/luxfi/consensus/validator" // package name is validators
-	constants "github.com/luxfi/const"
+	"github.com/luxfi/constantsants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"
@@ -19,14 +19,14 @@ import (
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
-	"github.com/luxfi/node/message"
-	"github.com/luxfi/node/network/peer"
-	"github.com/luxfi/node/network/throttling"
-	"github.com/luxfi/node/network/tracker"
-	"github.com/luxfi/node/staking"
-	"github.com/luxfi/node/utils"
-	"github.com/luxfi/node/utils/compression"
-	"github.com/luxfi/node/version"
+	"github.com/luxfi/p2p/message"
+	"github.com/luxfi/p2p/peer"
+	"github.com/luxfi/p2p/throttling"
+	"github.com/luxfi/p2p/tracker"
+	"github.com/luxfi/sdk/utils"
+	"github.com/luxfi/sdk/utils/compression"
+	luxtls "github.com/luxfi/tls"
+	"github.com/luxfi/version"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -88,12 +88,15 @@ func defaultGetConnFunc(ctx context.Context, node node.Node) (net.Conn, error) {
 
 // AttachPeer: see Network
 func (node *localNode) AttachPeer(ctx context.Context, router peer.InboundHandler) (peer.Peer, error) {
-	tlsCert, err := staking.NewTLSCert()
+	tlsCert, err := luxtls.NewTLSCert()
 	if err != nil {
 		return nil, err
 	}
 	tlsConfg := peer.TLSConfig(*tlsCert, nil)
-	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg, metric.NewCounter(metric.CounterOpts{}))
+	clientUpgrader := peer.NewTLSClientUpgrader(tlsConfg, metric.NewCounter(metric.CounterOpts{
+		Name: "test_counter",
+		Help: "test counter for testing",
+	}))
 	conn, err := node.getConnFunc(ctx, node)
 	if err != nil {
 		return nil, err

@@ -77,6 +77,7 @@ func NewCommand() *cobra.Command {
 		newSendOutboundMessageCommand(),
 		newStopCommand(),
 		newSaveSnapshotCommand(),
+		newSaveHotSnapshotCommand(),
 		newLoadSnapshotCommand(),
 		newRemoveSnapshotCommand(),
 		newGetSnapshotNamesCommand(),
@@ -1112,6 +1113,34 @@ func saveSnapshotFunc(_ *cobra.Command, args []string) error {
 	}
 
 	ux.Print(logger, log.Green.Wrap("save-snapshot response: %+v"), resp)
+	return nil
+}
+
+func newSaveHotSnapshotCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "save-hot-snapshot snapshot-name",
+		Short: "Requests server to save a hot network snapshot.",
+		RunE:  saveHotSnapshotFunc,
+		Args:  cobra.ExactArgs(1),
+	}
+	return cmd
+}
+
+func saveHotSnapshotFunc(_ *cobra.Command, args []string) error {
+	cli, err := newClient()
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	resp, err := cli.SaveHotSnapshot(ctx, args[0])
+	cancel()
+	if err != nil {
+		return err
+	}
+
+	ux.Print(logger, log.Green.Wrap("save-hot-snapshot response: %+v"), resp)
 	return nil
 }
 

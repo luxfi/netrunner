@@ -20,11 +20,11 @@ import (
 	"maps"
 	"slices"
 
-	luxd_constants "github.com/luxfi/const"
-	"github.com/luxfi/node/api/admin"
-	"github.com/luxfi/node/message"
+	luxd_ "github.com/luxfi/constantsants"
+	"github.com/luxfi/p2p/message"
+	"github.com/luxfi/sdk/api/admin"
 
-	"github.com/luxfi/node/vms/platformvm"
+	"github.com/luxfi/vm/vms/platformvm"
 
 	"github.com/luxfi/ids"
 	"github.com/luxfi/log"

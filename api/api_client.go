@@ -3,12 +3,12 @@ package api
 import (
 	"fmt"
 
-	"github.com/luxfi/node/api/admin"
-	"github.com/luxfi/node/api/health"
-	"github.com/luxfi/node/api/info"
-	"github.com/luxfi/node/indexer"
-	"github.com/luxfi/node/vms/exchangevm"
-	"github.com/luxfi/node/vms/platformvm"
+	"github.com/luxfi/sdk/api/admin"
+	"github.com/luxfi/sdk/api/health"
+	"github.com/luxfi/sdk/api/indexer"
+	"github.com/luxfi/sdk/api/info"
+	"github.com/luxfi/vm/vms/exchangevm"
+	"github.com/luxfi/vm/vms/platformvm"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 

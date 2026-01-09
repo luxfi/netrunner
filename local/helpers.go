@@ -11,11 +11,11 @@ import (
 	"path/filepath"
 	"time"
 
-	constants "github.com/luxfi/const"
+	"github.com/luxfi/constantsants"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/node/config"
+	"github.com/luxfi/config"
 )
 
 func init() {
