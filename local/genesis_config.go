@@ -16,7 +16,7 @@ import (
 	"maps"
 
 	"github.com/luxfi/config"
-	"github.com/luxfi/constantsants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/bls/signer/localsigner"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"

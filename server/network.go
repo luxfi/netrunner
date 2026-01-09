@@ -25,7 +25,7 @@ import (
 	netconstants "github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
 
-	"github.com/luxfi/constantsants"
+	"github.com/luxfi/constants"
 	"github.com/luxfi/log"
 )
 
