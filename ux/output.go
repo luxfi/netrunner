@@ -5,7 +5,7 @@ package ux
 import (
 	"fmt"
 
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 )
 
 //nolint:govet // msg is intentionally a format string that may come from variables

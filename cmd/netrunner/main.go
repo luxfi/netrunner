@@ -10,8 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/cmd/netrunner/commands"
 	"github.com/luxfi/netrunner/cmd/server"
 	"github.com/spf13/cobra"
@@ -25,7 +24,7 @@ var (
 
 func main() {
 	// Setup logger - use development logger for console output
-	logger := log.NewTestLogger(level.Info)
+	logger := log.NewTestLogger(log.InfoLevel)
 
 	// Setup root command
 	rootCmd := &cobra.Command{

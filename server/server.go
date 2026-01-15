@@ -25,8 +25,6 @@ import (
 	"slices"
 
 	"github.com/luxfi/config"
-	"github.com/luxfi/consensus/core"
-	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/rpcpb"
@@ -36,7 +34,7 @@ import (
 	"github.com/luxfi/p2p/peer"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -59,7 +57,7 @@ const (
 	// Subsequent restarts are faster (<10s) but initial bootstrap needs time
 	waitForHealthyTimeout = 60 * time.Second
 	// chainDeployTimeout - time for chain deploy operations including node restarts
-	// Subnet creation, chain creation, node restart, and P-chain sync can take 60-90s
+	// Chain creation, node restart, and P-chain sync can take 60-90s
 	chainDeployTimeout = 120 * time.Second
 
 	TimeParseLayout        = "2006-01-02 15:04:05"
@@ -1371,46 +1369,6 @@ func (lh *loggingInboundHandler) HandleInbound(_ context.Context, msg message.In
 		log.String("message", msg.Op().String()),
 		log.String("node-name", lh.nodeName),
 	)
-}
-
-func (lh *loggingInboundHandler) AppRequest(ctx context.Context, nodeID ids.NodeID, requestID uint32, deadline time.Time, appRequestBytes []byte) error {
-	lh.logger.Debug(
-		"AppRequest received",
-		log.String("node-name", lh.nodeName),
-		log.Stringer("nodeID", nodeID),
-		log.Uint32("requestID", requestID),
-	)
-	return nil
-}
-
-func (lh *loggingInboundHandler) AppRequestFailed(ctx context.Context, nodeID ids.NodeID, requestID uint32, appErr *core.AppError) error {
-	lh.logger.Debug(
-		"AppRequestFailed received",
-		log.String("node-name", lh.nodeName),
-		log.Stringer("nodeID", nodeID),
-		log.Uint32("requestID", requestID),
-	)
-	return nil
-}
-
-func (lh *loggingInboundHandler) AppResponse(ctx context.Context, nodeID ids.NodeID, requestID uint32, appResponseBytes []byte) error {
-	lh.logger.Debug(
-		"AppResponse received",
-		log.String("node-name", lh.nodeName),
-		log.Stringer("nodeID", nodeID),
-		log.Uint32("requestID", requestID),
-	)
-	return nil
-}
-
-func (lh *loggingInboundHandler) AppGossip(ctx context.Context, nodeID ids.NodeID, appGossipBytes []byte) error {
-	lh.logger.Debug(
-		"AppGossip received",
-		log.String("node-name", lh.nodeName),
-		log.Stringer("nodeID", nodeID),
-		log.Int("gossipSize", len(appGossipBytes)),
-	)
-	return nil
 }
 
 func (s *server) AttachPeer(ctx context.Context, req *rpcpb.AttachPeerRequest) (*rpcpb.AttachPeerResponse, error) {

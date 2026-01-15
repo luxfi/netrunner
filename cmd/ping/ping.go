@@ -7,8 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/netrunner/ux"
@@ -29,7 +28,7 @@ func NewCommand() *cobra.Command {
 		RunE:  pingFunc,
 	}
 
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", log.InfoLevel.String(), "log level")
 	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "0.0.0.0:9000", "server endpoint")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")
 	cmd.PersistentFlags().DurationVar(&requestTimeout, "request-timeout", 10*time.Second, "client request timeout")
@@ -44,7 +43,7 @@ func pingFunc(*cobra.Command, []string) error {
 	}
 	lcfg := log.Config{
 		DisplayLevel: lvl,
-		LogLevel:     level.Off,
+		LogLevel:     log.Disabled,
 	}
 	logFactory := log.NewFactoryWithConfig(lcfg)
 	logger, err := logFactory.Make(constants.LogNameControl)
