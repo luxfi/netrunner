@@ -15,7 +15,7 @@ import (
 
 	"github.com/luxfi/config"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/api"
 	apimocks "github.com/luxfi/netrunner/api/mocks"
 	"github.com/luxfi/netrunner/local/mocks"
@@ -898,7 +898,10 @@ func TestChildCmdRedirection(t *testing.T) {
 
 	// and it should have a specific length:
 	//             the actual output   + the color terminal escape sequence      + node name    + []<space> + color terminal reset escape sequence
-	expectedLen := len(expectedResult) + len(utils.NewColorPicker().NextColor()) + len(mockNodeName) + 3 + len(log.Reset)
+	// color.Wrap("") returns the color escape + reset escape sequences
+	color := utils.NewColorPicker().NextColor()
+	colorOverhead := len(color.Wrap(""))
+	expectedLen := len(expectedResult) + colorOverhead + len(mockNodeName) + 3
 	if len(result) != expectedLen {
 		t.Fatalf("expected string length to be %d, but it was %d", expectedLen, len(result))
 	}
@@ -1161,7 +1164,7 @@ func TestWriteFiles(t *testing.T) {
 	genesisPath := filepath.Join(tmpDir, genesisFileName)
 	configFilePath := filepath.Join(tmpDir, configFileName)
 	chainConfigDir := filepath.Join(tmpDir, chainConfigSubDir)
-	subnetConfigDir := filepath.Join(tmpDir, pChainConfigSubDir)
+	networkConfigDir := filepath.Join(tmpDir, pChainConfigSubDir)
 	cChainConfigPath := filepath.Join(tmpDir, chainConfigSubDir, "C", configFileName)
 
 	type test struct {
@@ -1187,7 +1190,7 @@ func TestWriteFiles(t *testing.T) {
 				config.StakingSignerKeyPathKey: stakingSigningKeyPath,
 				config.GenesisFileKey:          genesisPath,
 				config.ChainConfigDirKey:       chainConfigDir,
-				config.NetConfigDirKey:         subnetConfigDir,
+				config.NetConfigDirKey:         networkConfigDir,
 			},
 		},
 		{
@@ -1205,7 +1208,7 @@ func TestWriteFiles(t *testing.T) {
 				config.StakingSignerKeyPathKey: stakingSigningKeyPath,
 				config.GenesisFileKey:          genesisPath,
 				config.ChainConfigDirKey:       chainConfigDir,
-				config.NetConfigDirKey:         subnetConfigDir,
+				config.NetConfigDirKey:         networkConfigDir,
 				config.ConfigFileKey:           configFilePath,
 			},
 		},
@@ -1225,7 +1228,7 @@ func TestWriteFiles(t *testing.T) {
 				config.StakingSignerKeyPathKey: stakingSigningKeyPath,
 				config.GenesisFileKey:          genesisPath,
 				config.ChainConfigDirKey:       chainConfigDir,
-				config.NetConfigDirKey:         subnetConfigDir,
+				config.NetConfigDirKey:         networkConfigDir,
 				config.ConfigFileKey:           configFilePath,
 			},
 		},

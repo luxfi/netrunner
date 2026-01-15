@@ -40,7 +40,7 @@ type Config struct {
     // Upgrade configuration files
     UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
 
-    // Subnet configuration files
+    // Network (validator set) configuration files
     SubnetConfigFiles map[string]string `json:"subnetConfigFiles"`
 }
 ```
@@ -187,10 +187,10 @@ type BlockchainSpec struct {
     // Genesis data (file path or JSON string)
     Genesis []byte `json:"genesis"`
 
-    // Subnet ID (optional)
+    // Network ID (optional) - identifies the validator set
     SubnetID *string `json:"subnet_id"`
 
-    // Subnet specification
+    // Network specification (validator set configuration)
     SubnetSpec *SubnetSpec `json:"subnet_spec"`
 
     // Chain configuration
@@ -304,21 +304,21 @@ type BlockchainSpec struct {
 }
 ```
 
-## Subnet Configuration
+## Network Configuration (Validator Sets)
 
-### Subnet Spec Structure
+### Network Spec Structure
 
 ```go
 type SubnetSpec struct {
     // Validator participants
     Participants []string `json:"participants"`
 
-    // Subnet configuration
+    // Network configuration
     SubnetConfig []byte `json:"subnet_config"`
 }
 ```
 
-### Elastic Subnet Configuration
+### Elastic Network Configuration
 
 ```go
 type ElasticSubnetSpec struct {

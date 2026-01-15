@@ -5,7 +5,7 @@ description: Complete guide to setting up test networks with Lux Netrunner
 
 # Test Network Setup
 
-This guide walks through setting up various test network configurations using Lux Netrunner, from simple single-node setups to complex multi-subnet deployments.
+This guide walks through setting up various test network configurations using Lux Netrunner, from simple single-node setups to complex multi-chain deployments.
 
 ## Prerequisites
 
@@ -146,9 +146,9 @@ netrunner control start \
   }'
 ```
 
-## Subnet Networks
+## Validator Networks
 
-### Create a Permissioned Subnet
+### Create a Permissioned Network
 
 ```bash
 # Start the network
@@ -160,7 +160,7 @@ netrunner control start \
 # Wait for health
 netrunner control health
 
-# Create subnet with all nodes
+# Create network with all nodes
 netrunner control create-subnets '[{}]'
 
 # Or create with specific validators
@@ -168,13 +168,13 @@ netrunner control create-subnets \
   '[{"participants": ["node1", "node2", "node3"]}]'
 ```
 
-### Create an Elastic Subnet
+### Create an Elastic Network
 
-Elastic subnets allow dynamic validator sets:
+Elastic networks allow dynamic validator sets:
 
 ```bash
-# Create elastic subnet configuration
-cat > elastic-subnet.json <<EOF
+# Create elastic network configuration
+cat > elastic-network.json <<EOF
 {
   "AssetName": "TestToken",
   "AssetSymbol": "TEST",
@@ -193,8 +193,8 @@ cat > elastic-subnet.json <<EOF
 }
 EOF
 
-# Create elastic subnet
-netrunner control create-elastic-subnet elastic-subnet.json
+# Create elastic network
+netrunner control create-elastic-subnet elastic-network.json
 ```
 
 ## Custom Blockchain Deployment
@@ -325,12 +325,12 @@ netrunner control start \
 # Wait for bootstrap
 netrunner control health
 
-# Create subnet with validators
+# Create network (validator set) with validators
 netrunner control create-subnets '[{
   "participants": ["node1", "node2", "node3"]
 }]'
 
-# Get subnet info
+# Get network info
 netrunner control status
 ```
 
@@ -426,7 +426,7 @@ netrunner control start \
   --number-of-nodes=5 \
   --node-path ${LUXD_EXEC_PATH}
 
-# Create subnets and blockchains
+# Create networks (validator sets) and blockchains
 netrunner control create-subnets '[{"participants": ["node1", "node2"]}]'
 
 # Save snapshot
@@ -478,8 +478,8 @@ netrunner control health --endpoint=${ENDPOINT}
 netrunner control save-snapshot test1-complete
 netrunner control stop --endpoint=${ENDPOINT}
 
-# Test 2: Subnet network
-echo "Test 2: Subnet deployment"
+# Test 2: Network (validator set) deployment
+echo "Test 2: Network deployment"
 netrunner control load-snapshot test1-complete \
   --endpoint=${ENDPOINT}
 

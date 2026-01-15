@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/luxfi/ids"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	rpcb "github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/ux"
 	luxtls "github.com/luxfi/tls"

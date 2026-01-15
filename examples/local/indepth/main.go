@@ -9,8 +9,7 @@ import (
 	"time"
 
 	"github.com/luxfi/config"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
@@ -56,8 +55,8 @@ func shutdownOnSignal(
 func main() {
 	// Create the logger
 	logFactory := log.NewFactoryWithConfig(log.Config{
-		DisplayLevel: level.Info,
-		LogLevel:     level.Debug,
+		DisplayLevel: log.InfoLevel,
+		LogLevel:     log.DebugLevel,
 	})
 	logger, err := logFactory.Make("main")
 	if err != nil {

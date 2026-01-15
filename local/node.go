@@ -9,11 +9,12 @@ import (
 	"net/netip"
 	"time"
 
-	validators "github.com/luxfi/consensus/validator" // package name is validators
+	"github.com/luxfi/atomic"
+	"github.com/luxfi/compress"
 	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"github.com/luxfi/metric"
 	"github.com/luxfi/netrunner/api"
@@ -24,10 +25,8 @@ import (
 	"github.com/luxfi/p2p/throttling"
 	"github.com/luxfi/p2p/tracker"
 	luxtls "github.com/luxfi/tls"
+	validators "github.com/luxfi/validators" // package name is validators
 	"github.com/luxfi/version"
-	"github.com/luxfi/vm/utils"
-	"github.com/luxfi/vm/utils/compression"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -102,8 +101,8 @@ func (node *localNode) AttachPeer(ctx context.Context, router peer.InboundHandle
 		return nil, err
 	}
 	mc, err := message.NewCreator(
-		prometheus.NewRegistry(),
-		compression.TypeZstd,
+		metric.NewRegistry(),
+		compress.TypeZstd,
 		10*time.Second,
 	)
 	if err != nil {
@@ -111,14 +110,14 @@ func (node *localNode) AttachPeer(ctx context.Context, router peer.InboundHandle
 	}
 
 	metrics, err := peer.NewMetrics(
-		prometheus.NewRegistry(),
+		metric.NewRegistry(),
 	)
 	if err != nil {
 		return nil, err
 	}
 	// Use a nil resource tracker for now - this is acceptable for netrunner testing
 	var resourceTracker tracker.ResourceTracker = nil
-	signerIP := utils.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
+	signerIP := atomic.NewAtomic(netip.AddrPortFrom(netip.IPv6Unspecified(), 0))
 	tls := tlsCert.PrivateKey.(crypto.Signer)
 	// Create a dummy BLS signer for now
 	blsKey, err := bls.NewSecretKey()

@@ -28,7 +28,7 @@ import (
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/keys"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network"
@@ -38,10 +38,10 @@ import (
 	"github.com/luxfi/netrunner/utils/constants"
 	"github.com/luxfi/p2p/peer"
 	luxtls "github.com/luxfi/tls"
-	"github.com/luxfi/vm/utils/beacon"
+	"github.com/luxfi/node/utils/beacon"
 
 	"github.com/luxfi/address"
-	"github.com/luxfi/vm/utils/wrappers"
+	"github.com/luxfi/node/utils/wrappers"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )

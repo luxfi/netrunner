@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 )
@@ -35,50 +35,88 @@ func shutdownOnSignal(
 	close(closedOnShutdownChan)
 }
 
-// Zoo chain genesis for testnet (chain ID 200201)
 func createZooTestnetGenesis() ([]byte, error) {
-	zooGenesis := map[string]interface{}{
-		"alloc": map[string]interface{}{
-			"0200000000000000000000000000000000000005": map[string]interface{}{
-				"balance": "0x0",
-				"nonce":   "0x1",
-				"code":    "0x01",
-			},
-			"9011E888251AB053B7bD1cdB598Db4f9DEd94714": map[string]interface{}{
-				"balance": "0x193e5939a08ce9dbd480000000",
-			},
-		},
-		"baseFeePerGas": "0x5d21dba00",
-		"config": map[string]interface{}{
-			"berlinBlock":         0,
-			"byzantiumBlock":      0,
-			"chainId":             200201, // Testnet chain ID
-			"constantinopleBlock": 0,
-			"eip150Block":         0,
-			"eip155Block":         0,
-			"eip158Block":         0,
-			"homesteadBlock":      0,
-			"istanbulBlock":       0,
-			"londonBlock":         0,
-			"petersburgBlock":     0,
-			"subnetEVMTimestamp":  0,
-			"durangoTimestamp":    0,
-			"feeConfig": map[string]interface{}{
-				"gasLimit":                 12000000,
-				"targetBlockRate":          2,
-				"minBaseFee":               25000000000,
-				"targetGas":                15000000,
-				"baseFeeChangeDenominator": 36,
-				"minBlockGasCost":          0,
-				"maxBlockGasCost":          1000000,
-				"blockGasCostStep":         200000,
-			},
-		},
-		"difficulty": "0x0",
-		"gasLimit":   "0xb71b00",
-		"timestamp":  "0x6727e9c3",
+	data, err := os.ReadFile("/Users/z/work/lux/genesis/configs/zoo-testnet/genesis.json")
+	if err != nil {
+		return nil, err
 	}
-	return json.Marshal(zooGenesis)
+	return activateEVMUpgrades(data)
+}
+
+func createCorethDebugConfig(importPath string) ([]byte, error) {
+	cfg := map[string]interface{}{
+		"admin-api-enabled": true,
+		"eth-apis": []string{
+			"eth",
+			"eth-filter",
+			"net",
+			"web3",
+			"debug",
+			"internal-eth",
+			"internal-blockchain",
+			"internal-transaction",
+			"internal-account",
+			"admin",
+		},
+		"import-chain-data": importPath,
+		"log-level": "debug",
+	}
+	return json.Marshal(cfg)
+}
+
+func activateEVMUpgrades(genesisJSON []byte) ([]byte, error) {
+	// Force all upgrade timestamps to 0 so upgrades are active at genesis.
+	var genesis map[string]interface{}
+	if err := json.Unmarshal(genesisJSON, &genesis); err != nil {
+		return nil, err
+	}
+	if cfg, ok := genesis["config"].(map[string]interface{}); ok {
+		for _, key := range []string{
+			"banffBlockTimestamp",
+			"cortinaBlockTimestamp",
+			"durangoTimestamp",
+			"durangoBlockTimestamp",
+			"etnaTimestamp",
+			"fortunaTimestamp",
+			"graniteTimestamp",
+			"cancunTime",
+			"shanghaiTime",
+		} {
+			if _, exists := cfg[key]; exists {
+				cfg[key] = 0
+			}
+		}
+	}
+	return json.Marshal(genesis)
+}
+
+func activateCChainUpgrades(genesisJSON string) (string, error) {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(genesisJSON), &top); err != nil {
+		return "", err
+	}
+	raw, ok := top["cChainGenesis"]
+	if !ok {
+		return genesisJSON, nil
+	}
+	var cChainGenesis string
+	if err := json.Unmarshal(raw, &cChainGenesis); err != nil {
+		return "", err
+	}
+	updated, err := activateEVMUpgrades([]byte(cChainGenesis))
+	if err != nil {
+		return "", err
+	}
+	updatedRaw, err := json.Marshal(string(updated))
+	if err != nil {
+		return "", err
+	}
+	top["cChainGenesis"] = updatedRaw
+	out, err := json.Marshal(top)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
 
 func main() {
@@ -109,6 +147,18 @@ func run(logger log.Logger, binaryPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create testnet config: %w", err)
 	}
+	updatedGenesis, err := activateCChainUpgrades(netConfig.Genesis)
+	if err != nil {
+		return fmt.Errorf("failed to activate C-chain upgrades: %w", err)
+	}
+	netConfig.Genesis = updatedGenesis
+	netConfig.Flags["track-all-chains"] = true
+
+	corethConfig, err := createCorethDebugConfig("/Users/z/work/lux/state/rlp/lux-testnet/lux-testnet-96368.rlp")
+	if err != nil {
+		return fmt.Errorf("failed to create coreth debug config: %w", err)
+	}
+	netConfig.ChainConfigFiles["C"] = string(corethConfig)
 
 	// Override ports to avoid conflict with mainnet (use 9640-9649)
 	// and update bootstrap IPs/ports accordingly
@@ -116,6 +166,7 @@ func run(logger log.Logger, binaryPath string) error {
 	for i := range netConfig.NodeConfigs {
 		netConfig.NodeConfigs[i].Flags["http-port"] = 9640 + (i * 2)
 		netConfig.NodeConfigs[i].Flags["staking-port"] = 9641 + (i * 2)
+		netConfig.NodeConfigs[i].Flags["track-all-chains"] = true
 
 		// Update bootstrap ports for non-beacon nodes
 		if !netConfig.NodeConfigs[i].IsBeacon {
@@ -168,12 +219,16 @@ func run(logger log.Logger, binaryPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create zoo testnet genesis: %w", err)
 	}
+	zooCorethConfig, err := createCorethDebugConfig("/Users/z/work/lux/state/rlp/zoo-testnet/zoo-testnet-200201.rlp")
+	if err != nil {
+		return fmt.Errorf("failed to create zoo testnet coreth config: %w", err)
+	}
 
 	zooChainSpec := []network.ChainSpec{
 		{
 			VMName:         "evm",
 			Genesis:        zooGenesis,
-			ChainConfig:    nil,
+			ChainConfig:    zooCorethConfig,
 			BlockchainName: "zootest",
 		},
 	}

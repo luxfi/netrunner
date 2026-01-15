@@ -6,8 +6,8 @@ package local
 import (
 	"context"
 
-	"github.com/luxfi/vm/vms/platformvm"
-	"github.com/luxfi/vm/vms/platformvm/txs"
+	"github.com/luxfi/protocol/p/txs"
+	"github.com/luxfi/sdk/api/platformvm"
 	pwalletwallet "github.com/luxfi/sdk/wallet/chain/p/wallet"
 	"github.com/luxfi/sdk/wallet/primary/common"
 )

@@ -21,10 +21,10 @@ import (
 	"github.com/luxfi/keys"
 
 	"github.com/luxfi/genesis/pkg/genesis"
-	"github.com/luxfi/vm/vms/platformvm/reward"
+	"github.com/luxfi/protocol/p/reward"
 
 	"github.com/luxfi/sdk/wallet/chain/x"
-	"github.com/luxfi/vm/components/lux"
+	"github.com/luxfi/utxo"
 	"github.com/luxfi/vm/components/verify"
 
 	"maps"
@@ -36,18 +36,18 @@ import (
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/vm/vms/platformvm"
-	"github.com/luxfi/vm/vms/platformvm/txs"
+	"github.com/luxfi/protocol/p/txs"
+	"github.com/luxfi/protocol/p/signer"
 	"github.com/luxfi/sdk/api/admin"
+	"github.com/luxfi/sdk/api/platformvm"
 	pwallet "github.com/luxfi/sdk/wallet/chain/p"
 	pwalletwallet "github.com/luxfi/sdk/wallet/chain/p/wallet"
-	"github.com/luxfi/vm/platformvm/signer"
-	"github.com/luxfi/vm/secp256k1fx"
+	"github.com/luxfi/utxo/secp256k1fx"
 
 	pbuilder "github.com/luxfi/sdk/wallet/chain/p/builder"
 	psigner "github.com/luxfi/sdk/wallet/chain/p/signer"
@@ -861,10 +861,10 @@ func (ln *localNetwork) installCustomChains(
 		return nil, fmt.Errorf("timeout waiting for primary validators: %w", err)
 	}
 
-	// Wait for subnet creation transactions to be fully committed before adding validators
-	// The P-Chain needs time to commit the subnet creation blocks and propagate state to all nodes
+	// Wait for chain creation transactions to be fully committed before adding validators
+	// The P-Chain needs time to commit the chain creation blocks and propagate state to all nodes
 	// For local networks with fast consensus (K=5), 500ms is sufficient
-	ln.logger.Info("waiting for subnet creation to be committed...")
+	ln.logger.Info("waiting for chain creation to be committed...")
 	time.Sleep(500 * time.Millisecond)
 
 	if err = ln.addChainValidators(ctx, platformCli, w, chainIDs, participantsSpecs); err != nil {
@@ -938,7 +938,7 @@ func (ln *localNetwork) installCustomChains(
 		ln.logger.Info("blockchain created",
 			"index", i,
 			"blockchainID", blockchainID.String(),
-			"subnetID", *chainSpecs[i].ChainID,
+			"chainID", *chainSpecs[i].ChainID,
 		)
 	}
 
@@ -1549,9 +1549,9 @@ func exportXChainToPChain(ctx context.Context, w *wallet, owner *secp256k1fx.Out
 	defer cancel()
 	_, err := w.xWallet.IssueExportTx(
 		ids.Empty,
-		[]*lux.TransferableOutput{
+		[]*utxo.TransferableOutput{
 			{
-				Asset: lux.Asset{
+				Asset: utxo.Asset{
 					ID: chainAssetID,
 				},
 				Out: &secp256k1fx.TransferOutput{
@@ -1942,7 +1942,7 @@ func createChains(
 		log.Info("creating chain tx")
 		// Use different variable name to avoid shadowing outer context
 		txCtx, txCancel := createDefaultCtx(ctx)
-		tx, err := w.pWallet.IssueCreateSubnetTx(
+		tx, err := w.pWallet.IssueCreateNetworkTx(
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,
 				Addrs:     []ids.ShortID{w.addr},

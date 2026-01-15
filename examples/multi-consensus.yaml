@@ -59,8 +59,8 @@ engines:
       - eth2-settlement
     wait_healthy: true
 
-  # ZOO L2 on Lux
-  - name: zoo-subnet
+  # ZOO L2 Chain on Lux
+  - name: zoo-chain
     type: lux
     binary: "subnet-evm"
     network_id: 200200
@@ -69,13 +69,13 @@ engines:
     extra:
       chain_id: 200200
       parent_chain: lux-mainnet
-      subnet_id: "2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt"
+      network_id: "2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt"
     depends_on:
       - lux-mainnet
     wait_healthy: true
 
-  # SPC L2 on Lux
-  - name: spc-subnet
+  # SPC L2 Chain on Lux
+  - name: spc-chain
     type: lux
     binary: "subnet-evm"
     network_id: 36911
@@ -84,7 +84,7 @@ engines:
     extra:
       chain_id: 36911
       parent_chain: lux-mainnet
-      subnet_id: "2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt"
+      network_id: "2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt"
     depends_on:
       - lux-mainnet
     wait_healthy: true
@@ -135,16 +135,16 @@ networks:
   
   - name: zoo
     type: l2
-    engine: zoo-subnet
+    engine: zoo-chain
     parent: lux
     chain_id: 200200
     endpoints:
       - "http://localhost:9640"
       - "ws://localhost:9641"
-  
+
   - name: spc
     type: l2
-    engine: spc-subnet
+    engine: spc-chain
     parent: lux
     chain_id: 36911
     endpoints:

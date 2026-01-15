@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/rpcpb"
 	"google.golang.org/grpc"

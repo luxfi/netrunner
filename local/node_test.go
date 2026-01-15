@@ -23,8 +23,8 @@ import (
 	"github.com/luxfi/p2p/peer"
 	luxtls "github.com/luxfi/tls"
 	"github.com/luxfi/version"
-	"github.com/luxfi/vm/utils/ips"
-	"github.com/luxfi/vm/utils/wrappers"
+	"github.com/luxfi/node/utils/ips"
+	"github.com/luxfi/node/utils/wrappers"
 	"github.com/stretchr/testify/require"
 )
 

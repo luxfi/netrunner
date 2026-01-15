@@ -10,7 +10,7 @@ import (
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/network"
 )
 

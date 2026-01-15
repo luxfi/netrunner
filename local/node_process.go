@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
