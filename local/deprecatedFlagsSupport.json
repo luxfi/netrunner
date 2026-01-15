@@ -10,5 +10,17 @@
       "old_name": "whitelisted-subnets",
       "new_name": "track-chains",
       "value_map": ""
+  },
+  {
+      "version": "v1.9.6",
+      "old_name": "track-subnets",
+      "new_name": "track-chains",
+      "value_map": ""
+  },
+  {
+      "version": "v1.9.6",
+      "old_name": "subnet-config-dir",
+      "new_name": "net-config-dir",
+      "value_map": ""
   }
 ]

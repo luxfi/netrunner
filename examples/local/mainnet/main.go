@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/network"
 )

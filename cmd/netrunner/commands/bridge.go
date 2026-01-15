@@ -6,7 +6,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 
 	"github.com/spf13/cobra"
 )

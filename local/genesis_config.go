@@ -26,7 +26,7 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/vm/platformvm/signer"
+	"github.com/luxfi/protocol/p/signer"
 
 	"github.com/luxfi/address"
 	luxtls "github.com/luxfi/tls"
@@ -35,7 +35,7 @@ import (
 // patchGenesisPreservingRaw patches a top-level genesis JSON document while guaranteeing that
 // selected keys are preserved byte-for-byte as raw JSON values (including quotes/escapes for strings).
 //
-// This is the correct approach for EVM genesis fields (C-Chain + any subnet EVM genesis) because
+// This is the correct approach for EVM genesis fields (C-Chain + any chain EVM genesis) because
 // parsing via interface{} will corrupt large numeric fields and/or change encoding.
 //
 // CRITICAL: Never use map[string]interface{} for genesis - it causes float64 precision loss!
@@ -101,7 +101,7 @@ func mustJSON(v any) json.RawMessage {
 // These correspond to EVM chain genesis configurations.
 var evmGenesisKeys = []string{
 	"cChainGenesis",
-	// Add subnet EVM genesis keys if embedded in main genesis:
+	// Add chain EVM genesis keys if embedded in main genesis:
 	// "hanzoGenesis", "spcGenesis", "zooGenesis",
 }
 

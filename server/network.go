@@ -26,7 +26,7 @@ import (
 	"github.com/luxfi/netrunner/ux"
 
 	"github.com/luxfi/constants"
-	"github.com/luxfi/log"
+	log "github.com/luxfi/log"
 )
 
 const (
@@ -712,10 +712,10 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 			info: &rpcpb.CustomChainInfo{
 				ChainName:    blockchain.Name,
 				VmId:         blockchain.VMID.String(),
-				PchainId:     blockchain.NetID.String(),
+				PchainId:     blockchain.ChainID.String(),
 				BlockchainId: blockchain.ID.String(),
 			},
-			chainID:      blockchain.NetID,
+			chainID:      blockchain.ChainID,
 			blockchainID: blockchain.ID,
 		}
 	}
@@ -755,10 +755,11 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 		isElastic := false
 		elasticChainID := ids.Empty
 		if _, _, err := (*pChainClient).GetCurrentSupply(ctx, chainID); err == nil {
-			isElastic = true
-			elasticChainID, err = lc.nw.GetElasticChainID(ctx, chainID)
-			if err != nil {
-				return err
+			// Only mark as elastic if we can get the elastic chain ID
+			// (chain must have been transformed via IssueTransformChainTx)
+			if eid, err := lc.nw.GetElasticChainID(ctx, chainID); err == nil {
+				isElastic = true
+				elasticChainID = eid
 			}
 		}
 
