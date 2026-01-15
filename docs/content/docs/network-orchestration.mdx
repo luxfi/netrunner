@@ -13,7 +13,7 @@ Network orchestration in Netrunner allows you to:
 - Dynamically create and manage multi-node networks
 - Configure node topologies and relationships
 - Manage node lifecycle (start, stop, pause, resume)
-- Coordinate subnet and blockchain deployments
+- Coordinate network (validator set) and blockchain deployments
 - Simulate network conditions and failures
 
 ## Core Components
@@ -154,21 +154,21 @@ netrunner control pause-node node1
 netrunner control resume-node node1
 ```
 
-## Subnet Orchestration
+## Network Orchestration (Validator Sets)
 
-### Creating Subnets
+### Creating Networks
 
-Create subnets with specific validators:
+Create networks (validator sets) with specific validators:
 
 ```bash
-# Create subnet with all nodes as validators
+# Create network with all nodes as validators
 netrunner control create-subnets '[{}]'
 
-# Create subnet with specific validators
+# Create network with specific validators
 netrunner control create-subnets \
   '[{"participants": ["node1", "node2", "node3"]}]'
 
-# Create multiple subnets
+# Create multiple networks
 netrunner control create-subnets \
   '[
     {"participants": ["node1", "node2"]},
@@ -176,9 +176,9 @@ netrunner control create-subnets \
   ]'
 ```
 
-### Elastic Subnets
+### Elastic Networks
 
-Configure elastic subnets with custom parameters:
+Configure elastic networks with custom parameters:
 
 ```go
 type ElasticSubnetSpec struct {
@@ -204,7 +204,7 @@ type ElasticSubnetSpec struct {
 
 ### Deploying Custom VMs
 
-Deploy custom virtual machines on subnets:
+Deploy custom virtual machines on networks:
 
 ```bash
 # Deploy a single blockchain
@@ -371,7 +371,7 @@ netrunner control start \
 # Wait for network health
 netrunner control health --endpoint="0.0.0.0:8080"
 
-# Create a subnet
+# Create a network (validator set)
 netrunner control create-subnets \
   '[{"participants": ["node1", "node2", "node3"]}]'
 
@@ -398,7 +398,7 @@ netrunner control stop --endpoint="0.0.0.0:8080"
 
 1. **Nodes fail to start**: Check binary path and permissions
 2. **Network unhealthy**: Verify port availability and firewall rules
-3. **Subnet creation fails**: Ensure sufficient validators
+3. **Network creation fails**: Ensure sufficient validators
 4. **Snapshot restore fails**: Check disk space and file permissions
 
 ### Debug Commands

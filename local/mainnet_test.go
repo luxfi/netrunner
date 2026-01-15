@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/luxfi/genesis/configs"
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
 	"github.com/stretchr/testify/require"
 )
@@ -109,8 +108,8 @@ func TestMainnetFiveNodeNetwork(t *testing.T) {
 
 	// Create logger
 	logFactory := log.NewFactoryWithConfig(log.Config{
-		DisplayLevel: level.Info,
-		LogLevel:     level.Debug,
+		DisplayLevel: log.InfoLevel,
+		LogLevel:     log.DebugLevel,
 	})
 	log, err := logFactory.Make("test")
 	require.NoError(t, err, "Failed to create logger")
@@ -156,8 +155,8 @@ func TestMainnetConsensusValidation(t *testing.T) {
 
 	// Create logger
 	logFactory := log.NewFactoryWithConfig(log.Config{
-		DisplayLevel: level.Info,
-		LogLevel:     level.Debug,
+		DisplayLevel: log.InfoLevel,
+		LogLevel:     log.DebugLevel,
 	})
 	log, err := logFactory.Make("test")
 	require.NoError(t, err, "Failed to create logger")

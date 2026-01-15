@@ -5,14 +5,14 @@ description: Lux Netrunner - Network orchestration and testing framework for Lux
 
 # Lux Netrunner
 
-Lux Netrunner is a powerful network orchestration and testing framework designed for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, subnets, and complex network topologies.
+Lux Netrunner is a powerful network orchestration and testing framework designed for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, chains (L2 blockchains), and complex network topologies.
 
 ## Overview
 
 Netrunner simplifies blockchain network testing by providing:
 - **Dynamic network management** - Create, modify, and control networks on the fly
 - **Multi-chain support** - Deploy and test multiple blockchains simultaneously
-- **Subnet orchestration** - Easily create and manage subnets with custom validators
+- **Network orchestration** - Easily create and manage networks (validator sets) with custom validators
 - **Testing automation** - Built-in support for various testing scenarios
 - **Network snapshots** - Save and restore complete network states
 - **Chaos engineering** - Simulate failures and network partitions
@@ -106,14 +106,14 @@ netrunner control health --endpoint="0.0.0.0:8080"
 netrunner control uris --endpoint="0.0.0.0:8080"
 ```
 
-### Deploy a Subnet
+### Deploy a Chain
 
 ```bash
-# Create subnet with specific validators
+# Create network (validator set) with specific validators
 netrunner control create-subnets \
   '[{"participants": ["node1", "node2", "node3"]}]'
 
-# Deploy a blockchain on the subnet
+# Deploy a blockchain on the network
 netrunner control create-blockchains \
   '[{
     "vm_name": "subnetevm",
@@ -132,7 +132,7 @@ netrunner control create-blockchains \
 
 ### Integration Testing
 - Multi-chain interaction testing
-- Cross-subnet communication
+- Cross-chain communication
 - API endpoint validation
 - Transaction throughput testing
 
@@ -227,9 +227,9 @@ curl -X POST -k http://localhost:8081/v1/control/savesnapshot -d '{
 - `netrunner control resume-node` - Resume a node
 - `netrunner control restart-node` - Restart a node
 
-### Subnet Commands
-- `netrunner control create-subnets` - Create subnets
-- `netrunner control create-blockchains` - Deploy blockchains
+### Network Commands
+- `netrunner control create-subnets` - Create networks (validator sets)
+- `netrunner control create-blockchains` - Deploy blockchains (chains)
 
 ### Snapshot Commands
 - `netrunner control save-snapshot` - Save network state (stops network)

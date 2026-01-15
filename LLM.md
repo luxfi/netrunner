@@ -7,7 +7,7 @@
 
 ## Project Overview
 
-Lux Netrunner is a powerful network orchestration and testing framework for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, subnets, and complex network topologies.
+Lux Netrunner is a powerful network orchestration and testing framework for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, chains (L2 blockchains), and complex network topologies.
 
 ## Essential Commands
 

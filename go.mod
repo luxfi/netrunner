@@ -163,3 +163,11 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
+
+replace (
+	github.com/luxfi/atomic => ../atomic
+	github.com/luxfi/consensus => ../consensus
+	github.com/luxfi/protocol => ../protocol
+	github.com/luxfi/genesis => ../genesis
+	github.com/luxfi/log => github.com/luxfi/logger v1.3.1
+)

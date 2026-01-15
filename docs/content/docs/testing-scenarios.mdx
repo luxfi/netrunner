@@ -193,12 +193,12 @@ IMPORT_TX=$(curl -X POST --data '{
 echo "Import TX: ${IMPORT_TX}"
 ```
 
-### Subnet Testing
+### Network Testing
 
-#### Subnet Creation and Validation
+#### Network Creation and Validation
 
 ```go
-func TestSubnetCreation(t *testing.T) {
+func TestNetworkCreation(t *testing.T) {
     ctx := context.Background()
 
     // Start network
@@ -208,16 +208,16 @@ func TestSubnetCreation(t *testing.T) {
     require.NoError(t, err)
     defer network.Stop(ctx)
 
-    // Create subnet with 3 validators
-    subnetSpec := &netrunner.SubnetSpec{
+    // Create network (validator set) with 3 validators
+    networkSpec := &netrunner.SubnetSpec{
         Participants: []string{"node1", "node2", "node3"},
     }
 
-    subnetID, err := network.CreateSubnet(ctx, subnetSpec)
+    networkID, err := network.CreateSubnet(ctx, networkSpec)
     require.NoError(t, err)
 
-    // Verify subnet validators
-    validators, err := network.GetSubnetValidators(ctx, subnetID)
+    // Verify network validators
+    validators, err := network.GetSubnetValidators(ctx, networkID)
     require.NoError(t, err)
     assert.Len(t, validators, 3)
 }
@@ -611,7 +611,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: [consensus, subnet, performance, chaos]
+        test: [consensus, network, performance, chaos]
 
     steps:
       - uses: actions/checkout@v2
@@ -685,7 +685,7 @@ run_test() {
 
 # Run all tests
 run_test "consensus"
-run_test "subnet"
+run_test "network"
 run_test "performance"
 run_test "chaos"
 run_test "upgrade"

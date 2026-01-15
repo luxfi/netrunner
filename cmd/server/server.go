@@ -11,8 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/server"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
@@ -44,7 +43,7 @@ func NewCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 	}
 
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level for server logs")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", log.InfoLevel.String(), "log level for server logs")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
 	cmd.PersistentFlags().StringVar(&port, "port", ":9000", "server port")
 	cmd.PersistentFlags().StringVar(&gwPort, "grpc-gateway-port", ":9001", "grpc-gateway server port")

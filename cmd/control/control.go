@@ -14,8 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/luxfi/log"
-	"github.com/luxfi/log/level"
+	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/client"
 	"github.com/luxfi/netrunner/local"
 	"github.com/luxfi/netrunner/rpcpb"
@@ -49,7 +48,7 @@ func NewCommand() *cobra.Command {
 		Short: "Start a network runner controller.",
 	}
 
-	cmd.PersistentFlags().StringVar(&logLevel, "log-level", level.Info.String(), "log level")
+	cmd.PersistentFlags().StringVar(&logLevel, "log-level", log.InfoLevel.String(), "log level")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
 	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "0.0.0.0:9000", "server endpoint")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")

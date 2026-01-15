@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 
-	"github.com/luxfi/vm/vms/exchangevm"
-	"github.com/luxfi/vm/vms/platformvm"
+	"github.com/luxfi/sdk/api/exchangevm"
+	"github.com/luxfi/sdk/api/platformvm"
 	"github.com/luxfi/sdk/api/admin"
 	"github.com/luxfi/sdk/api/health"
 	"github.com/luxfi/sdk/api/indexer"
