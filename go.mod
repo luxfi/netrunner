@@ -12,28 +12,30 @@ require (
 	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.4
 	github.com/luxfi/address v1.0.1
+	github.com/luxfi/atomic v0.0.1
+	github.com/luxfi/compress v0.0.3
 	github.com/luxfi/config v1.1.1
-	github.com/luxfi/consensus v1.22.53
 	github.com/luxfi/constants v1.4.3
-	github.com/luxfi/crypto v1.17.39
+	github.com/luxfi/crypto v1.17.40
 	github.com/luxfi/genesis v1.5.21
 	github.com/luxfi/geth v1.16.69
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.9
 	github.com/luxfi/keys v1.0.7
-	github.com/luxfi/log v1.2.1
+	github.com/luxfi/log v1.3.0
 	github.com/luxfi/math v1.2.3
 	github.com/luxfi/metric v1.4.10
+	github.com/luxfi/node v1.22.81
 	github.com/luxfi/p2p v1.18.7
+	github.com/luxfi/protocol v0.0.2
 	github.com/luxfi/sdk v1.16.44
-	github.com/luxfi/sdk/api v0.0.2
+	github.com/luxfi/utxo v0.0.1
 	github.com/luxfi/version v1.0.1
 	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.3
 	github.com/otiai10/copy v1.14.1
-	github.com/prometheus/client_golang v1.23.2
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.46.0
@@ -50,16 +52,22 @@ require (
 	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/kr/fs v0.1.0 // indirect
-	github.com/luxfi/codec v1.1.2 // indirect
-	github.com/luxfi/compress v0.0.3 // indirect
-	github.com/luxfi/concurrent v0.0.2 // indirect
-	github.com/luxfi/container v0.0.2 // indirect
-	github.com/luxfi/formatting v1.0.0 // indirect
-	github.com/luxfi/pubsub v1.0.0 // indirect
+	github.com/luxfi/codec v1.1.3 // indirect
+	github.com/luxfi/concurrent v0.0.3 // indirect
+	github.com/luxfi/consensus v1.22.53 // indirect
+	github.com/luxfi/const v1.4.1 // indirect
+	github.com/luxfi/container v0.0.4 // indirect
+	github.com/luxfi/formatting v1.0.1 // indirect
+	github.com/luxfi/precompile v0.4.5 // indirect
+	github.com/luxfi/sdk/api v0.0.2 // indirect
 	github.com/luxfi/staking v1.1.0 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/melbahja/goph v1.4.0 // indirect
+	github.com/pires/go-proxyproto v0.8.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
-	github.com/posthog/posthog-go v1.6.1 // indirect
+	github.com/posthog/posthog-go v1.8.2 // indirect
+	github.com/prometheus/client_golang v1.23.2 // indirect
 )
 
 require (
@@ -94,22 +102,22 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/renameio/v2 v2.0.0 // indirect
+	github.com/google/renameio/v2 v2.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/luxfi/cache v1.2.0 // indirect
 	github.com/luxfi/database v1.17.38 // indirect
 	github.com/luxfi/evm v0.8.30 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
-	github.com/luxfi/keychain v1.0.1 // indirect
+	github.com/luxfi/keychain v1.0.2 // indirect
 	github.com/luxfi/math/big v0.1.0 // indirect
 	github.com/luxfi/math/safe v0.0.1 // indirect
-	github.com/luxfi/mock v0.1.0 // indirect
+	github.com/luxfi/mock v0.1.1 // indirect
 	github.com/luxfi/rpc v1.0.0
 	github.com/luxfi/sampler v1.0.0 // indirect
 	github.com/luxfi/tls v1.0.3
@@ -164,10 +172,6 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
-replace (
-	github.com/luxfi/atomic => ../atomic
-	github.com/luxfi/consensus => ../consensus
-	github.com/luxfi/protocol => ../protocol
-	github.com/luxfi/genesis => ../genesis
-	github.com/luxfi/log => github.com/luxfi/logger v1.3.1
-)
+replace github.com/luxfi/log => ../log
+
+replace github.com/luxfi/genesis => ../genesis

@@ -3,12 +3,12 @@ package api
 import (
 	"fmt"
 
-	"github.com/luxfi/sdk/api/exchangevm"
-	"github.com/luxfi/sdk/api/platformvm"
-	"github.com/luxfi/sdk/api/admin"
-	"github.com/luxfi/sdk/api/health"
-	"github.com/luxfi/sdk/api/indexer"
-	"github.com/luxfi/sdk/api/info"
+	"github.com/luxfi/sdk/exchangevm"
+	"github.com/luxfi/sdk/platformvm"
+	"github.com/luxfi/sdk/admin"
+	"github.com/luxfi/sdk/health"
+	"github.com/luxfi/sdk/indexer"
+	sdkinfo "github.com/luxfi/sdk/info"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 
@@ -25,7 +25,7 @@ type APIClient struct {
 	xChainWallet *exchangevm.WalletClient
 	cChain       interface{} // evmclient.Client
 	cChainEth    EthClient
-	info         *info.Client
+	info         *sdkinfo.Client
 	health       *health.Client
 	admin        *admin.Client
 	pindex       *indexer.Client
@@ -44,7 +44,7 @@ func NewAPIClient(ipAddr string, port uint16) Client {
 	platformClient := platformvm.NewClient(uri)
 	xChainClient := exchangevm.NewClient(uri, "X")
 	xChainWalletClient := exchangevm.NewWalletClient(uri, "X")
-	infoClient := info.NewClient(uri)
+	infoClient := sdkinfo.NewClient(uri)
 	healthClient := health.NewClient(uri)
 	adminClient := admin.NewClient(uri)
 	pindexClient := indexer.NewClient(uri + "/ext/index/P/block")
@@ -84,7 +84,7 @@ func (c APIClient) CChainEthAPI() EthClient {
 	return c.cChainEth
 }
 
-func (c APIClient) InfoAPI() *info.Client {
+func (c APIClient) InfoAPI() *sdkinfo.Client {
 	return c.info
 }
 

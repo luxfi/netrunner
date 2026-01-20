@@ -15,6 +15,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -752,7 +753,7 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 	// so this node won't try to use itself as a beacon.
 	if !isPausedNode && nodeConfig.IsBeacon {
 		err = ln.bootstraps.Add(beacon.New(nodeID, netip.AddrPortFrom(
-			netip.IPv6Loopback(),
+			netip.MustParseAddr("127.0.0.1"),
 			nodeData.p2pPort,
 		)))
 	}
@@ -800,14 +801,22 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 		errGr.Go(func() error {
 			// Every [healthCheckFreq], query node for health status.
 			// Do this until ctx timeout or network closed.
+			retryCount := 0
+			ln.logger.Info("health check goroutine started", log.String("node", nodeName))
 			for {
-				if node.Status() != status.Running {
+				retryCount++
+				ln.logger.Info("health check iteration", log.String("node", nodeName), log.Int("retry", retryCount))
+
+				nodeStatus := node.Status()
+				if nodeStatus != status.Running {
 					// If we had stopped this node ourselves, it wouldn't be in [ln.nodes].
 					// Since it is, it means the node stopped unexpectedly.
-					return fmt.Errorf("node %q stopped unexpectedly", nodeName)
+					ln.logger.Warn("node not running during health check", log.String("node", nodeName), log.String("status", string(nodeStatus)))
+					return fmt.Errorf("node %q stopped unexpectedly (status=%s)", nodeName, nodeStatus)
 				}
 				healthClient := node.client.HealthAPI()
 				if healthClient == nil {
+					ln.logger.Error("health client is nil", log.String("node", nodeName))
 					return fmt.Errorf("health client is nil for node %v", nodeName)
 				}
 				// Use Readiness instead of Health for local testnets
@@ -815,13 +824,20 @@ func (ln *localNetwork) healthy(ctx context.Context) error {
 				// which is expected behavior for isolated test networks
 				health, err := healthClient.Readiness(ctx, nil)
 				if err == nil && health.Healthy {
-					ln.logger.Debug("node became ready", log.String("name", nodeName))
+					ln.logger.Info("node became ready", log.String("name", nodeName))
 					return nil
+				}
+				if err != nil {
+					ln.logger.Info("health check error (will retry)", log.String("node", nodeName), log.Err(err))
+				} else {
+					ln.logger.Info("health check unhealthy (will retry)", log.String("node", nodeName), log.Bool("healthy", health.Healthy))
 				}
 				select {
 				case <-ctx.Done():
-					return fmt.Errorf("node %q failed to become healthy within timeout, or network stopped", nodeName)
+					ln.logger.Warn("context done during health check - RETURNING ERROR", log.String("node", nodeName), log.Int("retries", retryCount), log.Err(ctx.Err()))
+					return fmt.Errorf("node %q failed to become healthy within timeout, or network stopped (retries=%d, ctxErr=%v)", nodeName, retryCount, ctx.Err())
 				case <-time.After(healthCheckFreq):
+					ln.logger.Info("will retry health check", log.String("node", nodeName))
 				}
 			}
 		})
@@ -875,6 +891,12 @@ func (ln *localNetwork) GetAllNodes() (map[string]node.Node, error) {
 }
 
 func (ln *localNetwork) Stop(ctx context.Context) error {
+	ln.logger.Info("Stop() called, capturing stack trace")
+	// Log stack trace to understand who's calling Stop
+	buf := make([]byte, 4096)
+	n := runtime.Stack(buf, false)
+	ln.logger.Info("Stop() stack trace", log.String("stack", string(buf[:n])))
+
 	err := network.ErrStopped
 	ln.stopOnce.Do(
 		func() {

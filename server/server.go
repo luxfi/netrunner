@@ -52,10 +52,12 @@ const (
 
 	stopTimeout         = 5 * time.Second
 	defaultStartTimeout = 5 * time.Minute
-	// waitForHealthyTimeout - 60s for local 5-node network bootstrap
+	// waitForHealthyTimeout - 7 minutes for mainnet network bootstrap
+	// Node's monitorBootstrap has a 5-minute timeout, so we need to exceed that
 	// First startup takes longer as nodes need to establish consensus
 	// Subsequent restarts are faster (<10s) but initial bootstrap needs time
-	waitForHealthyTimeout = 60 * time.Second
+	// P-Chain API may return 503 for up to 60s after health check passes
+	waitForHealthyTimeout = 7 * time.Minute
 	// chainDeployTimeout - time for chain deploy operations including node restarts
 	// Chain creation, node restart, and P-chain sync can take 60-90s
 	chainDeployTimeout = 120 * time.Second
