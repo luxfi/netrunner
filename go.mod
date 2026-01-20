@@ -12,24 +12,24 @@ require (
 	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.4
 	github.com/luxfi/address v1.0.1
-	github.com/luxfi/atomic v0.0.1
-	github.com/luxfi/compress v0.0.3
+	github.com/luxfi/atomic v1.0.0
+	github.com/luxfi/compress v0.0.4
 	github.com/luxfi/config v1.1.1
 	github.com/luxfi/constants v1.4.3
 	github.com/luxfi/crypto v1.17.40
-	github.com/luxfi/genesis v1.5.21
-	github.com/luxfi/geth v1.16.69
+	github.com/luxfi/genesis v1.5.22
+	github.com/luxfi/geth v1.16.73
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.9
 	github.com/luxfi/keys v1.0.7
-	github.com/luxfi/log v1.3.0
+	github.com/luxfi/log v1.4.1
 	github.com/luxfi/math v1.2.3
-	github.com/luxfi/metric v1.4.10
-	github.com/luxfi/node v1.22.81
-	github.com/luxfi/p2p v1.18.7
+	github.com/luxfi/metric v1.4.11
+	github.com/luxfi/node v1.22.88
+	github.com/luxfi/p2p v1.18.8
 	github.com/luxfi/protocol v0.0.2
 	github.com/luxfi/sdk v1.16.44
-	github.com/luxfi/utxo v0.0.1
+	github.com/luxfi/utxo v0.2.3
 	github.com/luxfi/version v1.0.1
 	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.3
@@ -48,13 +48,15 @@ require (
 )
 
 require (
+	github.com/StephenButtolph/canoto v0.17.3 // indirect
 	github.com/btcsuite/btcutil v1.0.2 // indirect
+	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/luxfi/codec v1.1.3 // indirect
 	github.com/luxfi/concurrent v0.0.3 // indirect
-	github.com/luxfi/consensus v1.22.53 // indirect
+	github.com/luxfi/consensus v1.22.56 // indirect
 	github.com/luxfi/const v1.4.1 // indirect
 	github.com/luxfi/container v0.0.4 // indirect
 	github.com/luxfi/formatting v1.0.1 // indirect
@@ -110,8 +112,8 @@ require (
 	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
-	github.com/luxfi/cache v1.2.0 // indirect
-	github.com/luxfi/database v1.17.38 // indirect
+	github.com/luxfi/cache v1.2.1 // indirect
+	github.com/luxfi/database v1.17.39 // indirect
 	github.com/luxfi/evm v0.8.30 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
 	github.com/luxfi/keychain v1.0.2 // indirect
@@ -123,8 +125,8 @@ require (
 	github.com/luxfi/tls v1.0.3
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/upgrade v1.0.0 // indirect
-	github.com/luxfi/vm v1.0.16
-	github.com/luxfi/warp v1.18.4 // indirect
+	github.com/luxfi/vm v1.0.20
+	github.com/luxfi/warp v1.18.5 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
