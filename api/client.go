@@ -7,21 +7,21 @@ import (
 	ethereum "github.com/luxfi/geth"
 	"github.com/luxfi/geth/common"
 	"github.com/luxfi/geth/core/types"
-	"github.com/luxfi/sdk/api/exchangevm"
-	"github.com/luxfi/sdk/api/platformvm"
+	"github.com/luxfi/sdk/exchangevm"
+	"github.com/luxfi/sdk/platformvm"
 	"github.com/luxfi/rpc"
-	"github.com/luxfi/sdk/api/admin"
-	"github.com/luxfi/sdk/api/health"
-	"github.com/luxfi/sdk/api/indexer"
-	"github.com/luxfi/sdk/api/info"
+	"github.com/luxfi/sdk/admin"
+	apihealth "github.com/luxfi/api/health"
+	"github.com/luxfi/sdk/indexer"
+	sdkinfo "github.com/luxfi/sdk/info"
 	// evmclient "github.com/luxfi/evm/plugin/evm/client"
 )
 
 // HealthClient is the interface for health API client operations
 type HealthClient interface {
-	Readiness(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error)
-	Health(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error)
-	Liveness(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error)
+	Readiness(ctx context.Context, tags []string, options ...rpc.Option) (*apihealth.APIReply, error)
+	Health(ctx context.Context, tags []string, options ...rpc.Option) (*apihealth.APIReply, error)
+	Liveness(ctx context.Context, tags []string, options ...rpc.Option) (*apihealth.APIReply, error)
 }
 
 // EthClient is the interface for ethereum client operations
@@ -70,7 +70,7 @@ type Client interface {
 	XChainWalletAPI() *exchangevm.WalletClient
 	CChainAPI() interface{}  // evmclient.Client
 	CChainEthAPI() EthClient // ethclient websocket wrapper that adds mutexed calls, and lazy conn init (on first call)
-	InfoAPI() *info.Client
+	InfoAPI() *sdkinfo.Client
 	HealthAPI() HealthClient
 	AdminAPI() *admin.Client
 	PChainIndexAPI() *indexer.Client

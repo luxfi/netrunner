@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"maps"
 	"slices"
@@ -173,87 +174,87 @@ func (lc *localNetwork) createConfig() error {
 	}
 
 	lc.log.Info("createConfig networkID parsed", "networkID", networkID, "MainnetID", constants.MainnetID, "TestnetID", constants.TestnetID)
+	fmt.Fprintf(os.Stderr, "DEBUG: rootDataDir=%s\n", lc.options.rootDataDir)
 
 	// CRITICAL: Check if we're resuming from existing state.
 	// If node1/genesis.json exists AND node1/db has data, we MUST use the existing genesis
-	// to avoid "db contains invalid genesis hash" errors. JSON serialization is non-deterministic
-	// due to Go map iteration order, so regenerating genesis produces different bytes.
+	// AND the existing staking keys to avoid validator mismatch errors.
 	existingGenesis, isResume := lc.checkForExistingGenesis()
+	fmt.Fprintf(os.Stderr, "DEBUG: checkForExistingGenesis returned isResume=%v, genesisLen=%d\n", isResume, len(existingGenesis))
 	if isResume {
-		ux.Print(lc.log, log.Green.Wrap("📂 RESUME DETECTED: Using existing genesis from %s"), lc.options.rootDataDir)
-		fmt.Fprintf(os.Stderr, "📂 RESUME DETECTED: Using existing genesis from %s\n", lc.options.rootDataDir)
+		ux.Print(lc.log, log.Green.Wrap("📂 RESUME DETECTED: Loading existing genesis AND staking keys from %s"), lc.options.rootDataDir)
+		fmt.Fprintf(os.Stderr, "📂 RESUME DETECTED: Loading existing genesis AND staking keys from %s\n", lc.options.rootDataDir)
+
+		// CRITICAL: When resuming from a snapshot, we MUST use the existing staking keys
+		// from the snapshot, not generate new ones from ~/.lux/keys/. The snapshot's genesis
+		// contains NodeIDs that match the snapshot's staking keys. Using different keys
+		// causes validator mismatch and nodes fail to start.
+		cfg, err = local.NewConfigFromExistingSnapshot(
+			lc.options.execPath,
+			lc.options.rootDataDir,
+			existingGenesis,
+			lc.options.numNodes,
+			9630, // default port base
+		)
+		if err != nil {
+			return fmt.Errorf("failed to load config from existing snapshot: %w", err)
+		}
 	} else {
-		fmt.Fprintf(os.Stderr, "DEBUG: Not resuming - checkForExistingGenesis returned false (rootDataDir=%s)\n", lc.options.rootDataDir)
-	}
+		fmt.Fprintf(os.Stderr, "DEBUG: Fresh start - generating new config (rootDataDir=%s)\n", lc.options.rootDataDir)
 
-	// Use the appropriate genesis configuration based on network ID
-	// CRITICAL: For mainnet/testnet, ALWAYS use canonical genesis to ensure byte-for-byte
-	// deterministic output. This prevents "db contains invalid genesis hash" errors on restart.
-	// The canonical genesis files are pre-serialized and never re-generated.
+		// Use the appropriate genesis configuration based on network ID
+		// CRITICAL: For mainnet/testnet, ALWAYS use canonical genesis to ensure byte-for-byte
+		// deterministic output. This prevents "db contains invalid genesis hash" errors on restart.
+		// The canonical genesis files are pre-serialized and never re-generated.
 
-	// Check if LUX_MNEMONIC is set - if so, use mnemonic-based config to generate
-	// genesis with funds allocated to the mnemonic-derived address
-	mnemonic := os.Getenv("LUX_MNEMONIC")
-	useMnemonic := mnemonic != ""
+		// Check if LUX_MNEMONIC is set - if so, use mnemonic-based config to generate
+		// genesis with funds allocated to the mnemonic-derived address
+		mnemonic := os.Getenv("LUX_MNEMONIC")
+		useMnemonic := mnemonic != ""
 
-	switch networkID {
-	case constants.MainnetID: // LUX Mainnet (1)
-		if useMnemonic {
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading mainnet genesis FROM MNEMONIC (funds allocated to derived address)"))
-			cfg, err = local.NewMainnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
-		} else {
-			// ALWAYS use canonical genesis for mainnet - never regenerate
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL mainnet genesis (deterministic bytes)"))
-			cfg, err = local.NewCanonicalMainnetConfig(lc.options.execPath, lc.options.numNodes)
-		}
-	case constants.TestnetID: // LUX Testnet (2)
-		if useMnemonic {
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading testnet genesis FROM MNEMONIC (funds allocated to derived address)"))
-			cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
-		} else {
-			// ALWAYS use canonical genesis for testnet - never regenerate
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL testnet genesis (deterministic bytes)"))
-			cfg, err = local.NewCanonicalTestnetConfig(lc.options.execPath, lc.options.numNodes)
-		}
-	case constants.DevnetID: // LUX Devnet (3)
-		if useMnemonic {
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading devnet genesis FROM MNEMONIC (funds allocated to derived address)"))
-			cfg, err = local.NewDevnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
-		} else {
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
-			cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
-		}
-	case constants.CustomID: // Custom/Local (1337)
-		if useMnemonic {
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading custom genesis FROM MNEMONIC (funds allocated to derived address)"))
-			cfg, err = local.NewLocalConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
-		} else {
-			// Use canonical genesis for custom network
-			ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL custom genesis (deterministic bytes)"))
-			cfg, err = local.NewCanonicalCustomConfig(lc.options.execPath, lc.options.numNodes)
-		}
-	default:
-		// Fallback for unknown network IDs
-		ux.Print(lc.log, "%s", log.Orange.Wrap(fmt.Sprintf("Unknown network ID %d, using default config", networkID)))
-		cfg, err = local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
-	}
-	if err != nil {
-		return err
-	}
-
-	// For resume scenarios, verify genesis matches (but don't override for mainnet/testnet
-	// since canonical genesis is already deterministic)
-	if isResume && existingGenesis != "" {
-		if cfg.Genesis != existingGenesis {
-			if networkID == constants.MainnetID || networkID == constants.TestnetID {
-				// Log warning but use canonical - this shouldn't happen with proper setup
-				ux.Print(lc.log, "%s", log.Orange.Wrap("WARNING: Existing genesis differs from canonical. Using canonical."))
-				fmt.Fprintf(os.Stderr, "WARNING: Genesis mismatch detected. Using canonical genesis.\n")
+		switch networkID {
+		case constants.MainnetID: // LUX Mainnet (1)
+			if useMnemonic {
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading mainnet genesis FROM MNEMONIC (funds allocated to derived address)"))
+				cfg, err = local.NewMainnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
 			} else {
-				// For custom networks, use existing genesis to preserve state
-				ux.Print(lc.log, "%s", log.Green.Wrap("Using existing genesis for custom network"))
-				cfg.Genesis = existingGenesis
+				// ALWAYS use canonical genesis for mainnet - never regenerate
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL mainnet genesis (deterministic bytes)"))
+				cfg, err = local.NewCanonicalMainnetConfig(lc.options.execPath, lc.options.numNodes)
 			}
+		case constants.TestnetID: // LUX Testnet (2)
+			if useMnemonic {
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading testnet genesis FROM MNEMONIC (funds allocated to derived address)"))
+				cfg, err = local.NewTestnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+			} else {
+				// ALWAYS use canonical genesis for testnet - never regenerate
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL testnet genesis (deterministic bytes)"))
+				cfg, err = local.NewCanonicalTestnetConfig(lc.options.execPath, lc.options.numNodes)
+			}
+		case constants.DevnetID: // LUX Devnet (3)
+			if useMnemonic {
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading devnet genesis FROM MNEMONIC (funds allocated to derived address)"))
+				cfg, err = local.NewDevnetConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+			} else {
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
+				cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
+			}
+		case constants.CustomID: // Custom/Local (1337)
+			if useMnemonic {
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading custom genesis FROM MNEMONIC (funds allocated to derived address)"))
+				cfg, err = local.NewLocalConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
+			} else {
+				// Use canonical genesis for custom network
+				ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL custom genesis (deterministic bytes)"))
+				cfg, err = local.NewCanonicalCustomConfig(lc.options.execPath, lc.options.numNodes)
+			}
+		default:
+			// Fallback for unknown network IDs
+			ux.Print(lc.log, "%s", log.Orange.Wrap(fmt.Sprintf("Unknown network ID %d, using default config", networkID)))
+			cfg, err = local.NewDefaultConfigNNodes(lc.options.execPath, lc.options.numNodes)
+		}
+		if err != nil {
+			return err
 		}
 	}
 
@@ -699,9 +700,27 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 	if pChainClient == nil {
 		return fmt.Errorf("P-Chain client is nil")
 	}
+
+	// Retry GetBlockchains with exponential backoff
+	// The P-Chain may still be initializing even after health check passes
+	maxRetries := 120
+	retryInterval := 500 * time.Millisecond
 	blockchains, err := (*pChainClient).GetBlockchains(ctx)
+	for i := 1; err != nil && i < maxRetries; i++ {
+		lc.log.Debug("P-Chain GetBlockchains failed, retrying...",
+			log.Int("attempt", i+1),
+			log.Int("maxRetries", maxRetries),
+			log.Err(err))
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for P-Chain: %w", ctx.Err())
+		case <-time.After(retryInterval):
+			// Continue to next retry
+		}
+		blockchains, err = (*pChainClient).GetBlockchains(ctx)
+	}
 	if err != nil {
-		return err
+		return fmt.Errorf("P-Chain GetBlockchains failed after %d retries: %w", maxRetries, err)
 	}
 
 	for _, blockchain := range blockchains {
@@ -720,9 +739,23 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 		}
 	}
 
+	// Retry GetNets with same logic
 	chains, err := (*pChainClient).GetNets(ctx, nil)
+	for i := 1; err != nil && i < maxRetries; i++ {
+		lc.log.Debug("P-Chain GetNets failed, retrying...",
+			log.Int("attempt", i+1),
+			log.Int("maxRetries", maxRetries),
+			log.Err(err))
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for P-Chain GetNets: %w", ctx.Err())
+		case <-time.After(retryInterval):
+			// Continue to next retry
+		}
+		chains, err = (*pChainClient).GetNets(ctx, nil)
+	}
 	if err != nil {
-		return err
+		return fmt.Errorf("P-Chain GetNets failed after %d retries: %w", maxRetries, err)
 	}
 
 	chainIDList := []string{}
@@ -823,7 +856,9 @@ func (lc *localNetwork) awaitHealthyAndUpdateNetworkInfo(ctx context.Context) er
 	}
 
 	if err := lc.updateChainInfo(ctx); err != nil {
-		return err
+		// For fresh mainnet/testnet starts, P-Chain API may not be ready immediately
+		// This is non-fatal since updateChainInfo only populates custom chain info
+		lc.log.Warn("updateChainInfo failed (non-fatal for initial start)", log.Err(err))
 	}
 
 	nodeNames := slices.Collect(maps.Keys(lc.nodeInfos))

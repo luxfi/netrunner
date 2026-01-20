@@ -22,9 +22,9 @@ import (
 
 	luxd_ "github.com/luxfi/constants"
 	"github.com/luxfi/p2p/message"
-	"github.com/luxfi/sdk/api/admin"
+	"github.com/luxfi/sdk/admin"
 
-	"github.com/luxfi/sdk/api/platformvm"
+	"github.com/luxfi/sdk/platformvm"
 
 	"github.com/luxfi/ids"
 	log "github.com/luxfi/log"
