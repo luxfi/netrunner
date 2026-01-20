@@ -570,6 +570,80 @@ func NewConfigForNetworkWithCustomGenesis(binaryPath string, numNodes uint32, ge
 	return netConfig, nil
 }
 
+// NewConfigFromExistingSnapshot loads network config from an existing snapshot.
+// This is used when resuming from a snapshot to preserve the original staking keys
+// and genesis, ensuring NodeIDs match what's in the genesis validator set.
+//
+// Parameters:
+//   - binaryPath: Path to the luxd binary
+//   - rootDataDir: Path to the extracted snapshot (e.g., ~/.lux/runs/mainnet/current)
+//   - existingGenesis: The genesis JSON string from the snapshot
+//   - numNodes: Number of nodes to configure
+//   - portBase: Starting port for HTTP (staking port = HTTP + 1)
+//
+// The rootDataDir should contain node directories (node1, node2, ...) with:
+//   - luxtls.key: TLS private key
+//   - luxtls.crt: TLS certificate
+//   - signer.key: BLS signer key (optional)
+func NewConfigFromExistingSnapshot(binaryPath string, rootDataDir string, existingGenesis string, numNodes uint32, portBase int) (network.Config, error) {
+	netConfig := NewDefaultConfig(binaryPath)
+	netConfig.Genesis = existingGenesis
+
+	fmt.Printf("📂 Loading config from existing snapshot at %s\n", rootDataDir)
+
+	nodeConfigs := make([]node.Config, numNodes)
+	for i := uint32(0); i < numNodes; i++ {
+		nodeName := fmt.Sprintf("node%d", i+1)
+		nodeDir := filepath.Join(rootDataDir, nodeName)
+
+		// Load staking key
+		stakingKeyPath := filepath.Join(nodeDir, "luxtls.key")
+		stakingKey, err := os.ReadFile(stakingKeyPath)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to read staking key for %s from %s: %w", nodeName, stakingKeyPath, err)
+		}
+
+		// Load staking cert
+		stakingCertPath := filepath.Join(nodeDir, "luxtls.crt")
+		stakingCert, err := os.ReadFile(stakingCertPath)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to read staking cert for %s from %s: %w", nodeName, stakingCertPath, err)
+		}
+
+		// Load BLS signer key (optional - may not exist in older snapshots)
+		signerKeyPath := filepath.Join(nodeDir, "signer.key")
+		var signerKeyB64 string
+		if signerKey, err := os.ReadFile(signerKeyPath); err == nil {
+			signerKeyB64 = base64.StdEncoding.EncodeToString(signerKey)
+		}
+
+		port := portBase + int(i)*2
+		nodeConfigs[i] = node.Config{
+			Flags: map[string]interface{}{
+				config.HTTPPortKey:    port,
+				config.StakingPortKey: port + 1,
+			},
+			StakingKey:         string(stakingKey),
+			StakingCert:        string(stakingCert),
+			StakingSigningKey:  signerKeyB64,
+			IsBeacon:           true,
+			ChainConfigFiles:   map[string]string{},
+			UpgradeConfigFiles: map[string]string{},
+			PChainConfigFiles:  map[string]string{},
+		}
+
+		// Compute and log NodeID for verification
+		nodeID, err := utils.ToNodeID(stakingKey, stakingCert)
+		if err == nil {
+			fmt.Printf("  %s: NodeID=%s (from snapshot)\n", nodeName, nodeID.String())
+		}
+	}
+	netConfig.NodeConfigs = nodeConfigs
+
+	fmt.Printf("✅ Loaded %d node configs from existing snapshot\n", numNodes)
+	return netConfig, nil
+}
+
 // NewConfigWithPreExistingKeys creates a network config using pre-existing validator keys.
 // This is useful for:
 // - Maintaining consistent NodeIDs across network restarts

@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	health "github.com/luxfi/sdk/api/health"
+	apihealth "github.com/luxfi/api/health"
 	mock "github.com/stretchr/testify/mock"
 
 	rpc "github.com/luxfi/rpc"
@@ -17,7 +17,7 @@ type Client struct {
 }
 
 // Health provides a mock function with given fields: ctx, tags, options
-func (_m *Client) Health(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error) {
+func (_m *Client) Health(ctx context.Context, tags []string, options ...rpc.Option) (*apihealth.APIReply, error) {
 	_va := make([]interface{}, len(options))
 	for _i := range options {
 		_va[_i] = options[_i]
@@ -27,16 +27,16 @@ func (_m *Client) Health(ctx context.Context, tags []string, options ...rpc.Opti
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *health.APIReply
+	var r0 *apihealth.APIReply
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) (*health.APIReply, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) (*apihealth.APIReply, error)); ok {
 		return rf(ctx, tags, options...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) *health.APIReply); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) *apihealth.APIReply); ok {
 		r0 = rf(ctx, tags, options...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*health.APIReply)
+			r0 = ret.Get(0).(*apihealth.APIReply)
 		}
 	}
 
@@ -50,7 +50,7 @@ func (_m *Client) Health(ctx context.Context, tags []string, options ...rpc.Opti
 }
 
 // Liveness provides a mock function with given fields: ctx, tags, options
-func (_m *Client) Liveness(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error) {
+func (_m *Client) Liveness(ctx context.Context, tags []string, options ...rpc.Option) (*apihealth.APIReply, error) {
 	_va := make([]interface{}, len(options))
 	for _i := range options {
 		_va[_i] = options[_i]
@@ -60,16 +60,16 @@ func (_m *Client) Liveness(ctx context.Context, tags []string, options ...rpc.Op
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *health.APIReply
+	var r0 *apihealth.APIReply
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) (*health.APIReply, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) (*apihealth.APIReply, error)); ok {
 		return rf(ctx, tags, options...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) *health.APIReply); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) *apihealth.APIReply); ok {
 		r0 = rf(ctx, tags, options...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*health.APIReply)
+			r0 = ret.Get(0).(*apihealth.APIReply)
 		}
 	}
 
@@ -83,7 +83,7 @@ func (_m *Client) Liveness(ctx context.Context, tags []string, options ...rpc.Op
 }
 
 // Readiness provides a mock function with given fields: ctx, tags, options
-func (_m *Client) Readiness(ctx context.Context, tags []string, options ...rpc.Option) (*health.APIReply, error) {
+func (_m *Client) Readiness(ctx context.Context, tags []string, options ...rpc.Option) (*apihealth.APIReply, error) {
 	_va := make([]interface{}, len(options))
 	for _i := range options {
 		_va[_i] = options[_i]
@@ -93,16 +93,16 @@ func (_m *Client) Readiness(ctx context.Context, tags []string, options ...rpc.O
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
-	var r0 *health.APIReply
+	var r0 *apihealth.APIReply
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) (*health.APIReply, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) (*apihealth.APIReply, error)); ok {
 		return rf(ctx, tags, options...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) *health.APIReply); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, []string, ...rpc.Option) *apihealth.APIReply); ok {
 		r0 = rf(ctx, tags, options...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*health.APIReply)
+			r0 = ret.Get(0).(*apihealth.APIReply)
 		}
 	}
 

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	apihealth "github.com/luxfi/api/health"
 	"github.com/luxfi/config"
 	"github.com/luxfi/ids"
 	log "github.com/luxfi/log"
@@ -27,7 +28,6 @@ import (
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
 	"github.com/luxfi/rpc"
-	"github.com/luxfi/sdk/api/health"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -98,7 +98,7 @@ func (*localTestFlagCheckProcessCreator) GetNodeVersion(_ node.Config) (string, 
 // TODO have this method return an API Client that has all
 // APIs and methods implemented
 func newMockAPISuccessful(string, uint16) api.Client {
-	healthReply := &health.APIReply{Healthy: true}
+	healthReply := &apihealth.APIReply{Healthy: true}
 	healthClient := &healthmocks.Client{}
 	// Mock Readiness (used by local network health check)
 	healthClient.On("Readiness", mock.Anything, mock.Anything).Return(healthReply, nil)
@@ -113,7 +113,7 @@ func newMockAPISuccessful(string, uint16) api.Client {
 
 // Returns an API client where the Health API's Readiness method always returns unhealthy
 func newMockAPIUnhealthy(string, uint16) api.Client {
-	healthReply := &health.APIReply{Healthy: false}
+	healthReply := &apihealth.APIReply{Healthy: false}
 	healthClient := &healthmocks.Client{}
 	// Mock Readiness (used by local network health check)
 	healthClient.On("Readiness", mock.Anything, mock.Anything).Return(healthReply, nil)
@@ -528,6 +528,10 @@ func TestGenerateDefaultNetwork(t *testing.T) {
 	require := require.New(t)
 	binaryPath := "pepito"
 	networkConfig := NewDefaultConfig(binaryPath)
+	for i := range networkConfig.NodeConfigs {
+		delete(networkConfig.NodeConfigs[i].Flags, config.HTTPPortKey)
+		delete(networkConfig.NodeConfigs[i].Flags, config.StakingPortKey)
+	}
 	// Use reassignPortsIfUsed=true to avoid port conflicts in CI/parallel tests
 	net, err := newNetwork(log.NoLog{}, newMockAPISuccessful, &localTestSuccessfulNodeProcessCreator{}, "", "", true)
 	require.NoError(err)
@@ -1307,7 +1311,7 @@ func newMockAPIHealthyBlocks(string, uint16) api.Client {
 	healthClient.On("Readiness", mock.MatchedBy(func(_ context.Context) bool {
 		return true
 	}), mock.Anything, mock.Anything).Return(
-		func(ctx context.Context, _ []string, _ ...rpc.Option) *health.APIReply {
+		func(ctx context.Context, _ []string, _ ...rpc.Option) *apihealth.APIReply {
 			<-ctx.Done()
 			return nil
 		},

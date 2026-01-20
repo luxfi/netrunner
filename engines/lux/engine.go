@@ -13,8 +13,9 @@ import (
 
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/engines"
-	"github.com/luxfi/node/api/health"
-	"github.com/luxfi/sdk/api/info"
+	apiinfo "github.com/luxfi/api/info"
+	sdkhealth "github.com/luxfi/sdk/health"
+	sdkinfo "github.com/luxfi/sdk/info"
 )
 
 func init() {
@@ -33,8 +34,8 @@ type LuxEngine struct {
 	dataDir      string
 	config       *engines.NodeConfig
 	process      *exec.Cmd
-	infoClient   *info.Client
-	healthClient *health.Client
+	infoClient   *sdkinfo.Client
+	healthClient *sdkhealth.Client
 	startTime    time.Time
 
 	// Cached info
@@ -115,8 +116,8 @@ func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error
 	e.startTime = time.Now()
 
 	// Setup RPC clients
-	e.infoClient = info.NewClient(e.RPCEndpoint())
-	e.healthClient = health.NewClient(e.RPCEndpoint())
+	e.infoClient = sdkinfo.NewClient(e.RPCEndpoint())
+	e.healthClient = sdkhealth.NewClient(e.RPCEndpoint())
 
 	// Wait for node to be responsive
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -188,13 +189,13 @@ func (e *LuxEngine) Health(ctx context.Context) (*engines.HealthStatus, error) {
 	// Get peers
 	peers, err := e.infoClient.Peers(ctx, nil)
 	if err != nil {
-		peers = []info.Peer{}
+		peers = []apiinfo.Peer{}
 	}
 
 	// Get version
 	versions, err := e.infoClient.GetNodeVersion(ctx)
 	if err != nil {
-		versions = &info.GetNodeVersionReply{}
+		versions = &apiinfo.GetNodeVersionReply{}
 	}
 
 	return &engines.HealthStatus{
