@@ -177,3 +177,4 @@ require (
 replace github.com/luxfi/log => ../log
 
 replace github.com/luxfi/genesis => ../genesis
+
