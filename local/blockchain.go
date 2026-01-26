@@ -1340,7 +1340,14 @@ func getDefaultKey() (*secp256k1.PrivateKey, error) {
 	if len(loadedKeys) == 0 {
 		return nil, errors.New("no keys found in ~/.lux/keys")
 	}
-	fmt.Printf("🔑 getDefaultKey: Loaded key from disk: %s...\n", loadedKeys[0].PrivKeyHex[:16])
+	if loadedKeys[0].PrivKeyHex == "" {
+		return nil, errors.New("loaded key has no EC private key - run 'lux keys generate' to create one")
+	}
+	keyPreview := loadedKeys[0].PrivKeyHex
+	if len(keyPreview) > 16 {
+		keyPreview = keyPreview[:16]
+	}
+	fmt.Printf("🔑 getDefaultKey: Loaded key from disk: %s...\n", keyPreview)
 	// Convert hex to private key
 	privKeyBytes, err := hex.DecodeString(loadedKeys[0].PrivKeyHex)
 	if err != nil {
