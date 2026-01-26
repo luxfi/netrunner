@@ -1169,3 +1169,148 @@ func NewDevnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Co
 func NewLocalConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
 	return NewConfigFromMnemonic(binaryPath, configs.CustomID, numNodes)
 }
+
+// =============================================================================
+// CLEAN CONFIG FUNCTIONS - No LUX_MNEMONIC, No Genesis Patching
+// =============================================================================
+
+// NewConfigFromDisk creates a network config by loading keys from disk and using
+// genesis as-is. This is the PREFERRED method for production deployments.
+//
+// IMPORTANT: This function does NOT patch genesis. The genesis file must already
+// contain the correct initialStakers that match the keys in keysDir.
+//
+// Parameters:
+//   - binaryPath: Path to the luxd binary
+//   - networkID: Network ID (e.g., 96369 for mainnet, 96368 for testnet)
+//   - genesisPath: Path to genesis.json file (or empty to use embedded genesis)
+//   - keysDir: Directory containing node keys (default: ~/.lux/keys/)
+//   - numNodes: Number of nodes to configure
+//   - portBase: Starting port for HTTP (staking port = HTTP + 1)
+//
+// The keysDir should contain node0/, node1/, ... with:
+//   - staking/staker.key and staking/staker.crt (or staker.key, staker.crt at root)
+//   - bls/signer.key (optional)
+//   - ec/private.key (optional)
+func NewConfigFromDisk(binaryPath string, networkID uint32, genesisPath string, keysDir string, numNodes uint32, portBase int) (network.Config, error) {
+	// Default keys directory
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
+
+	// Load genesis bytes
+	var genesisBytes []byte
+	var err error
+	if genesisPath != "" {
+		genesisBytes, err = os.ReadFile(genesisPath)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to read genesis from %s: %w", genesisPath, err)
+		}
+		fmt.Printf("📄 Loaded genesis from %s\n", genesisPath)
+	} else {
+		// Use embedded canonical genesis
+		genesisBytes, err = configs.GetCanonicalGenesisBytes(networkID)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to load embedded genesis for network %d: %w", networkID, err)
+		}
+		fmt.Printf("📄 Using embedded genesis for network %d\n", networkID)
+	}
+
+	// Load validator keys from disk
+	ks := keys.NewKeyStore(keysDir)
+	validatorKeys := make([]*keys.ValidatorKey, numNodes)
+
+	fmt.Printf("🔑 Loading %d validators from %s...\n", numNodes, keysDir)
+	for i := uint32(0); i < numNodes; i++ {
+		name := fmt.Sprintf("node%d", i)
+		vk, err := ks.Load(name)
+		if err != nil {
+			return network.Config{}, fmt.Errorf("failed to load validator key %s from %s: %w (run 'lux key generate' first)", name, keysDir, err)
+		}
+		validatorKeys[i] = vk
+		fmt.Printf("  %s: NodeID=%s\n", name, vk.NodeID.String())
+	}
+
+	// Start with default config
+	netConfig := NewDefaultConfig(binaryPath)
+
+	// CRITICAL: Use genesis as-is without patching
+	// The genesis file must already contain the correct initialStakers
+	netConfig.Genesis = string(genesisBytes)
+
+	// Build node configs from loaded keys
+	nodeConfigs := make([]node.Config, numNodes)
+	for i := uint32(0); i < numNodes; i++ {
+		vk := validatorKeys[i]
+		port := portBase + int(i)*2
+		nodeConfigs[i] = node.Config{
+			Flags: map[string]interface{}{
+				config.HTTPPortKey:    port,
+				config.StakingPortKey: port + 1,
+			},
+			StakingKey:         string(vk.StakerKey),
+			StakingCert:        string(vk.StakerCert),
+			StakingSigningKey:  base64.StdEncoding.EncodeToString(vk.BLSSecretKey),
+			IsBeacon:           true,
+			ChainConfigFiles:   map[string]string{},
+			UpgradeConfigFiles: map[string]string{},
+			PChainConfigFiles:  map[string]string{},
+		}
+	}
+	netConfig.NodeConfigs = nodeConfigs
+
+	fmt.Printf("✅ Network config ready with %d validators (genesis unmodified)\n", numNodes)
+	return netConfig, nil
+}
+
+// NewMainnetConfigFromDisk creates mainnet config by loading keys from disk.
+// Genesis is used as-is without patching.
+func NewMainnetConfigFromDisk(binaryPath string, genesisPath string, keysDir string) (network.Config, error) {
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
+	// Count available keys
+	ks := keys.NewKeyStore(keysDir)
+	names, err := ks.List()
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to list keys in %s: %w", keysDir, err)
+	}
+	if len(names) == 0 {
+		return network.Config{}, fmt.Errorf("no validator keys found in %s (run 'lux key generate' first)", keysDir)
+	}
+	return NewConfigFromDisk(binaryPath, configs.MainnetID, genesisPath, keysDir, uint32(len(names)), 9630)
+}
+
+// NewTestnetConfigFromDisk creates testnet config by loading keys from disk.
+// Genesis is used as-is without patching.
+func NewTestnetConfigFromDisk(binaryPath string, genesisPath string, keysDir string) (network.Config, error) {
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
+	ks := keys.NewKeyStore(keysDir)
+	names, err := ks.List()
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to list keys in %s: %w", keysDir, err)
+	}
+	if len(names) == 0 {
+		return network.Config{}, fmt.Errorf("no validator keys found in %s (run 'lux key generate' first)", keysDir)
+	}
+	return NewConfigFromDisk(binaryPath, configs.TestnetID, genesisPath, keysDir, uint32(len(names)), 9640)
+}
+
+// NewDevnetConfigFromDisk creates devnet config by loading keys from disk.
+// Genesis is used as-is without patching.
+func NewDevnetConfigFromDisk(binaryPath string, genesisPath string, keysDir string) (network.Config, error) {
+	if keysDir == "" {
+		keysDir = validatorKeysDir()
+	}
+	ks := keys.NewKeyStore(keysDir)
+	names, err := ks.List()
+	if err != nil {
+		return network.Config{}, fmt.Errorf("failed to list keys in %s: %w", keysDir, err)
+	}
+	if len(names) == 0 {
+		return network.Config{}, fmt.Errorf("no validator keys found in %s (run 'lux key generate' first)", keysDir)
+	}
+	return NewConfigFromDisk(binaryPath, configs.DevnetID, genesisPath, keysDir, uint32(len(names)), 9650)
+}

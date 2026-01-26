@@ -1119,3 +1119,98 @@ This architecture provides a clean, production-ready approach to mainnet network
 - **State management**: Snapshot save/restore for reproducible testing
 - **No confusion**: Removes legacy `lux local` command entirely
 - **Mainnet-first**: Defaults to mainnet configuration with 5 validators
+
+---
+
+## Native BadgerDB Snapshot Fix (2026-01-22)
+
+### Problem
+Snapshot creation was using 75GB directory copies instead of efficient native BadgerDB incremental backups.
+
+### Root Cause
+1. **Node backup service not initialized**: `DataDir` wasn't passed to admin service config in `node/node.go`
+2. **CLI stop command order wrong**: Tried to snapshot databases directly while nodes had exclusive locks
+
+### Files Modified
+
+**`/Users/z/work/lux/node/node/node.go`**:
+Added `DataDir` to admin service config to enable backup service:
+```go
+service := admin.New(admin.Config{
+    // ... other fields ...
+    DataDir: n.Config.DatabaseConfig.Path,  // ADDED
+})
+```
+
+**`/Users/z/work/lux/netrunner/local/snapshot.go`**:
+Cleaned up to single unified approach using native BadgerDB via admin.snapshot API.
+- Removed legacy `copyDir` function
+- Removed `hotSnapshotManifest` types and duplicate functions
+- Reduced from 984 lines to 629 lines (36% reduction)
+
+**`/Users/z/work/lux/cli/cmd/networkcmd/stop.go`**:
+Fixed to use gRPC method (admin.snapshot API) for hot snapshots:
+```go
+// Before (wrong - tried direct file access while nodes running)
+if err := saveNetworkNative(stopNetworkType, snapshotName, useIncremental); err != nil {
+    if err := saveNetworkForType(stopNetworkType); err != nil { ... }
+}
+
+// After (correct - uses admin.snapshot API via gRPC)
+if err := saveNetworkForType(stopNetworkType); err != nil {
+    ux.Logger.PrintToUser("Warning: failed to save snapshot: %v", err)
+}
+```
+
+### Results
+- **Before**: 75GB snapshots (directory copy)
+- **After**: 132KB snapshots (native BadgerDB incremental)
+- **Reduction**: 99.9%+
+
+### Verified Functionality (2026-01-22)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| 5-node testnet | ✅ | Ports 9640-9648 |
+| 5-node mainnet | ✅ | Ports 9630-9638 |
+| Hot snapshots | ✅ | Via admin.snapshot API |
+| Incremental backups | ✅ | 5KB per node compressed |
+| Resume from data | ✅ | Auto-detects existing run |
+| Track all chains | ✅ | `track-chains="all"` |
+| All 11 chains | ✅ | P,C,X,Q,A,B,T,Z,G,K,D |
+
+### Snapshot Format (v2)
+```json
+{
+    "version": 2,
+    "network": "testnet",
+    "timestamp": 1769140260,
+    "created_at": "2026-01-23T03:51:00Z",
+    "nodes": {
+        "node1": {
+            "db_version": 11,
+            "incremental_from": 0,
+            "backup_file": "node1.backup.zst",
+            "compressed_size": 5362
+        }
+        // ... node2-node5
+    }
+}
+```
+
+### Commands Reference
+
+```bash
+# Start 5-node testnet
+lux network start --testnet
+
+# Stop with snapshot
+lux network stop --testnet --force --snapshot-name my-snapshot
+
+# Resume from snapshot (uses existing data)
+lux network start --testnet
+
+# Check snapshot
+ls -la ~/.lux/snapshots/lux-snapshot-<name>/
+cat ~/.lux/snapshots/lux-snapshot-<name>/manifest.json
+```
