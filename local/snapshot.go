@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -67,11 +66,9 @@ type nodeBackupInfo struct {
 	BackupFile string `json:"backup_file"`
 	// Size of compressed backup in bytes
 	CompressedSize int64 `json:"compressed_size"`
-	// Temp path during backup (not serialized)
-	tmpPath string `json:"-"`
 }
 
-// NewNetwork returns a new network from the given snapshot
+// NewNetworkFromSnapshot returns a new network from the given snapshot.
 func NewNetworkFromSnapshot(
 	log log.Logger,
 	snapshotName string,
@@ -114,12 +111,12 @@ func NewNetworkFromSnapshot(
 	return net, err
 }
 
-// SaveSnapshot saves a network snapshot using native database backup.
-// Network is stopped to ensure consistent backup.
-// Supports incremental backups when a previous snapshot exists.
+// SaveSnapshot saves a network snapshot using native BadgerDB incremental backup.
+// Uses admin.snapshot API for consistent hot backups without stopping the network.
+// Automatically creates incremental backups when a previous snapshot exists.
 func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (string, error) {
-	ln.lock.Lock()
-	defer ln.lock.Unlock()
+	ln.lock.RLock()
+	defer ln.lock.RUnlock()
 
 	if ln.stopCalled() {
 		return "", network.ErrStopped
@@ -144,7 +141,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		}
 	}
 
-	// Collect node info before stopping
+	// Collect node info
 	nodesConfig := map[string]node.Config{}
 	for nodeName, node := range ln.nodes {
 		nodeConfig := node.config
@@ -175,66 +172,9 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		nodesConfig[nodeName] = nodeConfig
 	}
 
-	// Request backup from each node while still running
-	nodeBackups := make(map[string]nodeBackupInfo)
-	for _, nodeConfig := range nodesConfig {
-		localNode, ok := ln.nodes[nodeConfig.Name]
-		if !ok {
-			return "", fmt.Errorf("node %q not found for snapshot", nodeConfig.Name)
-		}
-
-		adminClient := localNode.GetAPIClient().AdminAPI()
-		if adminClient == nil {
-			return "", fmt.Errorf("admin API client is nil for node %q", nodeConfig.Name)
-		}
-
-		// Determine incremental base version
-		var since uint64
-		if previousManifest != nil {
-			if prevNode, ok := previousManifest.Nodes[nodeConfig.Name]; ok {
-				since = prevNode.DBVersion
-			}
-		}
-
-		// Create temp file for backup
-		tmpBackupPath := filepath.Join(os.TempDir(), fmt.Sprintf("lux-backup-%s-%d.tmp", nodeConfig.Name, time.Now().UnixNano()))
-		defer os.Remove(tmpBackupPath)
-
-		// Request native backup via admin API
-		version, err := requestAdminSnapshot(ctx, adminClient, tmpBackupPath, since)
-		if err != nil {
-			return "", fmt.Errorf("failed to backup node %q: %w", nodeConfig.Name, err)
-		}
-
-		nodeBackups[nodeConfig.Name] = nodeBackupInfo{
-			DBVersion:       version,
-			IncrementalFrom: since,
-			BackupFile:      fmt.Sprintf("%s.backup.zst", nodeConfig.Name),
-			tmpPath:         tmpBackupPath,
-		}
-	}
-
-	// Stop network for consistent state
-	if err := ln.stop(ctx); err != nil {
-		return "", err
-	}
-	syncFilesystem()
-
 	// Create snapshot directory
 	if err := os.MkdirAll(snapshotDir, os.ModePerm); err != nil {
 		return "", err
-	}
-
-	// Compress and write backup files
-	for nodeName, backupInfo := range nodeBackups {
-		destPath := filepath.Join(snapshotDir, backupInfo.BackupFile)
-		size, err := compressFile(backupInfo.tmpPath, destPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to compress backup for node %q: %w", nodeName, err)
-		}
-		backupInfo.CompressedSize = size
-		backupInfo.tmpPath = "" // Clear temp path
-		nodeBackups[nodeName] = backupInfo
 	}
 
 	// Save network config
@@ -273,6 +213,54 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		return "", err
 	}
 
+	// Request backup from each node via admin API and compress
+	nodeBackups := make(map[string]nodeBackupInfo)
+	for _, nodeConfig := range nodesConfig {
+		localNode, ok := ln.nodes[nodeConfig.Name]
+		if !ok {
+			return "", fmt.Errorf("node %q not found for snapshot", nodeConfig.Name)
+		}
+
+		adminClient := localNode.GetAPIClient().AdminAPI()
+		if adminClient == nil {
+			return "", fmt.Errorf("admin API client is nil for node %q", nodeConfig.Name)
+		}
+
+		// Determine incremental base version
+		var since uint64
+		if previousManifest != nil {
+			if prevNode, ok := previousManifest.Nodes[nodeConfig.Name]; ok {
+				since = prevNode.DBVersion
+			}
+		}
+
+		// Create temp file for backup
+		tmpBackupPath := filepath.Join(os.TempDir(), fmt.Sprintf("lux-backup-%s-%d.tmp", nodeConfig.Name, time.Now().UnixNano()))
+
+		// Request native backup via admin API
+		version, err := requestAdminSnapshot(ctx, adminClient, tmpBackupPath, since)
+		if err != nil {
+			os.Remove(tmpBackupPath)
+			return "", fmt.Errorf("failed to backup node %q: %w", nodeConfig.Name, err)
+		}
+
+		// Compress backup with zstd
+		backupFileName := fmt.Sprintf("%s.backup.zst", nodeConfig.Name)
+		destPath := filepath.Join(snapshotDir, backupFileName)
+		size, err := compressFile(tmpBackupPath, destPath)
+		os.Remove(tmpBackupPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to compress backup for node %q: %w", nodeConfig.Name, err)
+		}
+
+		nodeBackups[nodeConfig.Name] = nodeBackupInfo{
+			DBVersion:       version,
+			IncrementalFrom: since,
+			BackupFile:      backupFileName,
+			CompressedSize:  size,
+		}
+	}
+
 	// Save manifest
 	manifest := &snapshotManifest{
 		Version:   manifestVersion,
@@ -292,6 +280,12 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 	)
 
 	return snapshotDir, nil
+}
+
+// SaveHotSnapshot is an alias for SaveSnapshot for API compatibility.
+// Both methods use native BadgerDB incremental backup without stopping the network.
+func (ln *localNetwork) SaveHotSnapshot(ctx context.Context, snapshotName string) (string, error) {
+	return ln.SaveSnapshot(ctx, snapshotName)
 }
 
 // loadSnapshot restores network from a snapshot using native database restore.
@@ -317,10 +311,10 @@ func (ln *localNetwork) loadSnapshot(
 		return fmt.Errorf("failure accessing snapshot %q: %w", snapshotName, err)
 	}
 
-	// Load manifest to determine snapshot format
+	// Load manifest
 	manifestPath := filepath.Join(snapshotDir, manifestFileName)
 	manifest, err := loadManifest(manifestPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err != nil {
 		return fmt.Errorf("failed to load manifest: %w", err)
 	}
 
@@ -341,43 +335,13 @@ func (ln *localNetwork) loadSnapshot(
 		}
 	}
 
-	// Prepare DB directories and restore backups
-	if manifest != nil {
-		// Native backup format - decompress and prepare for admin.load
-		if err := ln.prepareNativeBackupDirs(networkConfig.NodeConfigs); err != nil {
-			return err
-		}
-		for i := range networkConfig.NodeConfigs {
-			targetDBDir := filepath.Join(filepath.Join(ln.rootDir, networkConfig.NodeConfigs[i].Name), defaultDBSubdir)
-			networkConfig.NodeConfigs[i].Flags[config.DBPathKey] = targetDBDir
-		}
-	} else {
-		// Legacy format - check for old hot snapshot manifest
-		hotManifestPath := filepath.Join(snapshotDir, "hot_snapshot.json")
-		hotManifest, err := loadHotSnapshotManifest(hotManifestPath)
-		if err != nil {
-			return err
-		}
-		if hotManifest != nil {
-			if err := ln.prepareHotSnapshotDirs(networkConfig.NodeConfigs); err != nil {
-				return err
-			}
-			for i := range networkConfig.NodeConfigs {
-				targetDBDir := filepath.Join(filepath.Join(ln.rootDir, networkConfig.NodeConfigs[i].Name), defaultDBSubdir)
-				networkConfig.NodeConfigs[i].Flags[config.DBPathKey] = targetDBDir
-			}
-		} else {
-			// Legacy directory copy format
-			snapshotDBDir := filepath.Join(snapshotDir, defaultDBSubdir)
-			for _, nodeConfig := range networkConfig.NodeConfigs {
-				sourceDBDir := filepath.Join(snapshotDBDir, nodeConfig.Name)
-				targetDBDir := filepath.Join(filepath.Join(ln.rootDir, nodeConfig.Name), defaultDBSubdir)
-				if err := copyDir(sourceDBDir, targetDBDir); err != nil {
-					return fmt.Errorf("failure loading node %q db dir: %w", nodeConfig.Name, err)
-				}
-				nodeConfig.Flags[config.DBPathKey] = targetDBDir
-			}
-		}
+	// Prepare DB directories for native backup restore
+	if err := ln.prepareBackupDirs(networkConfig.NodeConfigs); err != nil {
+		return err
+	}
+	for i := range networkConfig.NodeConfigs {
+		targetDBDir := filepath.Join(filepath.Join(ln.rootDir, networkConfig.NodeConfigs[i].Name), defaultDBSubdir)
+		networkConfig.NodeConfigs[i].Flags[config.DBPathKey] = targetDBDir
 	}
 
 	// Replace binary path
@@ -443,193 +407,12 @@ func (ln *localNetwork) loadSnapshot(
 		return err
 	}
 
-	// Apply native backups after nodes start
-	if manifest != nil {
-		if err := ln.applyNativeBackups(ctx, snapshotDir, networkConfig.NodeConfigs, manifest); err != nil {
-			return err
-		}
-	} else {
-		// Check for legacy hot snapshot
-		hotManifestPath := filepath.Join(snapshotDir, "hot_snapshot.json")
-		hotManifest, _ := loadHotSnapshotManifest(hotManifestPath)
-		if hotManifest != nil {
-			if err := ln.applyHotSnapshot(ctx, snapshotDir, networkConfig.NodeConfigs, hotManifest); err != nil {
-				return err
-			}
-		}
+	// Apply native backups via admin.load API
+	if err := ln.applyBackups(ctx, snapshotDir, networkConfig.NodeConfigs, manifest); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-// SaveHotSnapshot saves a snapshot without stopping the network.
-// Uses native database backup API for consistent snapshots.
-func (ln *localNetwork) SaveHotSnapshot(ctx context.Context, snapshotName string) (string, error) {
-	ln.lock.RLock()
-	defer ln.lock.RUnlock()
-
-	if ln.stopCalled() {
-		return "", network.ErrStopped
-	}
-	if len(snapshotName) == 0 {
-		return "", fmt.Errorf("invalid snapshotName %q", snapshotName)
-	}
-
-	snapshotDir := filepath.Join(ln.snapshotsDir, snapshotPrefix+snapshotName)
-	networkName := constants.NetworkName(ln.networkID)
-
-	// Check for existing snapshot
-	var previousManifest *snapshotManifest
-	if _, err := os.Stat(snapshotDir); err == nil {
-		manifestPath := filepath.Join(snapshotDir, manifestFileName)
-		previousManifest, err = loadManifest(manifestPath)
-		if err != nil {
-			return "", fmt.Errorf("snapshot %q exists but manifest is invalid: %w", snapshotName, err)
-		}
-		if previousManifest.Network != networkName {
-			return "", fmt.Errorf("snapshot network mismatch: got %q want %q", previousManifest.Network, networkName)
-		}
-	}
-
-	// Collect node info
-	nodesConfig := map[string]node.Config{}
-	for nodeName, node := range ln.nodes {
-		nodeConfig := node.config
-		nodeConfig.Flags = maps.Clone(nodeConfig.Flags)
-		nodesConfig[nodeName] = nodeConfig
-	}
-
-	// Preserve current node ports
-	for nodeName, nodeConfig := range nodesConfig {
-		nodeConfig.Flags[config.HTTPPortKey] = ln.nodes[nodeName].GetAPIPort()
-		nodeConfig.Flags[config.StakingPortKey] = ln.nodes[nodeName].GetP2PPort()
-	}
-
-	// Make copy of network flags
-	networkConfigFlags := maps.Clone(ln.flags)
-	delete(networkConfigFlags, config.DataDirKey)
-	delete(networkConfigFlags, config.LogsDirKey)
-	for nodeName, nodeConfig := range nodesConfig {
-		if nodeConfig.ConfigFile != "" {
-			var err error
-			nodeConfig.ConfigFile, err = utils.SetJSONKey(nodeConfig.ConfigFile, config.LogsDirKey, "")
-			if err != nil {
-				return "", err
-			}
-		}
-		delete(nodeConfig.Flags, config.DataDirKey)
-		delete(nodeConfig.Flags, config.LogsDirKey)
-		nodesConfig[nodeName] = nodeConfig
-	}
-
-	// Create snapshot directory
-	if err := os.MkdirAll(snapshotDir, os.ModePerm); err != nil {
-		return "", err
-	}
-
-	// Save network config
-	networkConfig := network.Config{
-		Genesis:            string(ln.genesis),
-		Flags:              networkConfigFlags,
-		NodeConfigs:        []node.Config{},
-		BinaryPath:         ln.binaryPath,
-		ChainConfigFiles:   ln.chainConfigFiles,
-		GenesisConfigFiles: ln.genesisConfigFiles,
-		UpgradeConfigFiles: ln.upgradeConfigFiles,
-		PChainConfigFiles:  ln.pChainConfigFiles,
-	}
-	networkConfig.NodeConfigs = append(networkConfig.NodeConfigs, slices.Collect(maps.Values(nodesConfig))...)
-	networkConfigJSON, err := json.MarshalIndent(networkConfig, "", "    ")
-	if err != nil {
-		return "", err
-	}
-	if err := createFileAndWrite(filepath.Join(snapshotDir, "network.json"), networkConfigJSON); err != nil {
-		return "", err
-	}
-
-	// Save network state
-	chainID2ElasticChainID := map[string]string{}
-	for chainID, elasticChainID := range ln.chainID2ElasticChainID {
-		chainID2ElasticChainID[chainID.String()] = elasticChainID.String()
-	}
-	networkState := NetworkState{
-		ChainID2ElasticChainID: chainID2ElasticChainID,
-	}
-	networkStateJSON, err := json.MarshalIndent(networkState, "", "    ")
-	if err != nil {
-		return "", err
-	}
-	if err := createFileAndWrite(filepath.Join(snapshotDir, "state.json"), networkStateJSON); err != nil {
-		return "", err
-	}
-
-	// Request backup from each node and compress
-	nodeBackups := make(map[string]nodeBackupInfo)
-	for _, nodeConfig := range nodesConfig {
-		localNode, ok := ln.nodes[nodeConfig.Name]
-		if !ok {
-			return "", fmt.Errorf("node %q not found for hot snapshot", nodeConfig.Name)
-		}
-
-		adminClient := localNode.GetAPIClient().AdminAPI()
-		if adminClient == nil {
-			return "", fmt.Errorf("admin API client is nil for node %q", nodeConfig.Name)
-		}
-
-		// Determine incremental base version
-		var since uint64
-		if previousManifest != nil {
-			if prevNode, ok := previousManifest.Nodes[nodeConfig.Name]; ok {
-				since = prevNode.DBVersion
-			}
-		}
-
-		// Create temp file for backup
-		tmpBackupPath := filepath.Join(os.TempDir(), fmt.Sprintf("lux-backup-%s-%d.tmp", nodeConfig.Name, time.Now().UnixNano()))
-
-		// Request native backup via admin API
-		version, err := requestAdminSnapshot(ctx, adminClient, tmpBackupPath, since)
-		if err != nil {
-			os.Remove(tmpBackupPath)
-			return "", fmt.Errorf("failed to backup node %q: %w", nodeConfig.Name, err)
-		}
-
-		// Compress backup
-		backupFileName := fmt.Sprintf("%s.backup.zst", nodeConfig.Name)
-		destPath := filepath.Join(snapshotDir, backupFileName)
-		size, err := compressFile(tmpBackupPath, destPath)
-		os.Remove(tmpBackupPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to compress backup for node %q: %w", nodeConfig.Name, err)
-		}
-
-		nodeBackups[nodeConfig.Name] = nodeBackupInfo{
-			DBVersion:       version,
-			IncrementalFrom: since,
-			BackupFile:      backupFileName,
-			CompressedSize:  size,
-		}
-	}
-
-	// Save manifest
-	manifest := &snapshotManifest{
-		Version:   manifestVersion,
-		Network:   networkName,
-		Timestamp: time.Now().Unix(),
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
-		Nodes:     nodeBackups,
-	}
-	if err := saveManifest(filepath.Join(snapshotDir, manifestFileName), manifest); err != nil {
-		return "", err
-	}
-
-	ln.logger.Info("Hot snapshot saved",
-		log.String("snapshot", snapshotName),
-		log.String("path", snapshotDir),
-		log.Int("nodes", len(nodeBackups)),
-	)
-
-	return snapshotDir, nil
 }
 
 // RemoveSnapshot removes a network snapshot
@@ -668,8 +451,8 @@ func (ln *localNetwork) GetSnapshotNames() ([]string, error) {
 	return snapshots, nil
 }
 
-// prepareNativeBackupDirs creates empty DB directories for native backup restore
-func (ln *localNetwork) prepareNativeBackupDirs(nodeConfigs []node.Config) error {
+// prepareBackupDirs creates empty DB directories for backup restore
+func (ln *localNetwork) prepareBackupDirs(nodeConfigs []node.Config) error {
 	for _, nodeConfig := range nodeConfigs {
 		targetDBDir := filepath.Join(ln.rootDir, nodeConfig.Name, defaultDBSubdir)
 		if err := os.RemoveAll(targetDBDir); err != nil {
@@ -682,8 +465,8 @@ func (ln *localNetwork) prepareNativeBackupDirs(nodeConfigs []node.Config) error
 	return nil
 }
 
-// applyNativeBackups decompresses and loads native database backups
-func (ln *localNetwork) applyNativeBackups(
+// applyBackups decompresses and loads native database backups via admin API
+func (ln *localNetwork) applyBackups(
 	ctx context.Context,
 	snapshotDir string,
 	nodeConfigs []node.Config,
@@ -728,9 +511,6 @@ func (ln *localNetwork) applyNativeBackups(
 func loadManifest(path string) (*snapshotManifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, os.ErrNotExist
-		}
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
 	}
 	manifest := &snapshotManifest{}
@@ -811,140 +591,6 @@ func decompressFile(src, dst string) error {
 
 	if _, err := io.Copy(dstFile, decoder); err != nil {
 		return fmt.Errorf("failed to decompress: %w", err)
-	}
-	return nil
-}
-
-// copyDir copies a directory recursively (legacy support)
-func copyDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		dstPath := filepath.Join(dst, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(dstPath, info.Mode())
-		}
-
-		srcFile, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer srcFile.Close()
-
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0o750); err != nil {
-			return err
-		}
-
-		dstFile, err := os.Create(dstPath)
-		if err != nil {
-			return err
-		}
-		defer dstFile.Close()
-
-		_, err = io.Copy(dstFile, srcFile)
-		return err
-	})
-}
-
-// Legacy hot snapshot support for backwards compatibility
-
-const (
-	hotSnapshotManifestName = "hot_snapshot.json"
-	hotSnapshotVersion      = 1
-)
-
-type hotSnapshotManifest struct {
-	Version int                        `json:"version"`
-	Network string                     `json:"network"`
-	Nodes   map[string]hotSnapshotNode `json:"nodes"`
-}
-
-type hotSnapshotNode struct {
-	LastVersion uint64              `json:"last_version"`
-	Backups     []hotSnapshotBackup `json:"backups"`
-}
-
-type hotSnapshotBackup struct {
-	Since     uint64 `json:"since"`
-	Version   uint64 `json:"version"`
-	Path      string `json:"path"`
-	CreatedAt string `json:"created_at"`
-}
-
-func loadHotSnapshotManifest(path string) (*hotSnapshotManifest, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to read hot snapshot manifest: %w", err)
-	}
-	manifest := &hotSnapshotManifest{}
-	if err := json.Unmarshal(data, manifest); err != nil {
-		return nil, fmt.Errorf("failed to parse hot snapshot manifest: %w", err)
-	}
-	if manifest.Version != hotSnapshotVersion {
-		return nil, fmt.Errorf("unsupported hot snapshot version %d", manifest.Version)
-	}
-	if manifest.Nodes == nil {
-		manifest.Nodes = map[string]hotSnapshotNode{}
-	}
-	return manifest, nil
-}
-
-func (ln *localNetwork) prepareHotSnapshotDirs(nodeConfigs []node.Config) error {
-	for _, nodeConfig := range nodeConfigs {
-		targetDBDir := filepath.Join(ln.rootDir, nodeConfig.Name, defaultDBSubdir)
-		if err := os.RemoveAll(targetDBDir); err != nil {
-			return fmt.Errorf("failed to clear db dir for node %q: %w", nodeConfig.Name, err)
-		}
-		if err := os.MkdirAll(targetDBDir, 0o750); err != nil {
-			return fmt.Errorf("failed to create db dir for node %q: %w", nodeConfig.Name, err)
-		}
-	}
-	return nil
-}
-
-func (ln *localNetwork) applyHotSnapshot(
-	ctx context.Context,
-	snapshotDir string,
-	nodeConfigs []node.Config,
-	manifest *hotSnapshotManifest,
-) error {
-	for _, nodeConfig := range nodeConfigs {
-		nodeName := nodeConfig.Name
-		nodeManifest, ok := manifest.Nodes[nodeName]
-		if !ok || len(nodeManifest.Backups) == 0 {
-			return fmt.Errorf("missing hot snapshot backups for node %q", nodeName)
-		}
-
-		localNode, ok := ln.nodes[nodeName]
-		if !ok {
-			return fmt.Errorf("node %q not found while applying hot snapshot", nodeName)
-		}
-
-		adminClient := localNode.GetAPIClient().AdminAPI()
-		if adminClient == nil {
-			return fmt.Errorf("admin API client is nil for node %q", nodeName)
-		}
-
-		backups := append([]hotSnapshotBackup(nil), nodeManifest.Backups...)
-		sort.Slice(backups, func(i, j int) bool {
-			return backups[i].Since < backups[j].Since
-		})
-
-		for _, backup := range backups {
-			backupPath := filepath.Join(snapshotDir, filepath.FromSlash(backup.Path))
-			if err := requestAdminLoad(ctx, adminClient, backupPath); err != nil {
-				return fmt.Errorf("failed to load backup for node %q: %w", nodeName, err)
-			}
-		}
 	}
 	return nil
 }

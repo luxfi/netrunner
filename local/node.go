@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/luxfi/atomic"
-	"github.com/luxfi/compress"
 	"github.com/luxfi/constants"
+	"github.com/luxfi/node/utils/compression"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/ids"
 	log "github.com/luxfi/log"
@@ -102,7 +102,7 @@ func (node *localNode) AttachPeer(ctx context.Context, router peer.InboundHandle
 	}
 	mc, err := message.NewCreator(
 		metric.NewRegistry(),
-		compress.TypeZstd,
+		compression.TypeZstd,
 		10*time.Second,
 	)
 	if err != nil {
