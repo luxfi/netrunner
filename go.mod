@@ -25,7 +25,7 @@ require (
 	github.com/luxfi/log v1.4.1
 	github.com/luxfi/math v1.2.3
 	github.com/luxfi/metric v1.4.11
-	github.com/luxfi/node v1.23.2
+	github.com/luxfi/node v1.23.3
 	github.com/luxfi/p2p v1.18.9
 	github.com/luxfi/protocol v0.0.3
 	github.com/luxfi/sdk v1.16.45
@@ -134,7 +134,7 @@ require (
 	github.com/luxfi/tls v1.0.3
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/upgrade v1.0.0 // indirect
-	github.com/luxfi/vm v1.0.27
+	github.com/luxfi/vm v1.0.30
 	github.com/luxfi/warp v1.18.5 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
