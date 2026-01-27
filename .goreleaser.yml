@@ -14,22 +14,9 @@ builds:
       - amd64
       - arm64
     env:
-      - CGO_ENABLED=1
-      - CGO_CFLAGS=-O -D__BLST_PORTABLE__ # Set the CGO flags to use the portable version of BLST
-    overrides:
-      - goos: linux
-        goarch: arm64
-        env:
-          - CC=aarch64-linux-gnu-gcc
-      - goos: darwin
-        goarch: arm64
-        env:
-          - CC=oa64-clang
-      - goos: darwin
-        goarch: amd64
-        goamd64: v1
-        env:
-          - CC=o64-clang
+      # CGO disabled for cross-compilation - uses pure Go fallbacks
+      # For native builds with CGO acceleration, build locally with CGO_ENABLED=1
+      - CGO_ENABLED=0
 release:
   # Repo in which the release will be created.
   # Default is extracted from the origin remote URL or empty if its private hosted.
