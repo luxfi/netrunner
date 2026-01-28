@@ -24,7 +24,6 @@ import (
 	"slices"
 
 	"github.com/luxfi/config"
-	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/crypto/bls"
 	luxcrypto "github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/ids"
@@ -37,9 +36,9 @@ import (
 	"github.com/luxfi/netrunner/network/node/status"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
+	"github.com/luxfi/node/utils/beacon"
 	"github.com/luxfi/p2p/peer"
 	luxtls "github.com/luxfi/tls"
-	"github.com/luxfi/node/utils/beacon"
 
 	"github.com/luxfi/address"
 	"github.com/luxfi/node/utils/wrappers"
@@ -1239,7 +1238,7 @@ func (ln *localNetwork) buildArgs(
 	}
 
 	// pluginDir from config, default from luxconfig
-	pluginDir, err := getConfigEntry(nodeConfig.Flags, configFile, config.PluginDirKey, luxconfig.ResolvePluginDir())
+	pluginDir, err := getConfigEntry(nodeConfig.Flags, configFile, config.PluginDirKey, config.ResolvePluginDir())
 	if err != nil {
 		return buildArgsReturn{}, err
 	}

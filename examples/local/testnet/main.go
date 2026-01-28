@@ -59,7 +59,7 @@ func createCorethDebugConfig(importPath string) ([]byte, error) {
 			"admin",
 		},
 		"import-chain-data": importPath,
-		"log-level": "debug",
+		"log-level":         "debug",
 	}
 	return json.Marshal(cfg)
 }

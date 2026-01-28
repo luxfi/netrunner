@@ -31,7 +31,6 @@ import (
 	"slices"
 
 	"github.com/luxfi/config"
-	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/secp256k1"
@@ -41,8 +40,8 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/protocol/p/txs"
 	"github.com/luxfi/protocol/p/signer"
+	"github.com/luxfi/protocol/p/txs"
 	"github.com/luxfi/sdk/admin"
 	"github.com/luxfi/sdk/platformvm"
 	pwallet "github.com/luxfi/sdk/wallet/chain/p"
@@ -2222,7 +2221,7 @@ func (ln *localNetwork) waitChainValidators(
 // reload VM plugins on all nodes and verify they're available
 func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 	// Use unified config to resolve plugin directory for diagnostics
-	pluginDir := luxconfig.ResolvePluginDir()
+	pluginDir := config.ResolvePluginDir()
 	ln.logger.Info(log.Green.Wrap("reloading plugin binaries"),
 		"pluginDir", pluginDir,
 	)

@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
+	apiinfo "github.com/luxfi/api/info"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/engines"
-	apiinfo "github.com/luxfi/api/info"
 	sdkhealth "github.com/luxfi/sdk/health"
 	sdkinfo "github.com/luxfi/sdk/info"
 )
