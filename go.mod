@@ -14,7 +14,6 @@ require (
 	github.com/luxfi/address v1.0.1
 	github.com/luxfi/api v1.0.1
 	github.com/luxfi/atomic v1.0.0
-	github.com/luxfi/compress v0.0.5
 	github.com/luxfi/config v1.1.1
 	github.com/luxfi/constants v1.4.4
 	github.com/luxfi/crypto v1.17.40
@@ -34,7 +33,7 @@ require (
 	github.com/luxfi/validators v1.0.0
 	github.com/luxfi/version v1.0.1
 	github.com/onsi/ginkgo/v2 v2.27.5
-	github.com/onsi/gomega v1.38.3
+	github.com/onsi/gomega v1.39.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
@@ -64,6 +63,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/accel v1.0.1 // indirect
 	github.com/luxfi/codec v1.1.4 // indirect
+	github.com/luxfi/compress v0.0.5 // indirect
 	github.com/luxfi/concurrent v0.0.3 // indirect
 	github.com/luxfi/consensus v1.22.63 // indirect
 	github.com/luxfi/container v0.0.4 // indirect
