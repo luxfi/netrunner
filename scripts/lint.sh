@@ -21,7 +21,7 @@ fi
 TESTS=${TESTS:-"golangci_lint"}
 
 function test_golangci_lint {
-  go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@v1.49.0
+  go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
   golangci-lint run --config .golangci.yml
 }
 
