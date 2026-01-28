@@ -7,13 +7,14 @@ exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 exclude github.com/luxfi/geth v1.16.1
 
 require (
-	github.com/btcsuite/btcd v0.24.2
+	github.com/btcsuite/btcd v0.25.0
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.5
 	github.com/luxfi/address v1.0.1
 	github.com/luxfi/api v1.0.1
 	github.com/luxfi/atomic v1.0.0
+	github.com/luxfi/compress v0.0.5
 	github.com/luxfi/config v1.1.1
 	github.com/luxfi/constants v1.4.4
 	github.com/luxfi/crypto v1.17.40
@@ -63,7 +64,6 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/accel v1.0.1 // indirect
 	github.com/luxfi/codec v1.1.4 // indirect
-	github.com/luxfi/compress v0.0.5 // indirect
 	github.com/luxfi/concurrent v0.0.3 // indirect
 	github.com/luxfi/consensus v1.22.63 // indirect
 	github.com/luxfi/container v0.0.4 // indirect
