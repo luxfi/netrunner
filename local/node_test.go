@@ -19,12 +19,12 @@ import (
 	"github.com/luxfi/geth/metrics"
 	"github.com/luxfi/ids"
 	"github.com/luxfi/netrunner/network/node"
+	"github.com/luxfi/node/utils/ips"
+	"github.com/luxfi/node/utils/wrappers"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
 	luxtls "github.com/luxfi/tls"
 	"github.com/luxfi/version"
-	"github.com/luxfi/node/utils/ips"
-	"github.com/luxfi/node/utils/wrappers"
 	"github.com/stretchr/testify/require"
 )
 

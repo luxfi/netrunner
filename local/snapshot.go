@@ -15,7 +15,7 @@ import (
 	"slices"
 
 	"github.com/klauspost/compress/zstd"
-	luxconfig "github.com/luxfi/config"
+	"github.com/luxfi/config"
 	"github.com/luxfi/constants"
 	"github.com/luxfi/ids"
 	log "github.com/luxfi/log"
@@ -23,8 +23,6 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-
-	"github.com/luxfi/config"
 	"github.com/luxfi/sdk/admin"
 )
 
@@ -240,7 +238,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		// Request native backup via admin API
 		version, err := requestAdminSnapshot(ctx, adminClient, tmpBackupPath, since)
 		if err != nil {
-			os.Remove(tmpBackupPath)
+			_ = os.Remove(tmpBackupPath)
 			return "", fmt.Errorf("failed to backup node %q: %w", nodeConfig.Name, err)
 		}
 
@@ -248,7 +246,7 @@ func (ln *localNetwork) SaveSnapshot(ctx context.Context, snapshotName string) (
 		backupFileName := fmt.Sprintf("%s.backup.zst", nodeConfig.Name)
 		destPath := filepath.Join(snapshotDir, backupFileName)
 		size, err := compressFile(tmpBackupPath, destPath)
-		os.Remove(tmpBackupPath)
+		_ = os.Remove(tmpBackupPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to compress backup for node %q: %w", nodeConfig.Name, err)
 		}
@@ -354,7 +352,7 @@ func (ln *localNetwork) loadSnapshot(
 	// Set plugin dir
 	resolvedPluginDir := pluginDir
 	if resolvedPluginDir == "" {
-		resolvedPluginDir = luxconfig.ResolvePluginDir()
+		resolvedPluginDir = config.ResolvePluginDir()
 	}
 	for i := range networkConfig.NodeConfigs {
 		networkConfig.NodeConfigs[i].Flags[config.PluginDirKey] = resolvedPluginDir
@@ -493,16 +491,16 @@ func (ln *localNetwork) applyBackups(
 		compressedPath := filepath.Join(snapshotDir, nodeManifest.BackupFile)
 		tmpPath := filepath.Join(os.TempDir(), fmt.Sprintf("lux-restore-%s-%d.tmp", nodeName, time.Now().UnixNano()))
 		if err := decompressFile(compressedPath, tmpPath); err != nil {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 			return fmt.Errorf("failed to decompress backup for node %q: %w", nodeName, err)
 		}
 
 		// Load backup via admin API
 		if err := requestAdminLoad(ctx, adminClient, tmpPath); err != nil {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 			return fmt.Errorf("failed to load backup for node %q: %w", nodeName, err)
 		}
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 	}
 	return nil
 }

@@ -77,11 +77,11 @@ var (
 		"node6": `{"api-admin-enabled":false}`,
 		"node7": `{"api-admin-enabled":false}`,
 	}
-	numNodes                      = uint32(5)
-	networkParticipants           = []string{"node1", "node2", "node3"}
-	newParticipantNode            = "new_participant_node"
-	networkParticipants2          = []string{"node1", "node2", newParticipantNode}
-	existingNodes                 = []string{"node1", "node2", "node3", "node4", "node5"}
+	numNodes                       = uint32(5)
+	networkParticipants            = []string{"node1", "node2", "node3"}
+	newParticipantNode             = "new_participant_node"
+	networkParticipants2           = []string{"node1", "node2", newParticipantNode}
+	existingNodes                  = []string{"node1", "node2", "node3", "node4", "node5"}
 	disjointNewNetworkParticipants = [][]string{
 		{"new_node1", "new_node2"},
 		{"new_node3", "new_node4"},
@@ -277,8 +277,8 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:   "evm",
-						Genesis:  genesisContents,
+						VmName:  "evm",
+						Genesis: genesisContents,
 						ChainId: &existingNetworkID,
 					},
 				},
@@ -317,8 +317,8 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			_, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:   "evm",
-						Genesis:  genesisContents,
+						VmName:  "evm",
+						Genesis: genesisContents,
 						ChainId: &existingNetworkID,
 					},
 				},
@@ -397,13 +397,13 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			resp, err := cli.CreateChains(ctx,
 				[]*rpcpb.BlockchainSpec{
 					{
-						VmName:   "evm",
-						Genesis:  genesisContents,
+						VmName:  "evm",
+						Genesis: genesisContents,
 						ChainId: &existingNetworkID,
 					},
 					{
-						VmName:   "evm",
-						Genesis:  genesisContents,
+						VmName:  "evm",
+						Genesis: genesisContents,
 						ChainId: &existingNetworkID,
 					},
 				},
@@ -917,7 +917,7 @@ var _ = ginkgo.Describe("[Start/Remove/Restart/Add/Stop]", func() {
 			defer cancel()
 			testRemoveNetworkValidatorConfig := rpcpb.RemoveChainValidatorSpec{
 				NodeNames: []string{"node2"},
-				ChainId:  newNetworkID,
+				ChainId:   newNetworkID,
 			}
 			_, err := cli.RemoveChainValidator(ctx, []*rpcpb.RemoveChainValidatorSpec{&testRemoveNetworkValidatorConfig})
 			gomega.Ω(err).Should(gomega.BeNil())
