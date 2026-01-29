@@ -24,7 +24,7 @@ require (
 	github.com/luxfi/keys v1.0.8
 	github.com/luxfi/log v1.4.1
 	github.com/luxfi/math v1.2.3
-	github.com/luxfi/metric v1.4.11
+	github.com/luxfi/metric v1.5.0
 	github.com/luxfi/node v1.23.3
 	github.com/luxfi/p2p v1.18.9
 	github.com/luxfi/protocol v0.0.3
@@ -113,7 +113,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/renameio/v2 v2.0.1 // indirect
+	github.com/google/renameio/v2 v2.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
