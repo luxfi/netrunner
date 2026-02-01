@@ -28,7 +28,7 @@ require (
 	github.com/luxfi/node v1.23.4
 	github.com/luxfi/p2p v1.19.2-zap
 	github.com/luxfi/protocol v0.0.3
-	github.com/luxfi/sdk v1.16.45
+	github.com/luxfi/sdk v1.16.46
 	github.com/luxfi/utxo v0.2.4
 	github.com/luxfi/validators v1.0.0
 	github.com/luxfi/version v1.0.1
