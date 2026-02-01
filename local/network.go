@@ -573,13 +573,23 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 		}
 	}
 
-	for _, nodeConfig := range nodeConfigs {
-		if _, err := ln.addNode(nodeConfig); err != nil {
+	for i, nodeConfig := range nodeConfigs {
+		node, err := ln.addNode(nodeConfig)
+		if err != nil {
 			if err := ln.stop(ctx); err != nil {
 				// Clean up nodes already created
 				ln.logger.Debug("error stopping network", log.Err(err))
 			}
 			return fmt.Errorf("error adding node %s: %w", nodeConfig.Name, err)
+		}
+
+		// For beacon nodes (except the last one), wait for P2P port to be ready
+		// before starting subsequent nodes. This ensures bootstrap IPs are reachable.
+		if nodeConfig.IsBeacon && i < len(nodeConfigs)-1 {
+			ln.logger.Info("waiting for beacon node P2P port to be ready", log.String("node", nodeConfig.Name))
+			if err := ln.waitForP2PPort(ctx, node); err != nil {
+				ln.logger.Warn("beacon node P2P port not ready, continuing anyway", log.String("node", nodeConfig.Name), log.Err(err))
+			}
 		}
 	}
 
@@ -757,6 +767,35 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 		)))
 	}
 	return node, err
+}
+
+// waitForP2PPort waits for a node's P2P staking port to be accepting connections.
+// This ensures subsequent nodes can connect to this beacon during bootstrap.
+func (ln *localNetwork) waitForP2PPort(ctx context.Context, n node.Node) error {
+	addr := fmt.Sprintf("127.0.0.1:%d", n.GetP2PPort())
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	// Wait up to 10 seconds for the port to be ready
+	deadline := time.Now().Add(10 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if time.Now().After(deadline) {
+				return fmt.Errorf("timeout waiting for P2P port %s", addr)
+			}
+
+			conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
+			if err == nil {
+				_ = conn.Close()
+				ln.logger.Info("beacon P2P port is ready", log.String("node", n.GetName()), log.String("addr", addr))
+				return nil
+			}
+		}
+	}
 }
 
 // See network.Network
