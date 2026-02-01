@@ -24,9 +24,9 @@ require (
 	github.com/luxfi/keys v1.0.8
 	github.com/luxfi/log v1.4.1
 	github.com/luxfi/math v1.2.3
-	github.com/luxfi/metric v1.4.11
-	github.com/luxfi/node v1.23.3
-	github.com/luxfi/p2p v1.18.9
+	github.com/luxfi/metric v1.5.0
+	github.com/luxfi/node v1.23.4
+	github.com/luxfi/p2p v1.19.2-zap
 	github.com/luxfi/protocol v0.0.3
 	github.com/luxfi/sdk v1.16.45
 	github.com/luxfi/utxo v0.2.4
@@ -113,7 +113,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/renameio/v2 v2.0.1 // indirect
+	github.com/google/renameio/v2 v2.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
@@ -123,7 +123,7 @@ require (
 	github.com/klauspost/compress v1.18.3
 	github.com/luxfi/cache v1.2.1 // indirect
 	github.com/luxfi/database v1.17.40 // indirect
-	github.com/luxfi/evm v0.8.30 // indirect
+	github.com/luxfi/evm v0.8.35 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
 	github.com/luxfi/keychain v1.0.2 // indirect
 	github.com/luxfi/math/big v0.1.0 // indirect
@@ -134,7 +134,7 @@ require (
 	github.com/luxfi/tls v1.0.3
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/upgrade v1.0.0 // indirect
-	github.com/luxfi/vm v1.0.30
+	github.com/luxfi/vm v1.0.33
 	github.com/luxfi/warp v1.18.5 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
