@@ -47,12 +47,12 @@ func LoadLocalGenesis() (map[string]interface{}, error) {
 	return genesisMap, nil
 }
 
-// LoadCanonicalGenesis loads canonical genesis for mainnet/testnet WITHOUT modifying configs.
+// LoadCanonicalGenesis loads canonical genesis for mainnet/testnet/devnet WITHOUT modifying configs.
 // This preserves the exact cChainGenesis to ensure correct genesis hash computation.
 // For custom/local networks, falls back to LoadLocalGenesis behavior.
 func LoadCanonicalGenesis(networkID uint32) (map[string]interface{}, error) {
 	// For local/custom networks, use the standard local genesis with TestChainConfig
-	if networkID != constants.MainnetID && networkID != constants.TestnetID {
+	if networkID != constants.MainnetID && networkID != constants.TestnetID && networkID != constants.DevnetID {
 		return LoadLocalGenesis()
 	}
 
@@ -73,7 +73,7 @@ func LoadCanonicalGenesis(networkID uint32) (map[string]interface{}, error) {
 }
 
 // LoadGenesisForNetwork loads genesis config from standard paths based on network ID.
-// For mainnet (1) and testnet (2), it loads from luxfi/genesis configs.
+// For mainnet (1), testnet (2), and devnet (3), it loads from luxfi/genesis configs.
 // For other network IDs, it falls back to local genesis.
 func LoadGenesisForNetwork(networkID uint32) ([]byte, error) {
 	var networkName string
@@ -82,6 +82,8 @@ func LoadGenesisForNetwork(networkID uint32) ([]byte, error) {
 		networkName = "mainnet"
 	case constants.TestnetID:
 		networkName = "testnet"
+	case constants.DevnetID:
+		networkName = "devnet"
 	default:
 		// For custom/local networks, use embedded genesis
 		return genesisBytes, nil
