@@ -180,7 +180,7 @@ func (e *Engine) Clean(ctx context.Context) error {
 	// Delete PVCs
 	pvcs, _ := e.client.CoreV1().PersistentVolumeClaims(e.namespace).List(ctx, metav1.ListOptions{})
 	for _, pvc := range pvcs.Items {
-		e.client.CoreV1().PersistentVolumeClaims(e.namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
+		_ = e.client.CoreV1().PersistentVolumeClaims(e.namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
 	}
 
 	// Delete namespace
