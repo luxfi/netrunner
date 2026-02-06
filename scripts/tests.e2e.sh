@@ -9,9 +9,9 @@ if ! [[ "$0" =~ scripts/tests.e2e.sh ]]; then
   exit 255
 fi
 
-DEFAULT_VERSION_1=1.10.0
-DEFAULT_VERSION_2=1.9.16
-DEFAULT_SUBNET_EVM_VERSION=0.5.0
+DEFAULT_VERSION_1=1.22.80
+DEFAULT_VERSION_2=1.22.79
+DEFAULT_SUBNET_EVM_VERSION=0.8.35
 
 if [ $# == 0 ]; then
     VERSION_1=$DEFAULT_VERSION_1
@@ -47,13 +47,13 @@ if [ ! -f /tmp/node-v${VERSION_1}/node ]
 then
     ############################
     # download node
-    # https://github.com/luxfi/sdk/node/releases
+    # https://github.com/luxfi/node/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/luxfi/sdk/node/releases/download/v${VERSION_1}/node-linux-${GOARCH}-v${VERSION_1}.tar.gz
+    DOWNLOAD_URL=https://github.com/luxfi/node/releases/download/v${VERSION_1}/node-linux-${GOARCH}-v${VERSION_1}.tar.gz
     DOWNLOAD_PATH=/tmp/node.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxfi/sdk/node/releases/download/v${VERSION_1}/node-macos-v${VERSION_1}.zip
+      DOWNLOAD_URL=https://github.com/luxfi/node/releases/download/v${VERSION_1}/node-macos-v${VERSION_1}.zip
       DOWNLOAD_PATH=/tmp/node.zip
     fi
 
@@ -78,13 +78,13 @@ if [ ! -f /tmp/node-v${VERSION_2}/node ]
 then
     ############################
     # download node
-    # https://github.com/luxfi/sdk/node/releases
+    # https://github.com/luxfi/node/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/luxfi/sdk/node/releases/download/v${VERSION_2}/node-linux-${GOARCH}-v${VERSION_2}.tar.gz
+    DOWNLOAD_URL=https://github.com/luxfi/node/releases/download/v${VERSION_2}/node-linux-${GOARCH}-v${VERSION_2}.tar.gz
     DOWNLOAD_PATH=/tmp/node.tar.gz
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxfi/sdk/node/releases/download/v${VERSION_2}/node-macos-v${VERSION_2}.zip
+      DOWNLOAD_URL=https://github.com/luxfi/node/releases/download/v${VERSION_2}/node-macos-v${VERSION_2}.zip
       DOWNLOAD_PATH=/tmp/node.zip
     fi
 
@@ -105,32 +105,30 @@ then
     find /tmp/node-v${VERSION_2}
 fi
 
-if [ ! -f /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm ]
+if [ ! -f /tmp/evm-v${SUBNET_EVM_VERSION}/evm ]
 then
     ############################
-    # download subnet-evm
-    # https://github.com/luxfi/subnet-evm/releases
+    # download evm plugin
+    # https://github.com/luxfi/evm/releases
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
-    DOWNLOAD_URL=https://github.com/luxfi/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_linux_${GOARCH}.tar.gz
-    DOWNLOAD_PATH=/tmp/subnet-evm.tar.gz
+    # evm releases are raw binaries named evm-plugin-{os}-{arch}
+    DOWNLOAD_URL=https://github.com/luxfi/evm/releases/download/v${SUBNET_EVM_VERSION}/evm-plugin-linux-${GOARCH}
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxfi/subnet-evm/releases/download/v${SUBNET_EVM_VERSION}/subnet-evm_${SUBNET_EVM_VERSION}_darwin_${GOARCH}.tar.gz
+      DOWNLOAD_URL=https://github.com/luxfi/evm/releases/download/v${SUBNET_EVM_VERSION}/evm-plugin-darwin-${GOARCH}
     fi
 
-    rm -rf /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
-    rm -f ${DOWNLOAD_PATH}
+    rm -rf /tmp/evm-v${SUBNET_EVM_VERSION}
+    mkdir -p /tmp/evm-v${SUBNET_EVM_VERSION}
 
-    echo "downloading subnet-evm ${SUBNET_EVM_VERSION} at ${DOWNLOAD_URL}"
-    curl -L ${DOWNLOAD_URL} -o ${DOWNLOAD_PATH}
+    echo "downloading evm ${SUBNET_EVM_VERSION} at ${DOWNLOAD_URL}"
+    curl -L ${DOWNLOAD_URL} -o /tmp/evm-v${SUBNET_EVM_VERSION}/evm
+    chmod +x /tmp/evm-v${SUBNET_EVM_VERSION}/evm
 
-    echo "extracting downloaded subnet-evm"
-    mkdir /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
-    tar xzvf ${DOWNLOAD_PATH} -C /tmp/subnet-evm-v${SUBNET_EVM_VERSION}
-    # NOTE: We are copying the subnet-evm binary here to a plugin hardcoded as srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy which corresponds to the VM name `subnetevm` used as such in the test
+    # NOTE: We are copying the evm binary here to a plugin hardcoded as srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy which corresponds to the VM name `subnetevm` used as such in the test
     mkdir -p /tmp/node-v${VERSION_1}/plugins/
-    cp /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm /tmp/node-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
-    find /tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm
+    cp /tmp/evm-v${SUBNET_EVM_VERSION}/evm /tmp/node-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
+    find /tmp/evm-v${SUBNET_EVM_VERSION}/evm
 fi
 ############################
 echo "building runner"
@@ -179,4 +177,4 @@ echo "running e2e tests"
 --grpc-gateway-endpoint="0.0.0.0:8081" \
 --node-path-1=/tmp/node-v${VERSION_1}/node \
 --node-path-2=/tmp/node-v${VERSION_2}/node \
---subnet-evm-path=/tmp/subnet-evm-v${SUBNET_EVM_VERSION}/subnet-evm
+--subnet-evm-path=/tmp/evm-v${SUBNET_EVM_VERSION}/evm
