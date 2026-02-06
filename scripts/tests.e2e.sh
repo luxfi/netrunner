@@ -153,7 +153,7 @@ export CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 echo "building e2e.test"
 # to install the ginkgo binary (required for test build and run)
 go install -v github.com/onsi/ginkgo/v2/ginkgo@v2.1.3
-ACK_GINKGO_RC=true ginkgo build ./tests/e2e
+ACK_GINKGO_RC=true ginkgo build --tags e2e ./tests/e2e
 ./tests/e2e/e2e.test --help
 
 snapshots_dir=/tmp/network-runner-root-data/snapshots-e2e/
