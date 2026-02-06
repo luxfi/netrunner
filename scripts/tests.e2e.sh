@@ -67,9 +67,14 @@ then
     echo "extracting downloaded node"
     if [[ ${GOOS} == "linux" ]]; then
       tar xzvf ${DOWNLOAD_PATH} -C /tmp
+      # tarball extracts to build/luxd, move to expected location
+      mv /tmp/build /tmp/node-v${VERSION_1}
+      # create symlink from node -> luxd for compatibility
+      ln -sf luxd /tmp/node-v${VERSION_1}/node
     elif [[ ${GOOS} == "darwin" ]]; then
       unzip ${DOWNLOAD_PATH} -d /tmp/node-build
       mv /tmp/node-build/build /tmp/node-v${VERSION_1}
+      ln -sf luxd /tmp/node-v${VERSION_1}/node
     fi
     find /tmp/node-v${VERSION_1}
 fi
@@ -98,9 +103,14 @@ then
     echo "extracting downloaded node"
     if [[ ${GOOS} == "linux" ]]; then
       tar xzvf ${DOWNLOAD_PATH} -C /tmp
+      # tarball extracts to build/luxd, move to expected location
+      mv /tmp/build /tmp/node-v${VERSION_2}
+      # create symlink from node -> luxd for compatibility
+      ln -sf luxd /tmp/node-v${VERSION_2}/node
     elif [[ ${GOOS} == "darwin" ]]; then
       unzip ${DOWNLOAD_PATH} -d /tmp/node-build
       mv /tmp/node-build/build /tmp/node-v${VERSION_2}
+      ln -sf luxd /tmp/node-v${VERSION_2}/node
     fi
     find /tmp/node-v${VERSION_2}
 fi
