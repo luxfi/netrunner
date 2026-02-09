@@ -86,6 +86,7 @@ require (
 	github.com/luxfi/sys v0.0.0-20260110090042-50187ec5ffd8 // indirect
 	github.com/luxfi/timer v1.0.2 // indirect
 	github.com/luxfi/utils v1.1.4 // indirect
+	github.com/luxfi/zapdb/v4 v4.9.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -148,7 +149,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.3
 	github.com/luxfi/cache v1.2.1 // indirect
-	github.com/luxfi/database v1.17.40 // indirect
+	github.com/luxfi/database v1.17.42 // indirect
 	github.com/luxfi/evm v0.8.35 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
 	github.com/luxfi/keychain v1.0.2 // indirect
