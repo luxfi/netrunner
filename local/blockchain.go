@@ -1289,9 +1289,9 @@ type wallet struct {
 // getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
 // Priority: LUX_MNEMONIC > LUX_PRIVATE_KEY > disk keys
 func getDefaultKey() (*secp256k1.PrivateKey, error) {
-	// If LUX_MNEMONIC is set, derive key using BIP44 path m/44'/9000'/0'/0/0 (LUX native)
+	// If LUX_MNEMONIC is set, derive key using BIP44 path m/44'/60'/0'/0/0 (standard Ethereum)
 	// CRITICAL: This MUST match the derivation path used in genesis allocations
-	// (keys.DeriveValidatorFromMnemonic uses m/44'/9000'/0'/0/{index})
+	// (keys.DeriveValidatorFromMnemonic uses m/44'/60'/0'/0/{index})
 	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
 		fmt.Printf("🔑 getDefaultKey: Using LUX_MNEMONIC (len=%d)\n", len(mnemonic))
 
@@ -1308,7 +1308,7 @@ func getDefaultKey() (*secp256k1.PrivateKey, error) {
 
 		pubKey := privKey.PublicKey()
 		walletAddr := ids.ShortID(pubKey.Address())
-		fmt.Printf("🔑 Wallet address (from mnemonic m/44'/9000'/0'/0/0): %s\n", walletAddr.String())
+		fmt.Printf("🔑 Wallet address (from mnemonic m/44'/60'/0'/0/0): %s\n", walletAddr.String())
 
 		return privKey, nil
 	}
