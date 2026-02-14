@@ -144,9 +144,7 @@ var (
 	deprecatedFlagsSupportBytes []byte
 	deprecatedFlagsSupport      []deprecatedFlagEsp
 	// Pre-defined network configuration.
-	// [defaultNetworkConfig] should not be modified.
-	// TODO add method Copy() to network.Config to prevent
-	// accidental overwriting
+	// [defaultNetworkConfig] should not be modified — use NewDefaultConfig() to get a copy.
 	defaultNetworkConfig network.Config
 	// snapshots directory
 	defaultSnapshotsDir string
