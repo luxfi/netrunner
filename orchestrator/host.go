@@ -47,15 +47,16 @@ func NewHost() *Host {
 
 // EngineOptions contains options for starting an engine
 type EngineOptions struct {
-	NetworkID    uint32
-	HTTPPort     uint16
-	WSPort       uint16
-	StakingPort  uint16
-	DataDir      string
-	LogLevel     string
-	Binary       string
-	BootstrapIPs []string
-	Extra        map[string]interface{}
+	NetworkID      uint32
+	HTTPPort       uint16
+	WSPort         uint16
+	StakingPort    uint16
+	DataDir        string
+	LogLevel       string
+	Binary         string
+	BootstrapNodes []string // Endpoint-only bootstrap (NodeID discovered from TLS cert)
+	BootstrapIPs   []string // Deprecated: use BootstrapNodes
+	Extra          map[string]interface{}
 }
 
 // StartEngine starts a single engine
@@ -70,14 +71,15 @@ func (h *Host) StartEngine(ctx context.Context, name string, typ string, options
 
 	// Convert options to NodeConfig
 	config := &engines.NodeConfig{
-		NetworkID:    options.NetworkID,
-		HTTPPort:     options.HTTPPort,
-		WSPort:       options.WSPort,
-		StakingPort:  options.StakingPort,
-		DataDir:      options.DataDir,
-		LogLevel:     options.LogLevel,
-		BootstrapIPs: options.BootstrapIPs,
-		Extra:        options.Extra,
+		NetworkID:      options.NetworkID,
+		HTTPPort:       options.HTTPPort,
+		WSPort:         options.WSPort,
+		StakingPort:    options.StakingPort,
+		DataDir:        options.DataDir,
+		LogLevel:       options.LogLevel,
+		BootstrapNodes: options.BootstrapNodes,
+		BootstrapIPs:   options.BootstrapIPs,
+		Extra:          options.Extra,
 	}
 
 	// Allocate ports if not specified
@@ -196,14 +198,15 @@ func (h *Host) StartStack(ctx context.Context, manifest *StackManifest) error {
 		}
 
 		options := &EngineOptions{
-			NetworkID:    config.NetworkID,
-			HTTPPort:     config.HTTPPort,
-			WSPort:       config.WSPort,
-			StakingPort:  config.StakingPort,
-			DataDir:      config.DataDir,
-			LogLevel:     config.LogLevel,
-			BootstrapIPs: config.BootstrapIPs,
-			Extra:        config.Extra,
+			NetworkID:      config.NetworkID,
+			HTTPPort:       config.HTTPPort,
+			WSPort:         config.WSPort,
+			StakingPort:    config.StakingPort,
+			DataDir:        config.DataDir,
+			LogLevel:       config.LogLevel,
+			BootstrapNodes: config.BootstrapNodes,
+			BootstrapIPs:   config.BootstrapIPs,
+			Extra:          config.Extra,
 		}
 		if err := h.StartEngine(ctx, engine.Name, engine.Type, options); err != nil {
 			// Rollback on failure
