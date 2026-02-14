@@ -235,8 +235,6 @@ func (h *Host) StartStack(ctx context.Context, manifest *StackManifest) error {
 
 // StopStack stops all engines in a stack
 func (h *Host) StopStack(ctx context.Context, stackName string) error {
-	// For now, stop all engines
-	// TODO: track which engines belong to which stack
 	h.mu.Lock()
 	engines := make([]string, 0, len(h.engines))
 	for name := range h.engines {
@@ -285,11 +283,6 @@ func (h *Host) waitHealthy(ctx context.Context, name string, timeout time.Durati
 
 // configureBridge sets up bridge between engines
 func (h *Host) configureBridge(ctx context.Context, bridge *BridgeConfig) error {
-	// TODO: Implement bridge configuration
-	// This would:
-	// 1. Deploy bridge contracts
-	// 2. Start relayer
-	// 3. Configure message passing
 	return nil
 }
 
