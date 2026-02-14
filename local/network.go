@@ -72,9 +72,10 @@ var (
 	_ NodeProcessCreator = (*nodeProcessCreator)(nil)
 
 	warnFlags = map[string]struct{}{
-		config.NetworkIDKey:    {},
-		config.BootstrapIPsKey: {},
-		config.BootstrapIDsKey: {},
+		config.NetworkIDKey:      {},
+		config.BootstrapNodesKey: {},
+		config.BootstrapIPsKey:   {},
+		config.BootstrapIDsKey:   {},
 	}
 	chainConfigSubDir  = "chainConfigs"
 	pChainConfigSubDir = "pChainConfigs"
@@ -1316,8 +1317,7 @@ func (ln *localNetwork) buildArgs(
 		config.PluginDirKey:    pluginDir, // Always pass plugin dir for consistency
 		config.HTTPPortKey:     fmt.Sprintf("%d", apiPort),
 		config.StakingPortKey:  fmt.Sprintf("%d", p2pPort),
-		config.BootstrapIPsKey: ln.bootstraps.IPsArg(),
-		config.BootstrapIDsKey: ln.bootstraps.IDsArg(),
+		config.BootstrapNodesKey: ln.bootstraps.IPsArg(),
 	}
 
 	// Write staking key/cert etc. to disk so the new node can use them,

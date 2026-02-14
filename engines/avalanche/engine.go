@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/luxfi/ids"
@@ -82,8 +83,11 @@ func (e *LuxEngine) Start(ctx context.Context, config *engines.NodeConfig) error
 		"--http-allowed-origins=*",
 	}
 
-	// Add bootstrap nodes if custom network
-	if len(config.BootstrapIPs) > 0 {
+	// Add bootstrap nodes (endpoint-only, NodeID discovered from TLS cert)
+	if len(config.BootstrapNodes) > 0 {
+		args = append(args, fmt.Sprintf("--bootstrap-nodes=%s", strings.Join(config.BootstrapNodes, ",")))
+	} else if len(config.BootstrapIPs) > 0 {
+		// Deprecated: fall back to --bootstrap-ips for older luxd
 		for _, ip := range config.BootstrapIPs {
 			args = append(args, fmt.Sprintf("--bootstrap-ips=%s", ip))
 		}
