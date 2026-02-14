@@ -39,13 +39,14 @@ type HealthStatus struct {
 
 // NodeConfig contains engine startup configuration
 type NodeConfig struct {
-	NetworkID    uint32
-	HTTPPort     uint16
-	WSPort       uint16
-	StakingPort  uint16
-	DataDir      string
-	LogLevel     string
-	BootstrapIPs []string
+	NetworkID      uint32
+	HTTPPort       uint16
+	WSPort         uint16
+	StakingPort    uint16
+	DataDir        string
+	LogLevel       string
+	BootstrapNodes []string // Endpoint-only bootstrap (NodeID discovered from TLS cert)
+	BootstrapIPs   []string // Deprecated: use BootstrapNodes
 	// Chain-specific configs
 	Extra map[string]interface{}
 }

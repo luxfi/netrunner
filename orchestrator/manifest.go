@@ -34,7 +34,8 @@ type EngineConfig struct {
 	StakingPort  uint16                 `yaml:"staking_port,omitempty" json:"staking_port,omitempty"`
 	DataDir      string                 `yaml:"data_dir,omitempty" json:"data_dir,omitempty"`
 	LogLevel     string                 `yaml:"log_level,omitempty" json:"log_level,omitempty"`
-	BootstrapIPs []string               `yaml:"bootstrap_ips,omitempty" json:"bootstrap_ips,omitempty"`
+	BootstrapNodes []string               `yaml:"bootstrap_nodes,omitempty" json:"bootstrap_nodes,omitempty"`
+	BootstrapIPs   []string               `yaml:"bootstrap_ips,omitempty" json:"bootstrap_ips,omitempty"`
 	Extra        map[string]interface{} `yaml:"extra,omitempty" json:"extra,omitempty"`
 	WaitHealthy  bool                   `yaml:"wait_healthy,omitempty" json:"wait_healthy,omitempty"`
 	DependsOn    []string               `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
