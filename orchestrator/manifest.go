@@ -25,20 +25,20 @@ type StackManifest struct {
 
 // EngineConfig defines an engine configuration
 type EngineConfig struct {
-	Name         string                 `yaml:"name" json:"name"`
-	Type         string                 `yaml:"type" json:"type"` // lux, lux, geth, op, eth2
-	Binary       string                 `yaml:"binary,omitempty" json:"binary,omitempty"`
-	NetworkID    uint32                 `yaml:"network_id" json:"network_id"`
-	HTTPPort     uint16                 `yaml:"http_port,omitempty" json:"http_port,omitempty"`
-	WSPort       uint16                 `yaml:"ws_port,omitempty" json:"ws_port,omitempty"`
-	StakingPort  uint16                 `yaml:"staking_port,omitempty" json:"staking_port,omitempty"`
-	DataDir      string                 `yaml:"data_dir,omitempty" json:"data_dir,omitempty"`
-	LogLevel     string                 `yaml:"log_level,omitempty" json:"log_level,omitempty"`
+	Name           string                 `yaml:"name" json:"name"`
+	Type           string                 `yaml:"type" json:"type"` // lux, lux, geth, op, eth2
+	Binary         string                 `yaml:"binary,omitempty" json:"binary,omitempty"`
+	NetworkID      uint32                 `yaml:"network_id" json:"network_id"`
+	HTTPPort       uint16                 `yaml:"http_port,omitempty" json:"http_port,omitempty"`
+	WSPort         uint16                 `yaml:"ws_port,omitempty" json:"ws_port,omitempty"`
+	StakingPort    uint16                 `yaml:"staking_port,omitempty" json:"staking_port,omitempty"`
+	DataDir        string                 `yaml:"data_dir,omitempty" json:"data_dir,omitempty"`
+	LogLevel       string                 `yaml:"log_level,omitempty" json:"log_level,omitempty"`
 	BootstrapNodes []string               `yaml:"bootstrap_nodes,omitempty" json:"bootstrap_nodes,omitempty"`
 	BootstrapIPs   []string               `yaml:"bootstrap_ips,omitempty" json:"bootstrap_ips,omitempty"`
-	Extra        map[string]interface{} `yaml:"extra,omitempty" json:"extra,omitempty"`
-	WaitHealthy  bool                   `yaml:"wait_healthy,omitempty" json:"wait_healthy,omitempty"`
-	DependsOn    []string               `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	Extra          map[string]interface{} `yaml:"extra,omitempty" json:"extra,omitempty"`
+	WaitHealthy    bool                   `yaml:"wait_healthy,omitempty" json:"wait_healthy,omitempty"`
+	DependsOn      []string               `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
 
 	// OP Stack specific
 	L1RPC     string `yaml:"l1_rpc,omitempty" json:"l1_rpc,omitempty"`

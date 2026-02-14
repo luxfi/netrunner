@@ -1308,13 +1308,13 @@ func (ln *localNetwork) buildArgs(
 
 	// Flags for Lux
 	flags := map[string]string{
-		config.NetworkIDKey:    fmt.Sprintf("%d", ln.networkID),
-		config.DataDirKey:      dataDir,
-		config.DBPathKey:       dbDir,
-		config.LogsDirKey:      logsDir,
-		config.PluginDirKey:    pluginDir, // Always pass plugin dir for consistency
-		config.HTTPPortKey:     fmt.Sprintf("%d", apiPort),
-		config.StakingPortKey:  fmt.Sprintf("%d", p2pPort),
+		config.NetworkIDKey:      fmt.Sprintf("%d", ln.networkID),
+		config.DataDirKey:        dataDir,
+		config.DBPathKey:         dbDir,
+		config.LogsDirKey:        logsDir,
+		config.PluginDirKey:      pluginDir, // Always pass plugin dir for consistency
+		config.HTTPPortKey:       fmt.Sprintf("%d", apiPort),
+		config.StakingPortKey:    fmt.Sprintf("%d", p2pPort),
 		config.BootstrapNodesKey: ln.bootstraps.IPsArg(),
 	}
 
