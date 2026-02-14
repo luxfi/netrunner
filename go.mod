@@ -14,7 +14,7 @@ require (
 	github.com/luxfi/address v1.0.1
 	github.com/luxfi/api v1.0.1
 	github.com/luxfi/atomic v1.0.0
-	github.com/luxfi/config v1.1.1
+	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.4.4
 	github.com/luxfi/crypto v1.17.40
 	github.com/luxfi/genesis v1.6.1
