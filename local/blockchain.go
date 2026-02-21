@@ -31,6 +31,7 @@ import (
 	"slices"
 
 	"github.com/luxfi/config"
+	luxconfig "github.com/luxfi/config"
 	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/crypto/secp256k1"
@@ -1289,7 +1290,7 @@ type wallet struct {
 // getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
 // Priority: LUX_MNEMONIC > LUX_PRIVATE_KEY > disk keys
 func getDefaultKey() (*secp256k1.PrivateKey, error) {
-	// If LUX_MNEMONIC is set, derive key using BIP44 path m/44'/60'/0'/0/0 (standard Ethereum)
+	// If LUX_MNEMONIC is set, derive key using BIP44 path m/44'/60'/0'/0/0 (Ethereum standard)
 	// CRITICAL: This MUST match the derivation path used in genesis allocations
 	// (keys.DeriveValidatorFromMnemonic uses m/44'/60'/0'/0/{index})
 	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
@@ -1339,14 +1340,7 @@ func getDefaultKey() (*secp256k1.PrivateKey, error) {
 	if len(loadedKeys) == 0 {
 		return nil, errors.New("no keys found in ~/.lux/keys")
 	}
-	if loadedKeys[0].PrivKeyHex == "" {
-		return nil, errors.New("loaded key has no EC private key - run 'lux keys generate' to create one")
-	}
-	keyPreview := loadedKeys[0].PrivKeyHex
-	if len(keyPreview) > 16 {
-		keyPreview = keyPreview[:16]
-	}
-	fmt.Printf("🔑 getDefaultKey: Loaded key from disk: %s...\n", keyPreview)
+	fmt.Printf("🔑 getDefaultKey: Loaded key from disk: %s...\n", loadedKeys[0].PrivKeyHex[:16])
 	// Convert hex to private key
 	privKeyBytes, err := hex.DecodeString(loadedKeys[0].PrivKeyHex)
 	if err != nil {
@@ -2221,7 +2215,7 @@ func (ln *localNetwork) waitChainValidators(
 // reload VM plugins on all nodes and verify they're available
 func (ln *localNetwork) reloadVMPlugins(ctx context.Context) error {
 	// Use unified config to resolve plugin directory for diagnostics
-	pluginDir := config.ResolvePluginDir()
+	pluginDir := luxconfig.ResolvePluginDir()
 	ln.logger.Info(log.Green.Wrap("reloading plugin binaries"),
 		"pluginDir", pluginDir,
 	)
