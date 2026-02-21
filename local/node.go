@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/luxfi/atomic"
+	"github.com/luxfi/node/utils/compression"
 	"github.com/luxfi/constants"
 	"github.com/luxfi/crypto/bls"
 	"github.com/luxfi/ids"
@@ -19,7 +20,6 @@ import (
 	"github.com/luxfi/netrunner/api"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/network/node/status"
-	"github.com/luxfi/node/utils/compression"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
 	"github.com/luxfi/p2p/throttling"
