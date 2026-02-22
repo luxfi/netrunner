@@ -9,7 +9,7 @@ exclude github.com/luxfi/geth v1.16.1
 require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/dgraph-io/badger/v4 v4.9.0
+	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.5
 	github.com/luxfi/address v1.0.1
 	github.com/luxfi/api v1.0.3
