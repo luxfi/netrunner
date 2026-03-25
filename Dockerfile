@@ -1,11 +1,11 @@
-# Build stage - Install Go 1.25.5 from source
+# Build stage - Install Go from source
 FROM debian:bookworm-slim AS go-installer
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ARG GO_VERSION=1.26
+ARG GO_VERSION=1.26.1
 ARG TARGETARCH
 
 RUN wget -q "https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz" \
