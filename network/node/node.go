@@ -83,7 +83,7 @@ type Config struct {
 	GenesisConfigFiles map[string]string `json:"genesisConfigFiles"`
 	// May be nil.
 	UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
-	// May be nil. P-Chain chain (formerly subnet) config files.
+	// May be nil. P-Chain config files.
 	PChainConfigFiles map[string]string `json:"pChainConfigFiles"`
 	// Flags can hold additional flags for the node.
 	// It can be empty.

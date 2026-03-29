@@ -1092,7 +1092,7 @@ After fixes, successfully deployed Zoo chain on mainnet:
 
 ### RLP Block Import Limitation
 
-**Discovery**: The subnet-evm doesn't support `admin_importChain` RPC method. Blocks in subnet-evm come through Lux consensus, not direct import.
+**Discovery**: The L2 EVM doesn't support `admin_importChain` RPC method. Blocks in L2 EVM chains come through Lux consensus, not direct import.
 
 **Available RPC modules on Zoo chain**: eth, net, rpc, web3 (no admin or debug)
 
