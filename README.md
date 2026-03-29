@@ -156,7 +156,7 @@ netrunner control start \
 ```
 
 `--plugin-dir` and `--blockchain-specs` are parameters relevant to chain (L2 blockchain) operation.
-See the [chain deployment](#network-runner-rpc-server-subnet-evm-example) section for details about how to run chains.
+See the [chain deployment](#network-runner-rpc-server-l2-evm-example) section for details about how to run chains.
 
 The network-runner supports node node configuration at different levels.
 
@@ -299,7 +299,7 @@ curl -X POST -k http://localhost:8081/v1/control/removesnapshot -d '{"snapshot_n
 netrunner control remove-snapshot snapshotName
 ```
 
-To create 1 validated network (validator set), with all existing nodes as participants (requires network restart):
+To create 1 chain (validator set), with all existing nodes as participants (requires network restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{}]'
@@ -308,7 +308,7 @@ curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{}]'
 netrunner control create-subnets '[{}]'
 ```
 
-To create 1 validated network (validator set), with some of existing nodes as participants (requires network restart):
+To create 1 chain (validator set), with some of existing nodes as participants (requires network restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{"participants": ["node1", "node2"]}]'
@@ -317,7 +317,7 @@ curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{"participan
 netrunner control create-subnets '[{"participants": ["node1", "node2"]}]'
 ```
 
-To create 1 validated network (validator set), with some of existing nodes and another new node as participants (requires network restart):
+To create 1 chain (validator set), with some of existing nodes and another new node as participants (requires network restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{"participants": ["node1", "node2", "testNode"]}]'
@@ -327,7 +327,7 @@ netrunner control create-subnets '[{"participants": ["node1", "node2", "testNode
 
 ```
 
-To create N validated networks (validator sets) (requires network restart):
+To create N chains (validator sets) (requires network restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{}, {"participants": ["node1", "node2", "node3"]}, {"participants": ["node1", "node2", "testNode"]}]'
@@ -337,7 +337,7 @@ netrunner control create-subnets '[{}, {"participants": ["node1", "node2", "node
 
 ```
 
-To create a blockchain without a network id (requires network restart):
+To create a blockchain without a chain ID (requires network restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'"}]}'
@@ -355,7 +355,7 @@ curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginD
 netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_CONTENTS'"}]' --plugin-dir $PLUGIN_DIR
 ```
 
-To create a blockchain with a network id (does not require restart):
+To create a blockchain with a chain ID (does not require restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'"}]}'
@@ -364,7 +364,7 @@ curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginD
 netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'"}]' --plugin-dir $PLUGIN_DIR
 ```
 
-To create a blockchain with a network id, and chain config, network upgrade and network config file paths (requires network restart):
+To create a blockchain with a chain ID, and chain config, network upgrade and chain config file paths (requires network restart):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]}'
@@ -373,7 +373,7 @@ curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginD
 netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]' --plugin-dir $PLUGIN_DIR
 ```
 
-To create a blockchain with a new network id with select nodes as participants (requires network restart):
+To create a blockchain with a new chain with select nodes as participants (requires network restart):
 (New nodes will first be added as primary validators similar to the process in `create-subnets`)
 
 ```bash
@@ -383,7 +383,7 @@ curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginD
 netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": "{"participants": ["node1", "node2", "testNode"]}]' --plugin-dir $PLUGIN_DIR
 ```
 
-To create two blockchains in two disjoint networks (not shared validators), and where all validators have bls keys (participants new to the network):
+To create two blockchains in two disjoint chains (not shared validators), and where all validators have bls keys (participants new to the network):
 
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": {"participants": ["new_node1", "new_node2"]}},{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": {"participants": ["new_node3", "new_node4"]}}]'
@@ -552,7 +552,7 @@ netrunner control stop \
 --endpoint="0.0.0.0:8080"
 ```
 
-## `network-runner` RPC server: `subnet-evm` example
+## `network-runner` RPC server: L2 EVM example
 
 To start the server:
 
