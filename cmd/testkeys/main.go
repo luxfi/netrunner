@@ -10,9 +10,9 @@ import (
 )
 
 func main() {
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	mnemonic := os.Getenv("MNEMONIC")
 	if mnemonic == "" {
-		fmt.Println("LUX_MNEMONIC not set")
+		fmt.Println("MNEMONIC not set")
 		os.Exit(1)
 	}
 

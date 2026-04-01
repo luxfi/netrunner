@@ -1,4 +1,4 @@
-// genkeys generates mainnet validator keys from LUX_MNEMONIC
+// genkeys generates mainnet validator keys from MNEMONIC
 package main
 
 import (
@@ -22,9 +22,9 @@ type ValidatorBackup struct {
 }
 
 func main() {
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	mnemonic := os.Getenv("MNEMONIC")
 	if mnemonic == "" {
-		fmt.Println("ERROR: LUX_MNEMONIC not set")
+		fmt.Println("ERROR: MNEMONIC not set")
 		os.Exit(1)
 	}
 
@@ -35,7 +35,7 @@ func main() {
 		keysDir = filepath.Join(home, ".lux", "keys")
 	}
 
-	fmt.Printf("=== Generating 5 Mainnet Validators from LUX_MNEMONIC ===\n")
+	fmt.Printf("=== Generating 5 Mainnet Validators from MNEMONIC ===\n")
 	fmt.Printf("Keys Directory: %s\n\n", keysDir)
 
 	ks := keys.NewKeyStore(keysDir)
