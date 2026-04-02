@@ -9,7 +9,6 @@ exclude github.com/luxfi/geth v1.16.1
 require (
 	github.com/btcsuite/btcd v0.25.0
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/dgraph-io/badger/v4 v4.9.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
 	github.com/luxfi/address v1.0.1
 	github.com/luxfi/api v1.0.3
@@ -29,9 +28,10 @@ require (
 	github.com/luxfi/p2p v1.19.2-zap
 	github.com/luxfi/protocol v0.0.3
 	github.com/luxfi/sdk v1.16.46
-	github.com/luxfi/utxo v0.2.4
+	github.com/luxfi/utxo v0.2.5
 	github.com/luxfi/validators v1.0.0
 	github.com/luxfi/version v1.0.1
+	github.com/luxfi/zapdb/v4 v4.9.2
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -87,7 +87,6 @@ require (
 	github.com/luxfi/sys v0.0.0-20260110090042-50187ec5ffd8 // indirect
 	github.com/luxfi/timer v1.0.2 // indirect
 	github.com/luxfi/utils v1.1.4 // indirect
-	github.com/luxfi/zapdb/v4 v4.9.2 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
