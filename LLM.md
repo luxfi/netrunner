@@ -32,7 +32,7 @@ curl -sSfL https://raw.githubusercontent.com/luxfi/netrunner/main/scripts/instal
 netrunner server --port=":8080" --grpc-gateway-port=":8081"
 
 # Start network
-netrunner control start --number-of-nodes=5 --node-path=/path/to/luxd
+netrunner control start --number-of-nodes=3 --node-path=/path/to/luxd
 
 # Check health
 netrunner control health
@@ -505,7 +505,7 @@ go build -o bin/netrunner
 
 # Start network (handles genesis automatically)
 ./bin/netrunner control start \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path=/Users/z/work/lux/node/build/luxd \
   --blockchain-specs='[{"vm_name":"qemuvm","genesis":"/path/to/genesis.json"}]'
 ```
@@ -994,7 +994,7 @@ User runs: lux network snapshot restore checkpoint1
 ### Security Considerations
 
 1. **Key Protection**: Staking keys at `~/.lux/keys/` should have 0600 permissions
-2. **No EWOQ Keys**: As per CLAUDE.md, absolutely no EWOQ keys
+2. **No EWOQ Keys**: As per CLAUDE.md, absolutely no EWOQ keys — use treasury key instead
 3. **Real Genesis**: Use luxfi/genesis package, never generate custom genesis
 4. **Sybil Protection**: Always enable sybil-protection-enabled for mainnet
 
