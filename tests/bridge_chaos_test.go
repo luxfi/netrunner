@@ -34,7 +34,7 @@ import (
 	"github.com/luxfi/geth/accounts/abi"
 	"github.com/luxfi/geth/common"
 	"github.com/luxfi/geth/core/types"
-	"github.com/luxfi/geth/crypto"
+	luxcrypto "github.com/luxfi/crypto"
 	"github.com/luxfi/geth/ethclient"
 )
 
@@ -196,10 +196,10 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 	chainID := big.NewInt(96369)
 
 	// Anvil account 0 = deployer/admin.
-	deployerKey, _ := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+	deployerKey, _ := luxcrypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
 
 	// Generate MPC signer key.
-	mpcKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+	mpcKey, err := ecdsa.GenerateKey(luxcrypto.S256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("generate mpc key: %v", err)
 	}
@@ -207,7 +207,7 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 	// Generate 3 relayer keys.
 	relayers := make([]*ecdsa.PrivateKey, 3)
 	for i := range relayers {
-		k, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+		k, err := ecdsa.GenerateKey(luxcrypto.S256(), rand.Reader)
 		if err != nil {
 			t.Fatalf("generate relayer key %d: %v", i, err)
 		}
@@ -216,7 +216,7 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 
 	// Fund relayers from deployer.
 	for _, rk := range relayers {
-		addr := crypto.PubkeyToAddress(rk.PublicKey)
+		addr := common.PubkeyToAddress(rk.PublicKey)
 		fundAccount(t, client, chainID, deployerKey, addr, big.NewInt(1e18))
 	}
 
@@ -233,7 +233,7 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 	// or inline bytecode. For test portability, we use anvil's built-in
 	// deploy mechanism via cast.
 	tokenAddr := deployMockToken(t, rpcURL, deployerKey)
-	mpcAddr := crypto.PubkeyToAddress(mpcKey.PublicKey)
+	mpcAddr := common.PubkeyToAddress(mpcKey.PublicKey)
 	teleporterAddr := deployTeleporter(t, rpcURL, deployerKey, tokenAddr, mpcAddr)
 
 	// Seed backing attestation so mints succeed.
@@ -269,7 +269,7 @@ func deployMockToken(t *testing.T, rpcURL string, deployer *ecdsa.PrivateKey) co
 	// Solidity: constructor() ERC20("LETH","LETH") {}; function mint(address,uint256) external; function burnFrom(address,uint256) external;
 	// We use a precompiled bytecode for a mock token.
 	// In production tests this would be forge-deployed; here we use cast.
-	privHex := fmt.Sprintf("%x", crypto.FromECDSA(deployer))
+	privHex := fmt.Sprintf("%x", luxcrypto.FromECDSA(deployer))
 
 	// Deploy via cast using inline Solidity.
 	src := `// SPDX-License-Identifier: MIT
@@ -315,7 +315,7 @@ contract MockToken {
 func deployTeleporter(t *testing.T, rpcURL string, deployer *ecdsa.PrivateKey, token, mpcOracle common.Address) common.Address {
 	t.Helper()
 
-	privHex := fmt.Sprintf("%x", crypto.FromECDSA(deployer))
+	privHex := fmt.Sprintf("%x", luxcrypto.FromECDSA(deployer))
 
 	// Minimal Teleporter that mirrors the real contract's critical paths.
 	// This is a test double that preserves all safety invariants.
@@ -542,7 +542,7 @@ func fundAccount(t *testing.T, client *ethclient.Client, chainID *big.Int, from 
 	t.Helper()
 	ctx := context.Background()
 
-	fromAddr := crypto.PubkeyToAddress(from.PublicKey)
+	fromAddr := common.PubkeyToAddress(from.PublicKey)
 	nonce, err := client.PendingNonceAt(ctx, fromAddr)
 	if err != nil {
 		t.Fatalf("nonce: %v", err)
@@ -591,7 +591,7 @@ func (e *chaosEnv) sendContractTx(t *testing.T, key *ecdsa.PrivateKey, to common
 		return nil, fmt.Errorf("pack %s: %w", method, err)
 	}
 
-	fromAddr := crypto.PubkeyToAddress(key.PublicKey)
+	fromAddr := common.PubkeyToAddress(key.PublicKey)
 	nonce, err := e.client.PendingNonceAt(ctx, fromAddr)
 	if err != nil {
 		return nil, fmt.Errorf("nonce: %w", err)
@@ -637,23 +637,23 @@ func signDepositProof(key *ecdsa.PrivateKey, srcChain, nonce uint64, recipient c
 	// Match Teleporter.sol: keccak256(abi.encode(bytes32("DEPOSIT"), srcChainId, depositNonce, recipient, amount))
 	tag := common.BytesToHash([]byte("DEPOSIT"))
 	packed := packABIEncode(tag, new(big.Int).SetUint64(srcChain), new(big.Int).SetUint64(nonce), recipient, amount)
-	return signEthMessage(key, crypto.Keccak256(packed))
+	return signEthMessage(key, common.Keccak256(packed))
 }
 
 // signBackingProof creates an MPC signature for a backing attestation.
 func signBackingProof(key *ecdsa.PrivateKey, srcChain uint64, totalBacking, timestamp *big.Int) ([]byte, error) {
 	tag := common.BytesToHash([]byte("BACKING"))
 	packed := packABIEncode(tag, new(big.Int).SetUint64(srcChain), totalBacking, timestamp)
-	return signEthMessage(key, crypto.Keccak256(packed))
+	return signEthMessage(key, common.Keccak256(packed))
 }
 
 // signEthMessage produces an Ethereum signed message (EIP-191 personal_sign).
 func signEthMessage(key *ecdsa.PrivateKey, messageHash []byte) ([]byte, error) {
-	prefixed := crypto.Keccak256(
+	prefixed := common.Keccak256(
 		[]byte("\x19Ethereum Signed Message:\n32"),
 		messageHash,
 	)
-	sig, err := crypto.Sign(prefixed, key)
+	sig, err := luxcrypto.Sign(prefixed, key)
 	if err != nil {
 		return nil, err
 	}
@@ -798,7 +798,7 @@ func TestBridge_NonceLinearizability(t *testing.T) {
 	const numNonces = 30
 	const concurrency = 3
 	amount := big.NewInt(1e15) // 0.001 token per deposit
-	recipient := crypto.PubkeyToAddress(env.relayers[0].PublicKey)
+	recipient := common.PubkeyToAddress(env.relayers[0].PublicKey)
 
 	// Refresh backing to cover all mints.
 	env.updateBacking(t, big.NewInt(time.Now().Unix()), big.NewInt(1e18))
@@ -872,12 +872,12 @@ func TestBridge_PartitionedMPCSigner(t *testing.T) {
 	// Generate 3 MPC signer keys and register them all as oracles.
 	signers := make([]*ecdsa.PrivateKey, 3)
 	for i := range signers {
-		k, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+		k, err := ecdsa.GenerateKey(luxcrypto.S256(), rand.Reader)
 		if err != nil {
 			t.Fatalf("generate signer %d: %v", i, err)
 		}
 		signers[i] = k
-		addr := crypto.PubkeyToAddress(k.PublicKey)
+		addr := common.PubkeyToAddress(k.PublicKey)
 		_, err = env.sendContractTx(t, env.deployer, env.teleporter, env.parsedABI, "setMPCOracle", addr, true)
 		if err != nil {
 			t.Fatalf("register signer %d: %v", i, err)
@@ -885,7 +885,7 @@ func TestBridge_PartitionedMPCSigner(t *testing.T) {
 	}
 
 	env.updateBacking(t, big.NewInt(time.Now().Unix()), big.NewInt(1e18))
-	recipient := crypto.PubkeyToAddress(env.relayers[0].PublicKey)
+	recipient := common.PubkeyToAddress(env.relayers[0].PublicKey)
 	amount := big.NewInt(1e15)
 
 	// 1. All 3 signers work: each signs a deposit successfully.
@@ -903,7 +903,7 @@ func TestBridge_PartitionedMPCSigner(t *testing.T) {
 	}
 
 	// 2. Partition signer[2] (revoke oracle status to simulate unreachable).
-	partitionedAddr := crypto.PubkeyToAddress(signers[2].PublicKey)
+	partitionedAddr := common.PubkeyToAddress(signers[2].PublicKey)
 	_, err := env.sendContractTx(t, env.deployer, env.teleporter, env.parsedABI, "setMPCOracle", partitionedAddr, false)
 	if err != nil {
 		t.Fatalf("partition signer 2: %v", err)
@@ -1008,15 +1008,15 @@ func TestBridge_CrashDuringBatchMint(t *testing.T) {
 		t.Fatalf("dial: %v", err)
 	}
 	chainID := big.NewInt(96369)
-	deployerKey, _ := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-	mpcKey, _ := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
-	recipient := crypto.PubkeyToAddress(deployerKey.PublicKey)
+	deployerKey, _ := luxcrypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+	mpcKey, _ := ecdsa.GenerateKey(luxcrypto.S256(), rand.Reader)
+	recipient := common.PubkeyToAddress(deployerKey.PublicKey)
 
 	parsedABI, _ := abi.JSON(strings.NewReader(teleporterABI))
 
 	// Deploy contracts.
 	tokenAddr := deployMockToken(t, rpcURL, deployerKey)
-	mpcAddr := crypto.PubkeyToAddress(mpcKey.PublicKey)
+	mpcAddr := common.PubkeyToAddress(mpcKey.PublicKey)
 	teleporterAddr := deployTeleporter(t, rpcURL, deployerKey, tokenAddr, mpcAddr)
 
 	// Seed backing.
@@ -1083,7 +1083,7 @@ func TestBridge_CrashDuringBatchMint(t *testing.T) {
 func sendRawTx(t *testing.T, client *ethclient.Client, chainID *big.Int, key *ecdsa.PrivateKey, to common.Address, data []byte) *types.Receipt {
 	t.Helper()
 	ctx := context.Background()
-	from := crypto.PubkeyToAddress(key.PublicKey)
+	from := common.PubkeyToAddress(key.PublicKey)
 
 	nonce, err := client.PendingNonceAt(ctx, from)
 	if err != nil {
@@ -1132,7 +1132,7 @@ func TestBridge_AutoPauseUnderPartition(t *testing.T) {
 	}
 	env := setupChaosEnv(t)
 
-	recipient := crypto.PubkeyToAddress(env.relayers[0].PublicKey)
+	recipient := common.PubkeyToAddress(env.relayers[0].PublicKey)
 	mintAmount := big.NewInt(1e17) // 0.1 tokens
 
 	// 1. Setup: mint some tokens so totalMinted > 0.
@@ -1278,7 +1278,7 @@ func TestBridge_DoubleSpendNonce(t *testing.T) {
 	env.updateBacking(t, big.NewInt(time.Now().Unix()), big.NewInt(1e18))
 
 	nonce := uint64(42)
-	recipient := crypto.PubkeyToAddress(env.relayers[0].PublicKey)
+	recipient := common.PubkeyToAddress(env.relayers[0].PublicKey)
 	amount := big.NewInt(1e15)
 
 	sig, err := signDepositProof(env.mpcKey, srcChainID, nonce, recipient, amount)
@@ -1342,11 +1342,11 @@ func TestBridge_ExitGuaranteeDuringChaos(t *testing.T) {
 	}
 	env := setupChaosEnv(t)
 
-	recipient := crypto.PubkeyToAddress(env.relayers[0].PublicKey)
+	recipient := common.PubkeyToAddress(env.relayers[0].PublicKey)
 	mintAmount := big.NewInt(1e17)
 
 	// 1. Setup: mint tokens to the deployer so we can burn them.
-	deployerAddr := crypto.PubkeyToAddress(env.deployer.PublicKey)
+	deployerAddr := common.PubkeyToAddress(env.deployer.PublicKey)
 	env.updateBacking(t, big.NewInt(time.Now().Unix()), big.NewInt(1e18))
 	for i := uint64(0); i < 10; i++ {
 		_, err := env.mintDeposit(t, i, deployerAddr, mintAmount)
@@ -1427,11 +1427,11 @@ func TestBridge_BackingRatioHysteresis(t *testing.T) {
 	}
 	env := setupChaosEnv(t)
 
-	recipient := crypto.PubkeyToAddress(env.relayers[0].PublicKey)
+	recipient := common.PubkeyToAddress(env.relayers[0].PublicKey)
 	mintAmount := big.NewInt(1e17)
 
 	// 1. Setup: mint 10 tokens so totalMinted = 1e18.
-	env.updateBacking(t, big.NewInt(time.Now().Unix()), big.NewInt(1e19))
+	env.updateBacking(t, big.NewInt(time.Now().Unix()), new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)))
 	for i := uint64(0); i < 10; i++ {
 		_, err := env.mintDeposit(t, i, recipient, mintAmount)
 		if err != nil {
