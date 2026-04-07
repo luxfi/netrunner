@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	ethereum "github.com/luxfi/geth"
 	luxcrypto "github.com/luxfi/crypto"
 	"github.com/luxfi/crypto/secp256k1"
 	"github.com/luxfi/geth/accounts/abi"
@@ -443,7 +444,7 @@ func TestGPU_ECRecoverBatchCorrectness(t *testing.T) {
 		calldata, err := parsedABI.Pack("recover", m.hash, m.v, m.r, m.s)
 		require.NoError(t, err)
 
-		result, err := client.CallContract(ctx, makeCallMsg(contractAddr, calldata), nil)
+		result, err := client.CallContract(ctx, callMsg(contractAddr, calldata), nil)
 		require.NoError(t, err, "ecrecover call %d failed", i)
 
 		if len(result) >= 32 {
@@ -462,15 +463,14 @@ func TestGPU_ECRecoverBatchCorrectness(t *testing.T) {
 	t.Logf("PASS: all %d ecrecover calls returned correct signer", batchSize)
 }
 
-// makeCallMsg constructs an ethereum.CallMsg for read-only contract calls.
-func makeCallMsg(to common.Address, data []byte) interface{ ToMessage() interface{} } {
-	// ethclient.CallContract accepts ethereum.CallMsg directly.
-	// We return a struct that satisfies the call pattern.
-	type callMsg struct {
-		To   *common.Address
-		Data []byte
+// callMsg constructs an ethereum.CallMsg for read-only contract calls.
+func callMsg(to common.Address, data []byte) ethereum.CallMsg {
+	addr := to
+	return ethereum.CallMsg{
+		To:   &addr,
+		Data: data,
+		Gas:  1_000_000,
 	}
-	return nil // Placeholder: ethclient uses positional params
 }
 
 // TestGPU_Keccak256BatchConsistency computes 10000 keccak256 hashes on-chain and
@@ -859,16 +859,9 @@ func TestGPU_PrecompileBatchVerify(t *testing.T) {
 }
 
 // buildCallMsg constructs an ethereum.CallMsg for eth_call.
-func buildCallMsg(to common.Address, data []byte) interface{} {
-	// We return the struct type that ethclient.CallContract expects.
-	// The luxfi/geth ethereum.CallMsg type is in the root package.
-	type callMsg struct {
-		To   *common.Address
-		Data []byte
-		Gas  uint64
-	}
+func buildCallMsg(to common.Address, data []byte) ethereum.CallMsg {
 	addr := to
-	return callMsg{To: &addr, Data: data, Gas: 1_000_000}
+	return ethereum.CallMsg{To: &addr, Data: data, Gas: 1_000_000}
 }
 
 // bytesEqual compares two byte slices.
