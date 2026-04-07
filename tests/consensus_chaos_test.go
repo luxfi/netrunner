@@ -4,6 +4,7 @@ package tests
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"os"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/luxfi/geth/common"
 	"github.com/luxfi/geth/core/types"
-	"github.com/luxfi/geth/crypto"
+	luxcrypto "github.com/luxfi/crypto"
 	"github.com/luxfi/geth/ethclient"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
@@ -34,16 +35,11 @@ type consensusTestEnv struct {
 	fundAddr common.Address
 }
 
-type ecdsa = crypto.PrivateKey // alias to avoid import ambiguity
-
 func newConsensusTestEnv(t *testing.T) *consensusTestEnv {
 	t.Helper()
 	require := require.New(t)
 
-	logger := log.NewLogger(
-		"consensus-chaos",
-		log.NewWrappedCore(log.Info, log.Stdout, log.Plain.ConsoleEncoder()),
-	)
+	logger := log.New("component", "consensus-chaos")
 
 	luxdPath := os.Getenv("LUXD_PATH")
 	if luxdPath == "" {
@@ -75,9 +71,9 @@ func newConsensusTestEnv(t *testing.T) *consensusTestEnv {
 	chainID, err := clients[0].ChainID(context.Background())
 	require.NoError(err)
 
-	fundKey, err := crypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
+	fundKey, err := luxcrypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
 	require.NoError(err)
-	fundAddr := crypto.PubkeyToAddress(fundKey.PublicKey)
+	fundAddr := common.PubkeyToAddress(fundKey.PublicKey)
 
 	return &consensusTestEnv{
 		network:  net,
@@ -727,9 +723,9 @@ func TestConsensus_DoubleVote(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a separate funded account for the double-vote test.
-	dvKey, err := crypto.GenerateKey()
+	dvKey, err := luxcrypto.GenerateKey()
 	require.NoError(err)
-	dvAddr := crypto.PubkeyToAddress(dvKey.PublicKey)
+	dvAddr := common.PubkeyToAddress(dvKey.PublicKey)
 
 	// Fund it.
 	fundAmt := new(big.Int).Mul(big.NewInt(10), new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
