@@ -13,9 +13,10 @@ import (
 	"testing"
 	"time"
 
+	ethereum "github.com/luxfi/geth"
+	luxcrypto "github.com/luxfi/crypto"
 	"github.com/luxfi/geth/common"
 	"github.com/luxfi/geth/core/types"
-	"github.com/luxfi/geth/crypto"
 	"github.com/luxfi/geth/ethclient"
 	"github.com/luxfi/log"
 	"github.com/luxfi/netrunner/local"
@@ -28,30 +29,30 @@ import (
 // These are the first 4 bytes of keccak256 of the function signature.
 var (
 	// Factory
-	selCreatePair = crypto.Keccak256([]byte("createPair(address,address)"))[:4]
+	selCreatePair = common.Keccak256([]byte("createPair(address,address)"))[:4]
 
 	// Router
-	selAddLiquidity        = crypto.Keccak256([]byte("addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)"))[:4]
-	selRemoveLiquidity     = crypto.Keccak256([]byte("removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)"))[:4]
-	selSwapExactTokensForTokens = crypto.Keccak256([]byte("swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"))[:4]
+	selAddLiquidity        = common.Keccak256([]byte("addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)"))[:4]
+	selRemoveLiquidity     = common.Keccak256([]byte("removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)"))[:4]
+	selSwapExactTokensForTokens = common.Keccak256([]byte("swapExactTokensForTokens(uint256,uint256,address[],address,uint256)"))[:4]
 
 	// Pair
-	selGetReserves = crypto.Keccak256([]byte("getReserves()"))[:4]
-	selTotalSupply = crypto.Keccak256([]byte("totalSupply()"))[:4]
-	selBalanceOf   = crypto.Keccak256([]byte("balanceOf(address)"))[:4]
+	selGetReserves = common.Keccak256([]byte("getReserves()"))[:4]
+	selTotalSupply = common.Keccak256([]byte("totalSupply()"))[:4]
+	selBalanceOf   = common.Keccak256([]byte("balanceOf(address)"))[:4]
 
 	// ERC20
-	selTransfer = crypto.Keccak256([]byte("transfer(address,uint256)"))[:4]
-	selApprove  = crypto.Keccak256([]byte("approve(address,uint256)"))[:4]
+	selTransfer = common.Keccak256([]byte("transfer(address,uint256)"))[:4]
+	selApprove  = common.Keccak256([]byte("approve(address,uint256)"))[:4]
 
 	// TWAP oracle
-	selPrice0CumulativeLast = crypto.Keccak256([]byte("price0CumulativeLast()"))[:4]
-	selPrice1CumulativeLast = crypto.Keccak256([]byte("price1CumulativeLast()"))[:4]
+	selPrice0CumulativeLast = common.Keccak256([]byte("price0CumulativeLast()"))[:4]
+	selPrice1CumulativeLast = common.Keccak256([]byte("price1CumulativeLast()"))[:4]
 
 	// StableSwap
-	selGetD    = crypto.Keccak256([]byte("getD()"))[:4]
-	selAddLiq  = crypto.Keccak256([]byte("add_liquidity(uint256[],uint256)"))[:4]
-	selRemLiq  = crypto.Keccak256([]byte("remove_liquidity(uint256,uint256[])"))[:4]
+	selGetD    = common.Keccak256([]byte("getD()"))[:4]
+	selAddLiq  = common.Keccak256([]byte("add_liquidity(uint256[],uint256)"))[:4]
+	selRemLiq  = common.Keccak256([]byte("remove_liquidity(uint256,uint256[])"))[:4]
 
 	maxUint256 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1))
 )
@@ -70,10 +71,7 @@ func newDEXTestEnv(t *testing.T) *dexTestEnv {
 	t.Helper()
 	require := require.New(t)
 
-	logger := log.NewLogger(
-		"dex-chaos",
-		log.NewWrappedCore(log.Info, log.Stdout, log.Plain.ConsoleEncoder()),
-	)
+	logger := log.New("component", "dex-chaos")
 
 	luxdPath := os.Getenv("LUXD_PATH")
 	if luxdPath == "" {
@@ -105,9 +103,9 @@ func newDEXTestEnv(t *testing.T) *dexTestEnv {
 
 	// Use a well-known funded key from the default genesis.
 	// The default network pre-funds this key with a large C-chain balance.
-	fundKey, err := crypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
+	fundKey, err := luxcrypto.HexToECDSA("56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027")
 	require.NoError(err)
-	fundAddr := crypto.PubkeyToAddress(fundKey.PublicKey)
+	fundAddr := common.PubkeyToAddress(fundKey.PublicKey)
 
 	return &dexTestEnv{
 		network:  net,
@@ -135,7 +133,7 @@ func (env *dexTestEnv) sendTx(t *testing.T, client *ethclient.Client, key *ecdsa
 	require := require.New(t)
 	ctx := context.Background()
 
-	from := crypto.PubkeyToAddress(key.PublicKey)
+	from := common.PubkeyToAddress(key.PublicKey)
 	nonce, err := client.PendingNonceAt(ctx, from)
 	require.NoError(err)
 
@@ -204,14 +202,9 @@ func (env *dexTestEnv) getReserves(t *testing.T, client *ethclient.Client, pair 
 	return r0, r1
 }
 
-func toCallMsg(to common.Address, selector []byte, args []byte) interface{} {
+func toCallMsg(to common.Address, selector []byte, args []byte) ethereum.CallMsg {
 	data := append(selector, args...)
-	// Return a struct compatible with ethereum.CallMsg
-	type callMsg struct {
-		To   *common.Address
-		Data []byte
-	}
-	return callMsg{To: &to, Data: data}
+	return ethereum.CallMsg{To: &to, Data: data}
 }
 
 // -------------------------------------------------------------------
@@ -323,10 +316,10 @@ func TestDEX_LiquidityInvariant(t *testing.T) {
 	accounts := make([]*ecdsa.PrivateKey, 5)
 	addrs := make([]common.Address, 5)
 	for i := range accounts {
-		key, err := crypto.GenerateKey()
+		key, err := luxcrypto.GenerateKey()
 		require.NoError(err)
 		accounts[i] = key
-		addrs[i] = crypto.PubkeyToAddress(key.PublicKey)
+		addrs[i] = common.PubkeyToAddress(key.PublicKey)
 	}
 
 	// Fund all accounts.
@@ -829,10 +822,10 @@ func TestDEX_CrossPoolArbitrage(t *testing.T) {
 	poolFund := new(big.Int).Mul(big.NewInt(100), new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
 
 	for i := range pools {
-		key, err := crypto.GenerateKey()
+		key, err := luxcrypto.GenerateKey()
 		require.NoError(err)
 		pools[i] = key
-		poolAddrs[i] = crypto.PubkeyToAddress(key.PublicKey)
+		poolAddrs[i] = common.PubkeyToAddress(key.PublicKey)
 		env.sendTx(t, env.clients[0], env.fundKey, &poolAddrs[i], nil, poolFund)
 	}
 
