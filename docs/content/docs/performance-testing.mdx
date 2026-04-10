@@ -148,7 +148,7 @@ func TestTransactionThroughput(t *testing.T) {
 
 # Start network with fast block production
 netrunner control start \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_PATH} \
   --global-node-config '{
     "proposervm-use-current-height": true,

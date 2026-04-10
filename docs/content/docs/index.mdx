@@ -93,10 +93,10 @@ netrunner server \
   --port=":8080" \
   --grpc-gateway-port=":8081"
 
-# In another terminal, start a 5-node network
+# In another terminal, start a 3-node network
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path /path/to/luxd
 
 # Check network health
@@ -184,7 +184,7 @@ Netrunner supports multiple blockchain engines:
 ```bash
 curl -X POST -k http://localhost:8081/v1/control/start -d '{
   "execPath": "/path/to/luxd",
-  "numNodes": 5,
+  "numNodes": 3,
   "logLevel": "INFO"
 }'
 ```
