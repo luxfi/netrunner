@@ -32,6 +32,18 @@ import (
 	luxtls "github.com/luxfi/tls"
 )
 
+// getMnemonic returns the mnemonic from environment variables.
+// Priority: MNEMONIC > LUX_MNEMONIC > LIGHT_MNEMONIC
+func getMnemonic() string {
+	if v := os.Getenv("MNEMONIC"); v != "" {
+		return v
+	}
+	if v := getMnemonic(); v != "" {
+		return v
+	}
+	return os.Getenv("LIGHT_MNEMONIC")
+}
+
 // patchGenesisPreservingRaw patches a top-level genesis JSON document while guaranteeing that
 // selected keys are preserved byte-for-byte as raw JSON values (including quotes/escapes for strings).
 //
@@ -202,7 +214,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		var newAllocations []map[string]interface{}
 
 		// If LUX_MNEMONIC is set, create allocations for mnemonic-derived key
-		if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
+		if mnemonic := getMnemonic(); mnemonic != "" {
 			validatorKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, 1)
 			if err == nil && len(validatorKeys) > 0 {
 				vk := validatorKeys[0]
@@ -210,7 +222,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 				xLuxAddr, errX := address.Format("X", hrp, addr[:])
 				pLuxAddr, errP := address.Format("P", hrp, addr[:])
 				if errX == nil && errP == nil {
-					fmt.Printf("🔑 Setting X+P allocations for LUX_MNEMONIC: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
+					fmt.Printf("🔑 Setting X+P allocations for mnemonic: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
 					// X-chain allocation
 					newAllocations = append(newAllocations, map[string]interface{}{
 						"ethAddr":        vk.CChainAddrHex(),
@@ -760,8 +772,8 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 	}
 
 	// Add mnemonic allocation if set
-	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
-		fmt.Printf("🔑 LUX_MNEMONIC is set, adding mnemonic allocation to genesis\n")
+	if mnemonic := getMnemonic(); mnemonic != "" {
+		fmt.Printf("🔑 Mnemonic set, adding mnemonic allocation to genesis\n")
 		allocations = append(allocations, map[string]interface{}{
 			"ethAddr":       "0x0406d56943a38ad8398a738527f27e2cf01731a8",
 			"luxAddr":       "P-lux1qsrd262r5w9dswv2wwzj0un79ncpwvdgkpqzqu",
@@ -889,10 +901,9 @@ func validatorKeysDir() string {
 // - TLS staking certs (for NodeID) - generated once, then persisted
 // - BLS keys (for consensus) - deterministic from mnemonic
 func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32) (network.Config, error) {
-	fmt.Println(">>> ENTERED NewConfigFromMnemonic <<<")
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	mnemonic := getMnemonic()
 	if mnemonic == "" {
-		return network.Config{}, fmt.Errorf("LUX_MNEMONIC environment variable not set")
+		return network.Config{}, fmt.Errorf("mnemonic not set (set LIGHT_MNEMONIC, LUX_MNEMONIC, or MNEMONIC)")
 	}
 
 	// Check if persisted validator keys exist
@@ -926,14 +937,13 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 	}
 
 	if allExist {
-		fmt.Printf("🔴 DEBUG_MARKER: allExist=true\n")
 		fmt.Printf("🔑 Loading %d validators from %s (stable NodeIDs)...\n", numNodes, keysDir)
 		for i, vk := range validatorKeys {
 			fmt.Printf("   node%d: %s\n", i, vk.NodeID.String())
 		}
 	} else {
 		// No existing keys - derive from mnemonic and persist
-		fmt.Printf("🔑 Deriving %d validators from LUX_MNEMONIC (first run)...\n", numNodes)
+		fmt.Printf("🔑 Deriving %d validators from mnemonic (first run)...\n", numNodes)
 
 		validatorKeys, err = keys.DeriveValidatorsFromMnemonic(mnemonic, int(numNodes))
 		if err != nil {
@@ -951,7 +961,6 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		}
 	}
 
-	fmt.Println("🔍 DEBUG: About to derive wallet key from mnemonic...")
 	// CRITICAL: Always derive the wallet key from mnemonic and ensure it has allocations.
 	// The wallet (used by deploy, fundPChainFromXChain, etc.) uses keys.DeriveValidatorFromMnemonic(mnemonic, 0),
 	// which may differ from validators loaded from ~/.lux/keys.

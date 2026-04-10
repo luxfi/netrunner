@@ -1360,9 +1360,6 @@ func newWallet(
 	}
 	kc := secp256k1fx.NewKeychain(privKey)
 
-	// Debug: print addresses being queried
-	fmt.Printf("🔍 Wallet querying for addresses: %v\n", kc.Addrs)
-
 	// Use dedicated timeout context for FetchState to avoid parent context cancellation propagation
 	fetchCtx, fetchCancel := createDefaultCtx(ctx)
 	luxState, err := primary.FetchState(fetchCtx, uri, kc.Addrs)
@@ -1371,15 +1368,6 @@ func newWallet(
 		return nil, fmt.Errorf("failed to fetch state from %s: %w", uri, err)
 	}
 
-	// Debug: print network context and UTXOs
-	xChainIDForDebug := luxState.XCTX.BlockchainID
-	fmt.Printf("🔍 Network ID: %d, X-chain ID: %s\n", luxState.XCTX.NetworkID, xChainIDForDebug)
-	fmt.Printf("🔍 LUX Asset ID: %s\n", luxState.XCTX.XAssetID)
-	xUtxos, _ := luxState.UTXOs.UTXOs(ctx, xChainIDForDebug, xChainIDForDebug)
-	fmt.Printf("🔍 Fetched %d X-chain UTXOs\n", len(xUtxos))
-	for i, utxo := range xUtxos {
-		fmt.Printf("   UTXO[%d]: ID=%s, AssetID=%s\n", i, utxo.UTXOID.TxID, utxo.AssetID())
-	}
 	pClient := platformvm.NewClient(uri)
 	pTXs := make(map[ids.ID]*txs.Tx)
 	for _, id := range preloadTXs {
@@ -1448,15 +1436,8 @@ func (ln *localNetwork) addPrimaryValidators(
 	for _, v := range vdrs {
 		curValidators.Add(v.NodeID)
 	}
-	// Debug: log current validators from genesis
-	fmt.Printf("🔍 GetCurrentValidators returned %d validators:\n", len(vdrs))
-	for _, v := range vdrs {
-		fmt.Printf("   - %s (weight: %d)\n", v.NodeID.String(), v.Weight)
-	}
 	for nodeName, node := range ln.nodes {
 		nodeID := node.GetNodeID()
-		fmt.Printf("🔍 Checking node %s (ID: %s) - in curValidators: %v\n", nodeName, nodeID.String(), curValidators.Contains(nodeID))
-
 		if curValidators.Contains(nodeID) {
 			continue
 		}
@@ -1586,39 +1567,16 @@ func fundPChainFromXChain(ctx context.Context, w *wallet, logger log.Logger) err
 	// Amount needed for chain operations (1 LUX should be plenty for fees)
 	const requiredAmount = uint64(1_000_000_000) // 1 LUX in nLUX
 
-	// Debug: print wallet address for verification against genesis
-	fmt.Printf("🔍 DEBUG: Wallet address (short): %s\n", w.addr.String())
-	fmt.Printf("🔍 DEBUG: Wallet P-chain address: P-lux1%s (bech32 would differ)\n", w.addr.String())
-	fmt.Printf("🔍 DEBUG: LUX asset ID: %s\n", w.luxAssetID.String())
-
 	// First check if P-chain already has sufficient funds
 	balances, err := w.pBuilder.GetBalance()
 	if err != nil {
 		log.Warn("failed to check P-chain balance, will try X->P transfer", "error", err.Error())
-		fmt.Printf("⚠️  DEBUG: P-chain balance check failed: %v\n", err)
 	} else {
-		fmt.Printf("🔍 DEBUG: P-chain balances map has %d entries\n", len(balances))
-		for assetID, bal := range balances {
-			fmt.Printf("   - Asset %s: %d nLUX\n", assetID.String(), bal)
-		}
 		pBalance := balances[w.luxAssetID]
 		log.Info("P-chain balance check", "balance", pBalance, "required", requiredAmount)
-		fmt.Printf("💰 P-chain balance: %d nLUX (need %d)\n", pBalance, requiredAmount)
 		if pBalance >= requiredAmount {
 			log.Info(log.Green.Wrap("P-chain already has sufficient funds, skipping X->P transfer"))
-			fmt.Printf("✅ P-chain already funded, no transfer needed\n")
 			return nil
-		}
-	}
-
-	// Also check X-chain balance for debugging
-	xBalances, xErr := w.xWallet.Builder().GetFTBalance()
-	if xErr != nil {
-		fmt.Printf("⚠️  DEBUG: X-chain balance check failed: %v\n", xErr)
-	} else {
-		fmt.Printf("🔍 DEBUG: X-chain balances:\n")
-		for assetID, bal := range xBalances {
-			fmt.Printf("   - Asset %s: %d nLUX\n", assetID.String(), bal)
 		}
 	}
 
