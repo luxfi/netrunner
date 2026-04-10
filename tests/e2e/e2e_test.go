@@ -77,11 +77,11 @@ var (
 		"node6": `{"api-admin-enabled":false}`,
 		"node7": `{"api-admin-enabled":false}`,
 	}
-	numNodes                       = uint32(5)
+	numNodes                       = uint32(3)
 	networkParticipants            = []string{"node1", "node2", "node3"}
 	newParticipantNode             = "new_participant_node"
 	networkParticipants2           = []string{"node1", "node2", newParticipantNode}
-	existingNodes                  = []string{"node1", "node2", "node3", "node4", "node5"}
+	existingNodes                  = []string{"node1", "node2", "node3"}
 	disjointNewNetworkParticipants = [][]string{
 		{"new_node1", "new_node2"},
 		{"new_node3", "new_node4"},

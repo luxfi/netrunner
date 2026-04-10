@@ -1,6 +1,6 @@
 {
-  "profile-name": "turbo-3of5",
-  "notes": "Aggressive 5-node local perf profile. 3/5 quorum for faster polls. Not for public networks.",
+  "profile-name": "turbo-2of3",
+  "notes": "Aggressive 3-node local perf profile. 2/3 quorum for faster polls. Not for public networks.",
 
   "log-display-level": "ERROR",
   "log-level": "ERROR",
@@ -45,11 +45,11 @@
   "bootstrap-ancestors-max-containers-sent": 50000,
   "bootstrap-ancestors-max-containers-received": 50000,
 
-  "consensus-sample-size": 5,
-  "consensus-preference-quorum-size": 3,
-  "consensus-confidence-quorum-size": 3,
+  "consensus-sample-size": 3,
+  "consensus-preference-quorum-size": 2,
+  "consensus-confidence-quorum-size": 2,
 
-  "consensus-commit-threshold": 4,
+  "consensus-commit-threshold": 2,
   "consensus-concurrent-repolls": 64,
 
   "consensus-optimal-processing": 4096,
