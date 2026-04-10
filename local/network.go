@@ -57,7 +57,7 @@ const (
 	stopTimeout               = 30 * time.Second
 	// healthCheckFreq reduced from 3s to 100ms for ultra-fast health polling
 	healthCheckFreq      = 100 * time.Millisecond
-	DefaultNumNodes      = 5
+	DefaultNumNodes      = 3
 	snapshotPrefix       = "lux-snapshot-"
 	networkRootDirPrefix = "network"
 	defaultDBSubdir      = "db"
@@ -463,7 +463,6 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 
 	// If LUX_MNEMONIC is set, add allocations for mnemonic-derived address
 	mnemonic := os.Getenv("LUX_MNEMONIC")
-	fmt.Printf("🔍 DEBUG: NewDefaultConfigNNodes called, LUX_MNEMONIC set=%v\n", mnemonic != "")
 	if mnemonic != "" {
 		vk, err := keys.DeriveValidatorFromMnemonic(mnemonic, 0)
 		if err != nil {
@@ -479,8 +478,6 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 		// Create X-chain and P-chain addresses
 		// Network ID 1337 uses "local" HRP (per constants.NetworkIDToHRP)
 		const hrp = "local"
-		fmt.Printf("🔍 DEBUG: vk.PChainAddr (base58): %s\n", vk.PChainAddr.String())
-		fmt.Printf("🔍 DEBUG: vk.PChainAddr (hex): %x\n", vk.PChainAddr[:])
 		xLuxAddr, err := address.Format("X", hrp, vk.PChainAddr[:])
 		if err != nil {
 			return netConfig, fmt.Errorf("failed to format X-chain address: %w", err)

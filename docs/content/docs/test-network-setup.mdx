@@ -66,7 +66,7 @@ Keep this running in a separate terminal.
 
 ### 2. Start a Basic Network
 
-Create a 5-node network:
+Create a 3-node network:
 
 ```bash
 # Set the path to your Lux binary
@@ -76,7 +76,7 @@ LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/node"
 netrunner control start \
   --log-level debug \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH}
 ```
 
@@ -114,12 +114,12 @@ netrunner control start \
 
 ### Multi-Node Network
 
-Standard 5-node test network:
+Standard 3-node test network:
 
 ```bash
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --global-node-config '{
     "network-peer-list-gossip-frequency": "250ms",
@@ -154,7 +154,7 @@ netrunner control start \
 # Start the network
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH}
 
 # Wait for health
@@ -239,7 +239,7 @@ cat > /tmp/subnet-evm.genesis.json <<EOF
     }
   },
   "alloc": {
-    "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC": {
+    "0x9011E888251AB053B7bD1cdB598Db4f9DEd94714": {
       "balance": "0x52B7D2DCC80CD2E4000000"
     }
   },
@@ -253,7 +253,7 @@ EOF
 # Start network with subnet-evm
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --plugin-dir ${LUXD_PLUGIN_PATH} \
   --blockchain-specs '[{
@@ -268,7 +268,7 @@ netrunner control start \
 # Start network with QuantumVM
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --plugin-dir ${LUXD_PLUGIN_PATH} \
   --blockchain-specs '[{
@@ -314,7 +314,7 @@ netrunner control stop
 # Create network with validators
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --global-node-config '{
     "staking-enabled": true,
@@ -360,7 +360,7 @@ EOF
 # Start network with multiple chains
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --plugin-dir ${LUXD_PLUGIN_PATH} \
   --blockchain-specs-file blockchains.json
@@ -376,7 +376,7 @@ Test network resilience:
 # Start network
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH}
 
 # Pause node (simulate failure)
@@ -423,7 +423,7 @@ netrunner control stream-status \
 # Start and configure network
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH}
 
 # Create networks (validator sets) and blockchains
@@ -468,10 +468,10 @@ cleanup() {
 trap cleanup EXIT
 
 # Test 1: Basic network
-echo "Test 1: Basic 5-node network"
+echo "Test 1: Basic 3-node network"
 netrunner control start \
   --endpoint=${ENDPOINT} \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_PATH}
 
 netrunner control health --endpoint=${ENDPOINT}
@@ -537,7 +537,7 @@ If you encounter port conflicts:
 # Use custom ports
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --custom-node-configs '{
     "node1": {"http-port": 19630, "staking-port": 19631},

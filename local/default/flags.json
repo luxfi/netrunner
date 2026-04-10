@@ -10,10 +10,10 @@
   "sybil-protection-enabled": true,
   "network-health-min-conn-peers": 0,
 
-  "consensus-sample-size": 5,
-  "consensus-preference-quorum-size": 4,
-  "consensus-confidence-quorum-size": 4,
-  "consensus-commit-threshold": 4,
+  "consensus-sample-size": 3,
+  "consensus-preference-quorum-size": 2,
+  "consensus-confidence-quorum-size": 2,
+  "consensus-commit-threshold": 2,
 
   "consensus-concurrent-repolls": 32,
   "consensus-optimal-processing": 2048,

@@ -72,7 +72,7 @@ A simple chain of nodes where each node connects to the next:
 
 ```bash
 netrunner control start \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path /path/to/luxd \
   --topology linear
 ```
@@ -83,7 +83,7 @@ Every node connects to every other node:
 
 ```bash
 netrunner control start \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path /path/to/luxd \
   --topology mesh
 ```
@@ -94,7 +94,7 @@ All nodes connect to a central bootstrap node:
 
 ```bash
 netrunner control start \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path /path/to/luxd \
   --topology star
 ```
@@ -358,10 +358,10 @@ netrunner server \
 # Wait for server
 sleep 2
 
-# Start a 5-node network
+# Start a 3-node network
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
-  --number-of-nodes=5 \
+  --number-of-nodes=3 \
   --node-path /path/to/luxd \
   --global-node-config '{
     "network-peer-list-gossip-frequency": "250ms",
