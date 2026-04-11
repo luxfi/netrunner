@@ -31,7 +31,7 @@ require (
 	github.com/luxfi/utxo v0.2.5
 	github.com/luxfi/validators v1.0.0
 	github.com/luxfi/version v1.0.1
-	github.com/luxfi/zapdb/v4 v4.9.2
+	github.com/luxfi/zapdb v1.0.0
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
