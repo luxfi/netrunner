@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	badger "github.com/luxfi/zapdb/v4"
+	badger "github.com/luxfi/zapdb"
 	"github.com/luxfi/ids"
 	log "github.com/luxfi/log"
 	"github.com/luxfi/netrunner/network"
