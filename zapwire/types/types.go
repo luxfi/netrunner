@@ -182,6 +182,139 @@ func (s *StatusResponse) Decode(r *zap.Reader) error {
 	return s.ClusterInfo.Decode(r)
 }
 
+// encodeStringMap writes a map[string]string with a uint32 length prefix
+// followed by (key, value) string pairs. Order is map-iteration order;
+// callers that need stable ordering must sort upstream.
+func encodeStringMap(b *zap.Buffer, m map[string]string) {
+	b.WriteUint32(uint32(len(m)))
+	for k, v := range m {
+		b.WriteString(k)
+		b.WriteString(v)
+	}
+}
+
+// decodeStringMap reads the symmetric format written by encodeStringMap.
+func decodeStringMap(r *zap.Reader) (map[string]string, error) {
+	n, err := r.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[string]string, n)
+	for i := uint32(0); i < n; i++ {
+		k, err := r.ReadString()
+		if err != nil {
+			return nil, err
+		}
+		v, err := r.ReadString()
+		if err != nil {
+			return nil, err
+		}
+		m[k] = v
+	}
+	return m, nil
+}
+
+// encodeOptString writes an optional string as: presence:uint8 then string.
+func encodeOptString(b *zap.Buffer, present bool, s string) {
+	if !present {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	b.WriteString(s)
+}
+
+// decodeOptString reads what encodeOptString wrote. Returns (value, present, err).
+func decodeOptString(r *zap.Reader) (string, bool, error) {
+	flag, err := r.ReadUint8()
+	if err != nil {
+		return "", false, err
+	}
+	if flag == 0 {
+		return "", false, nil
+	}
+	s, err := r.ReadString()
+	if err != nil {
+		return "", false, err
+	}
+	return s, true, nil
+}
+
+// AddNodeRequest matches rpcpb.AddNodeRequest field-for-field.
+type AddNodeRequest struct {
+	Name              string
+	ExecPath          string
+	NodeConfig        string // optional: present iff NodeConfigSet is true
+	NodeConfigSet     bool
+	ChainConfigs      map[string]string
+	UpgradeConfigs    map[string]string
+	ChainConfigFiles  map[string]string
+	PluginDir         string
+}
+
+func (a *AddNodeRequest) Encode(b *zap.Buffer) {
+	b.WriteString(a.Name)
+	b.WriteString(a.ExecPath)
+	encodeOptString(b, a.NodeConfigSet, a.NodeConfig)
+	encodeStringMap(b, a.ChainConfigs)
+	encodeStringMap(b, a.UpgradeConfigs)
+	encodeStringMap(b, a.ChainConfigFiles)
+	b.WriteString(a.PluginDir)
+}
+
+func (a *AddNodeRequest) Decode(r *zap.Reader) error {
+	var err error
+	if a.Name, err = r.ReadString(); err != nil {
+		return err
+	}
+	if a.ExecPath, err = r.ReadString(); err != nil {
+		return err
+	}
+	if a.NodeConfig, a.NodeConfigSet, err = decodeOptString(r); err != nil {
+		return err
+	}
+	if a.ChainConfigs, err = decodeStringMap(r); err != nil {
+		return err
+	}
+	if a.UpgradeConfigs, err = decodeStringMap(r); err != nil {
+		return err
+	}
+	if a.ChainConfigFiles, err = decodeStringMap(r); err != nil {
+		return err
+	}
+	if a.PluginDir, err = r.ReadString(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// AddNodeResponse carries the post-add cluster snapshot.
+type AddNodeResponse struct {
+	ClusterInfo *ClusterInfo
+}
+
+func (a *AddNodeResponse) Encode(b *zap.Buffer) {
+	if a.ClusterInfo == nil {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	a.ClusterInfo.Encode(b)
+}
+
+func (a *AddNodeResponse) Decode(r *zap.Reader) error {
+	present, err := r.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if present == 0 {
+		a.ClusterInfo = nil
+		return nil
+	}
+	a.ClusterInfo = &ClusterInfo{}
+	return a.ClusterInfo.Decode(r)
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 

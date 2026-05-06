@@ -40,6 +40,9 @@ func runServer(t *testing.T, be Backend) (*Server, func()) {
 // stubBackend is a minimal Backend implementation for e2e tests.
 type stubBackend struct {
 	pingPID int32
+
+	// captured request payloads for round-trip-integrity assertions
+	lastAddNode *types.AddNodeRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -102,6 +105,24 @@ func (b *stubBackend) Status(ctx context.Context) (*types.StatusResponse, error)
 			},
 			Subnets:   []string{"primary"},
 			NetworkID: 96369,
+		},
+	}, nil
+}
+
+// addNodeLast records the last AddNode request seen, for round-trip
+// integrity assertions in tests.
+func (b *stubBackend) AddNode(ctx context.Context, req *types.AddNodeRequest) (*types.AddNodeResponse, error) {
+	b.lastAddNode = req
+	return &types.AddNodeResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames: []string{"alpha", req.Name},
+			NodeInfos: map[string]*types.NodeInfo{
+				req.Name: {Name: req.Name, ExecPath: req.ExecPath},
+			},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
 		},
 	}, nil
 }
@@ -245,6 +266,58 @@ func TestE2EStatus(t *testing.T) {
 	}
 	if string(chain.Genesis) != `{"chainId":96369}` {
 		t.Fatalf("Genesis round-trip mangled: %s", chain.Genesis)
+	}
+}
+
+func TestE2EAddNode(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	req := &types.AddNodeRequest{
+		Name:          "gamma",
+		ExecPath:      "/usr/local/bin/luxd",
+		NodeConfig:    `{"http-port":9650}`,
+		NodeConfigSet: true,
+		ChainConfigs: map[string]string{
+			"C": `{"foo":"bar"}`,
+			"X": `{"baz":"qux"}`,
+		},
+		UpgradeConfigs:   map[string]string{"C": `{}`},
+		ChainConfigFiles: map[string]string{"chain-1": `{}`},
+		PluginDir:        "/usr/local/lib/lux/plugins",
+	}
+	resp, err := client.AddNode(ctx, req)
+	if err != nil {
+		t.Fatalf("AddNode: %v", err)
+	}
+	if resp.ClusterInfo == nil {
+		t.Fatal("ClusterInfo: nil")
+	}
+	if be.lastAddNode == nil {
+		t.Fatal("server did not see AddNode request")
+	}
+	if be.lastAddNode.Name != "gamma" {
+		t.Fatalf("Name: got %q", be.lastAddNode.Name)
+	}
+	if be.lastAddNode.NodeConfig != `{"http-port":9650}` || !be.lastAddNode.NodeConfigSet {
+		t.Fatalf("NodeConfig round-trip: %+v", be.lastAddNode)
+	}
+	if len(be.lastAddNode.ChainConfigs) != 2 ||
+		be.lastAddNode.ChainConfigs["C"] != `{"foo":"bar"}` ||
+		be.lastAddNode.ChainConfigs["X"] != `{"baz":"qux"}` {
+		t.Fatalf("ChainConfigs round-trip: %+v", be.lastAddNode.ChainConfigs)
+	}
+	if be.lastAddNode.PluginDir != "/usr/local/lib/lux/plugins" {
+		t.Fatalf("PluginDir: %q", be.lastAddNode.PluginDir)
 	}
 }
 
