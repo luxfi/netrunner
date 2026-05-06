@@ -213,6 +213,19 @@ func (b *stubBackend) SendOutboundMessage(ctx context.Context, req *types.SendOu
 	return &types.SendOutboundMessageResponse{Sent: true}, nil
 }
 
+func (b *stubBackend) WaitForHealthy(ctx context.Context) (*types.WaitForHealthyResponse, error) {
+	return &types.WaitForHealthyResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames:   []string{"alpha", "beta"},
+			NodeInfos:   map[string]*types.NodeInfo{},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
+		},
+	}, nil
+}
+
 func (b *stubBackend) Stop(ctx context.Context) (*types.StopResponse, error) {
 	return &types.StopResponse{
 		ClusterInfo: &types.ClusterInfo{
@@ -588,6 +601,33 @@ func TestE2ESendOutboundMessage(t *testing.T) {
 	}
 	if len(got.MsgBody) != 4 || got.MsgBody[0] != 0xde || got.MsgBody[3] != 0xef {
 		t.Fatalf("MsgBody round-trip: %x", got.MsgBody)
+	}
+}
+
+func TestE2EWaitForHealthy(t *testing.T) {
+	srv, teardown := runServer(t, &stubBackend{})
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	resp, err := client.WaitForHealthy(ctx)
+	if err != nil {
+		t.Fatalf("WaitForHealthy: %v", err)
+	}
+	if resp.ClusterInfo == nil {
+		t.Fatal("ClusterInfo: nil")
+	}
+	if !resp.ClusterInfo.Healthy {
+		t.Fatal("Healthy: false")
+	}
+	if len(resp.ClusterInfo.NodeNames) != 2 {
+		t.Fatalf("NodeNames: got %d, want 2", len(resp.ClusterInfo.NodeNames))
 	}
 }
 

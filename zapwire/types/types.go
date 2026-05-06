@@ -645,6 +645,43 @@ func (s *SendOutboundMessageResponse) Decode(rd *zap.Reader) error {
 	return nil
 }
 
+// WaitForHealthyRequest is empty (proto has an optional network_name
+// field used only by the multi-network REST gateway shim; the native
+// control protocol always operates on the single in-process network,
+// so this field is omitted).
+type WaitForHealthyRequest struct{}
+
+func (*WaitForHealthyRequest) Encode(b *zap.Buffer)       {}
+func (*WaitForHealthyRequest) Decode(r *zap.Reader) error { return nil }
+
+// WaitForHealthyResponse carries the cluster snapshot once all nodes
+// report Healthy = true.
+type WaitForHealthyResponse struct {
+	ClusterInfo *ClusterInfo
+}
+
+func (w *WaitForHealthyResponse) Encode(b *zap.Buffer) {
+	if w.ClusterInfo == nil {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	w.ClusterInfo.Encode(b)
+}
+
+func (w *WaitForHealthyResponse) Decode(r *zap.Reader) error {
+	present, err := r.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if present == 0 {
+		w.ClusterInfo = nil
+		return nil
+	}
+	w.ClusterInfo = &ClusterInfo{}
+	return w.ClusterInfo.Decode(r)
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 
