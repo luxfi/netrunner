@@ -42,7 +42,8 @@ type stubBackend struct {
 	pingPID int32
 
 	// captured request payloads for round-trip-integrity assertions
-	lastAddNode *types.AddNodeRequest
+	lastAddNode    *types.AddNodeRequest
+	lastRemoveNode *types.RemoveNodeRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -119,6 +120,20 @@ func (b *stubBackend) AddNode(ctx context.Context, req *types.AddNodeRequest) (*
 			NodeInfos: map[string]*types.NodeInfo{
 				req.Name: {Name: req.Name, ExecPath: req.ExecPath},
 			},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
+		},
+	}, nil
+}
+
+func (b *stubBackend) RemoveNode(ctx context.Context, req *types.RemoveNodeRequest) (*types.RemoveNodeResponse, error) {
+	b.lastRemoveNode = req
+	return &types.RemoveNodeResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames:   []string{"alpha"},
+			NodeInfos:   map[string]*types.NodeInfo{},
 			PID:         42,
 			RootDataDir: "/tmp/netrunner",
 			Healthy:     true,
@@ -318,6 +333,31 @@ func TestE2EAddNode(t *testing.T) {
 	}
 	if be.lastAddNode.PluginDir != "/usr/local/lib/lux/plugins" {
 		t.Fatalf("PluginDir: %q", be.lastAddNode.PluginDir)
+	}
+}
+
+func TestE2ERemoveNode(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	resp, err := client.RemoveNode(ctx, &types.RemoveNodeRequest{Name: "beta"})
+	if err != nil {
+		t.Fatalf("RemoveNode: %v", err)
+	}
+	if resp.ClusterInfo == nil {
+		t.Fatal("ClusterInfo: nil")
+	}
+	if be.lastRemoveNode == nil || be.lastRemoveNode.Name != "beta" {
+		t.Fatalf("Name round-trip: %+v", be.lastRemoveNode)
 	}
 }
 

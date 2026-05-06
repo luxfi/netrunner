@@ -315,6 +315,48 @@ func (a *AddNodeResponse) Decode(r *zap.Reader) error {
 	return a.ClusterInfo.Decode(r)
 }
 
+// RemoveNodeRequest matches rpcpb.RemoveNodeRequest.
+type RemoveNodeRequest struct {
+	Name string
+}
+
+func (r *RemoveNodeRequest) Encode(b *zap.Buffer) { b.WriteString(r.Name) }
+func (r *RemoveNodeRequest) Decode(rd *zap.Reader) error {
+	s, err := rd.ReadString()
+	if err != nil {
+		return err
+	}
+	r.Name = s
+	return nil
+}
+
+// RemoveNodeResponse carries the post-remove cluster snapshot.
+type RemoveNodeResponse struct {
+	ClusterInfo *ClusterInfo
+}
+
+func (r *RemoveNodeResponse) Encode(b *zap.Buffer) {
+	if r.ClusterInfo == nil {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	r.ClusterInfo.Encode(b)
+}
+
+func (r *RemoveNodeResponse) Decode(rd *zap.Reader) error {
+	present, err := rd.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if present == 0 {
+		r.ClusterInfo = nil
+		return nil
+	}
+	r.ClusterInfo = &ClusterInfo{}
+	return r.ClusterInfo.Decode(rd)
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 
