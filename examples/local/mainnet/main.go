@@ -66,7 +66,7 @@ func createZooGenesis() ([]byte, error) {
 			"istanbulBlock":       0,
 			"londonBlock":         0,
 			"petersburgBlock":     0,
-			"subnetEVMTimestamp":  0,
+			"evmTimestamp":  0,
 			"durangoTimestamp":    0,
 			"feeConfig": map[string]interface{}{
 				"gasLimit":                 12000000,
