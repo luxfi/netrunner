@@ -46,6 +46,7 @@ type stubBackend struct {
 	lastRemoveNode  *types.RemoveNodeRequest
 	lastRestartNode *types.RestartNodeRequest
 	lastPauseNode   *types.PauseNodeRequest
+	lastResumeNode  *types.ResumeNodeRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -165,6 +166,22 @@ func (b *stubBackend) PauseNode(ctx context.Context, req *types.PauseNodeRequest
 			NodeNames: []string{req.Name},
 			NodeInfos: map[string]*types.NodeInfo{
 				req.Name: {Name: req.Name, Paused: true},
+			},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
+		},
+	}, nil
+}
+
+func (b *stubBackend) ResumeNode(ctx context.Context, req *types.ResumeNodeRequest) (*types.ResumeNodeResponse, error) {
+	b.lastResumeNode = req
+	return &types.ResumeNodeResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames: []string{req.Name},
+			NodeInfos: map[string]*types.NodeInfo{
+				req.Name: {Name: req.Name, Paused: false},
 			},
 			PID:         42,
 			RootDataDir: "/tmp/netrunner",
@@ -461,6 +478,31 @@ func TestE2EPauseNode(t *testing.T) {
 	}
 	if !resp.ClusterInfo.NodeInfos["alpha"].Paused {
 		t.Fatalf("Paused flag not propagated")
+	}
+}
+
+func TestE2EResumeNode(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	resp, err := client.ResumeNode(ctx, &types.ResumeNodeRequest{Name: "alpha"})
+	if err != nil {
+		t.Fatalf("ResumeNode: %v", err)
+	}
+	if be.lastResumeNode == nil || be.lastResumeNode.Name != "alpha" {
+		t.Fatalf("Name round-trip: %+v", be.lastResumeNode)
+	}
+	if resp.ClusterInfo.NodeInfos["alpha"].Paused {
+		t.Fatalf("Paused flag should be false post-resume")
 	}
 }
 
