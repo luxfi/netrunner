@@ -192,6 +192,16 @@ func (c *Client) ResumeNode(ctx context.Context, req *types.ResumeNodeRequest) (
 	return resp, nil
 }
 
+// AttachPeer attaches a synthetic test peer to the named node and
+// returns the new peer's identity.
+func (c *Client) AttachPeer(ctx context.Context, req *types.AttachPeerRequest) (*types.AttachPeerResponse, error) {
+	resp := &types.AttachPeerResponse{}
+	if err := c.callSub(ctx, OpStart, SubAttachPeer, req, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}
