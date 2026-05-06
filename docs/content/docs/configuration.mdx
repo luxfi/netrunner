@@ -161,6 +161,9 @@ type Config struct {
   "bootstrap-ids": "NodeID-xxx",
 
   // Performance Tuning
+  // Note: `snow-sample-size` / `snow-quorum-size` are the canonical luxd CLI flag
+  // names. Current luxd builds also accept `consensus-sample-size` / `consensus-quorum-size`
+  // as aliases for the same parameters.
   "snow-sample-size": 20,
   "snow-quorum-size": 15,
   "snow-concurrent-repolls": 4,
@@ -494,6 +497,8 @@ Configure nodes across regions:
 ```
 
 ### Performance Tuning
+
+> Note: `snow-sample-size` / `snow-quorum-size` are the canonical luxd CLI flag names. Current luxd builds also accept `consensus-sample-size` / `consensus-quorum-size` as aliases.
 
 ```json
 {
