@@ -24,6 +24,7 @@ type Backend interface {
 	Status(ctx context.Context) (*types.StatusResponse, error)
 	Stop(ctx context.Context) (*types.StopResponse, error)
 	AddNode(ctx context.Context, req *types.AddNodeRequest) (*types.AddNodeResponse, error)
+	RemoveNode(ctx context.Context, req *types.RemoveNodeRequest) (*types.RemoveNodeResponse, error)
 }
 
 // Server hosts a netrunner control RPC over ZAP.
@@ -146,6 +147,16 @@ func (s *Server) handleStartSub(
 			return 0, nil, err
 		}
 		resp, err := s.be.AddNode(ctx, req)
+		if err != nil {
+			return 0, nil, err
+		}
+		return msgType, encodeResp(resp), nil
+	case SubRemoveNode:
+		req := &types.RemoveNodeRequest{}
+		if err := req.Decode(zap.NewReader(body)); err != nil {
+			return 0, nil, err
+		}
+		resp, err := s.be.RemoveNode(ctx, req)
 		if err != nil {
 			return 0, nil, err
 		}
