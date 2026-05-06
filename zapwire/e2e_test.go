@@ -47,6 +47,7 @@ type stubBackend struct {
 	lastRestartNode *types.RestartNodeRequest
 	lastPauseNode   *types.PauseNodeRequest
 	lastResumeNode  *types.ResumeNodeRequest
+	lastAttachPeer  *types.AttachPeerRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -188,6 +189,21 @@ func (b *stubBackend) ResumeNode(ctx context.Context, req *types.ResumeNodeReque
 			Healthy:     true,
 			NetworkID:   12345,
 		},
+	}, nil
+}
+
+func (b *stubBackend) AttachPeer(ctx context.Context, req *types.AttachPeerRequest) (*types.AttachPeerResponse, error) {
+	b.lastAttachPeer = req
+	return &types.AttachPeerResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames:   []string{req.NodeName},
+			NodeInfos:   map[string]*types.NodeInfo{},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
+		},
+		AttachedPeerInfo: &types.AttachedPeerInfo{ID: "peer-id-xyz"},
 	}, nil
 }
 
@@ -503,6 +519,31 @@ func TestE2EResumeNode(t *testing.T) {
 	}
 	if resp.ClusterInfo.NodeInfos["alpha"].Paused {
 		t.Fatalf("Paused flag should be false post-resume")
+	}
+}
+
+func TestE2EAttachPeer(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	resp, err := client.AttachPeer(ctx, &types.AttachPeerRequest{NodeName: "alpha"})
+	if err != nil {
+		t.Fatalf("AttachPeer: %v", err)
+	}
+	if be.lastAttachPeer == nil || be.lastAttachPeer.NodeName != "alpha" {
+		t.Fatalf("NodeName round-trip: %+v", be.lastAttachPeer)
+	}
+	if resp.AttachedPeerInfo == nil || resp.AttachedPeerInfo.ID != "peer-id-xyz" {
+		t.Fatalf("AttachedPeerInfo: %+v", resp.AttachedPeerInfo)
 	}
 }
 
