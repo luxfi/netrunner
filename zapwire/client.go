@@ -147,6 +147,15 @@ func (c *Client) Status(ctx context.Context) (*types.StatusResponse, error) {
 	return resp, nil
 }
 
+// AddNode adds a single node to the running cluster.
+func (c *Client) AddNode(ctx context.Context, req *types.AddNodeRequest) (*types.AddNodeResponse, error) {
+	resp := &types.AddNodeResponse{}
+	if err := c.callSub(ctx, OpStart, SubAddNode, req, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}
