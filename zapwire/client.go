@@ -212,6 +212,16 @@ func (c *Client) SendOutboundMessage(ctx context.Context, req *types.SendOutboun
 	return resp, nil
 }
 
+// WaitForHealthy blocks server-side until the cluster reports healthy
+// on every node, then returns the snapshot.
+func (c *Client) WaitForHealthy(ctx context.Context) (*types.WaitForHealthyResponse, error) {
+	resp := &types.WaitForHealthyResponse{}
+	if err := c.callSub(ctx, OpStart, SubWaitForHealthy, &types.WaitForHealthyRequest{}, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}
