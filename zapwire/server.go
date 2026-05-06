@@ -23,6 +23,7 @@ type Backend interface {
 	URIs(ctx context.Context) (*types.URIsResponse, error)
 	Status(ctx context.Context) (*types.StatusResponse, error)
 	Stop(ctx context.Context) (*types.StopResponse, error)
+	AddNode(ctx context.Context, req *types.AddNodeRequest) (*types.AddNodeResponse, error)
 }
 
 // Server hosts a netrunner control RPC over ZAP.
@@ -96,11 +97,11 @@ func (s *Server) handle(
 
 	case OpStart:
 		// Fan-out opcode: peel the sub-opcode byte and dispatch.
-		sub, _, err := peelSubOpcode(payload)
+		sub, body, err := peelSubOpcode(payload)
 		if err != nil {
 			return 0, nil, err
 		}
-		return s.handleStartSub(ctx, msgType, sub)
+		return s.handleStartSub(ctx, msgType, sub, body)
 
 	case OpStop:
 		resp, err := s.be.Stop(ctx)
@@ -118,6 +119,7 @@ func (s *Server) handleStartSub(
 	ctx context.Context,
 	msgType zap.MessageType,
 	sub SubOpcode,
+	body []byte,
 ) (zap.MessageType, []byte, error) {
 	switch sub {
 	case SubHealth:
@@ -134,6 +136,16 @@ func (s *Server) handleStartSub(
 		return msgType, encodeResp(resp), nil
 	case SubStatus:
 		resp, err := s.be.Status(ctx)
+		if err != nil {
+			return 0, nil, err
+		}
+		return msgType, encodeResp(resp), nil
+	case SubAddNode:
+		req := &types.AddNodeRequest{}
+		if err := req.Decode(zap.NewReader(body)); err != nil {
+			return 0, nil, err
+		}
+		resp, err := s.be.AddNode(ctx, req)
 		if err != nil {
 			return 0, nil, err
 		}
