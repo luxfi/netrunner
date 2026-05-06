@@ -517,6 +517,82 @@ func (p *ResumeNodeResponse) Decode(rd *zap.Reader) error {
 	return p.ClusterInfo.Decode(rd)
 }
 
+// AttachedPeerInfo matches rpcpb.AttachedPeerInfo.
+type AttachedPeerInfo struct {
+	ID string
+}
+
+func (a *AttachedPeerInfo) Encode(b *zap.Buffer) { b.WriteString(a.ID) }
+func (a *AttachedPeerInfo) Decode(rd *zap.Reader) error {
+	s, err := rd.ReadString()
+	if err != nil {
+		return err
+	}
+	a.ID = s
+	return nil
+}
+
+// AttachPeerRequest matches rpcpb.AttachPeerRequest.
+type AttachPeerRequest struct {
+	NodeName string
+}
+
+func (a *AttachPeerRequest) Encode(b *zap.Buffer) { b.WriteString(a.NodeName) }
+func (a *AttachPeerRequest) Decode(rd *zap.Reader) error {
+	s, err := rd.ReadString()
+	if err != nil {
+		return err
+	}
+	a.NodeName = s
+	return nil
+}
+
+// AttachPeerResponse carries the post-attach cluster snapshot plus the
+// new peer's identity.
+type AttachPeerResponse struct {
+	ClusterInfo      *ClusterInfo
+	AttachedPeerInfo *AttachedPeerInfo
+}
+
+func (a *AttachPeerResponse) Encode(b *zap.Buffer) {
+	if a.ClusterInfo == nil {
+		b.WriteUint8(0)
+	} else {
+		b.WriteUint8(1)
+		a.ClusterInfo.Encode(b)
+	}
+	if a.AttachedPeerInfo == nil {
+		b.WriteUint8(0)
+	} else {
+		b.WriteUint8(1)
+		a.AttachedPeerInfo.Encode(b)
+	}
+}
+
+func (a *AttachPeerResponse) Decode(rd *zap.Reader) error {
+	flag, err := rd.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if flag == 1 {
+		a.ClusterInfo = &ClusterInfo{}
+		if err := a.ClusterInfo.Decode(rd); err != nil {
+			return err
+		}
+	}
+	flag, err = rd.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if flag == 1 {
+		a.AttachedPeerInfo = &AttachedPeerInfo{}
+		if err := a.AttachedPeerInfo.Decode(rd); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 
