@@ -9,15 +9,44 @@ import (
 	"time"
 
 	"github.com/luxfi/netrunner/zapwire/types"
+	"github.com/luxfi/zwing"
 )
 
-// runServer starts a zapwire server on 127.0.0.1:0 and returns a
-// teardown that the test must call (via defer or t.Cleanup). It also
-// gives a context whose cancel is wired into the teardown, so handlers
-// see ctx.Done() before the listener closes.
-func runServer(t *testing.T, be Backend) (*Server, func()) {
+// testRig holds the ephemeral PQ identities used by an e2e test. The
+// server identity is pinned by the client to prove that the Z-Wing
+// handshake actually authenticated the server.
+type testRig struct {
+	clientCfg *zwing.Config
+	serverCfg *zwing.Config
+}
+
+func newTestRig(t *testing.T) *testRig {
 	t.Helper()
-	srv, err := NewServer("127.0.0.1:0", be)
+	clientID, err := zwing.GenerateIdentity()
+	if err != nil {
+		t.Fatalf("client identity: %v", err)
+	}
+	serverID, err := zwing.GenerateIdentity()
+	if err != nil {
+		t.Fatalf("server identity: %v", err)
+	}
+	return &testRig{
+		clientCfg: &zwing.Config{
+			LocalIdentity:  clientID,
+			ExpectedRemote: serverID.Public(),
+		},
+		serverCfg: &zwing.Config{LocalIdentity: serverID},
+	}
+}
+
+// runServer starts a zapwire server on 127.0.0.1:0 over a Z-Wing
+// listener and returns a teardown that the test must call (via defer
+// or t.Cleanup). It also gives a context whose cancel is wired into
+// the teardown, so handlers see ctx.Done() before the listener closes.
+func runServer(t *testing.T, be Backend) (*Server, *testRig, func()) {
+	t.Helper()
+	rig := newTestRig(t)
+	srv, err := NewServer("127.0.0.1:0", rig.serverCfg, be)
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
@@ -34,7 +63,7 @@ func runServer(t *testing.T, be Backend) (*Server, func()) {
 		_ = srv.Close()
 		<-done
 	}
-	return srv, teardown
+	return srv, rig, teardown
 }
 
 // stubBackend is a minimal Backend implementation for e2e tests.
@@ -240,13 +269,13 @@ func (b *stubBackend) Stop(ctx context.Context) (*types.StopResponse, error) {
 }
 
 func TestE2EPing(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{pingPID: 42})
+	srv, rig, teardown := runServer(t, &stubBackend{pingPID: 42})
 	defer teardown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -262,12 +291,12 @@ func TestE2EPing(t *testing.T) {
 }
 
 func TestE2ERPCVersion(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{})
+	srv, rig, teardown := runServer(t, &stubBackend{})
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -283,12 +312,12 @@ func TestE2ERPCVersion(t *testing.T) {
 }
 
 func TestE2EHealth(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{})
+	srv, rig, teardown := runServer(t, &stubBackend{})
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -313,12 +342,12 @@ func TestE2EHealth(t *testing.T) {
 }
 
 func TestE2EURIs(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{})
+	srv, rig, teardown := runServer(t, &stubBackend{})
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -334,12 +363,12 @@ func TestE2EURIs(t *testing.T) {
 }
 
 func TestE2EStatus(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{})
+	srv, rig, teardown := runServer(t, &stubBackend{})
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -370,12 +399,12 @@ func TestE2EStatus(t *testing.T) {
 
 func TestE2EAddNode(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -422,12 +451,12 @@ func TestE2EAddNode(t *testing.T) {
 
 func TestE2ERemoveNode(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -447,12 +476,12 @@ func TestE2ERemoveNode(t *testing.T) {
 
 func TestE2ERestartNode(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -493,12 +522,12 @@ func TestE2ERestartNode(t *testing.T) {
 
 func TestE2EPauseNode(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -518,12 +547,12 @@ func TestE2EPauseNode(t *testing.T) {
 
 func TestE2EResumeNode(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -543,12 +572,12 @@ func TestE2EResumeNode(t *testing.T) {
 
 func TestE2EAttachPeer(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -568,12 +597,12 @@ func TestE2EAttachPeer(t *testing.T) {
 
 func TestE2ESendOutboundMessage(t *testing.T) {
 	be := &stubBackend{}
-	srv, teardown := runServer(t, be)
+	srv, rig, teardown := runServer(t, be)
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -605,12 +634,12 @@ func TestE2ESendOutboundMessage(t *testing.T) {
 }
 
 func TestE2EWaitForHealthy(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{})
+	srv, rig, teardown := runServer(t, &stubBackend{})
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}
@@ -632,12 +661,12 @@ func TestE2EWaitForHealthy(t *testing.T) {
 }
 
 func TestE2EStop(t *testing.T) {
-	srv, teardown := runServer(t, &stubBackend{})
+	srv, rig, teardown := runServer(t, &stubBackend{})
 	defer teardown()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err := Dial(ctx, srv.Addr())
+	client, err := Dial(ctx, srv.Addr(), rig.clientCfg)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
 	}

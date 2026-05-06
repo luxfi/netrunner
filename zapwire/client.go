@@ -20,19 +20,29 @@ import (
 
 	"github.com/luxfi/api/zap"
 	"github.com/luxfi/netrunner/zapwire/types"
+	"github.com/luxfi/zwing"
 )
 
 // Wire-protocol version. Bumped on breaking changes to encoding.
 const ProtocolVersion uint32 = 1
 
-// Client is the netrunner control RPC client over ZAP.
+// Client is the netrunner control RPC client over a Z-Wing channel.
+//
+// All netrunner control traffic is post-quantum encrypted and mutually
+// authenticated. There is no cleartext mode. If a control plane needs
+// to talk to a netrunner server, it presents a Z-Wing identity, period.
 type Client struct {
 	conn *zap.Conn
 }
 
-// Dial opens a ZAP control connection to a netrunner server.
-func Dial(ctx context.Context, addr string) (*Client, error) {
-	conn, err := zap.Dial(ctx, addr, nil)
+// Dial opens a ZAP control connection to a netrunner server over
+// Z-Wing. cfg must carry a LocalIdentity; ExpectedRemote optionally
+// pins the server's identity.
+func Dial(ctx context.Context, addr string, cfg *zwing.Config) (*Client, error) {
+	if cfg == nil || cfg.LocalIdentity == nil {
+		return nil, errors.New("zapwire: zwing.Config with LocalIdentity required")
+	}
+	conn, err := zwing.DialZAP(ctx, addr, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("zapwire: dial %s: %w", addr, err)
 	}
