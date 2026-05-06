@@ -10,6 +10,7 @@ import (
 
 	"github.com/luxfi/api/zap"
 	"github.com/luxfi/netrunner/zapwire/types"
+	"github.com/luxfi/zwing"
 )
 
 // Backend is the interface a netrunner server implementation provides
@@ -40,12 +41,17 @@ type Server struct {
 	srv      *zap.Server
 }
 
-// NewServer creates a netrunner ZAP server listening on addr.
-func NewServer(addr string, be Backend) (*Server, error) {
+// NewServer creates a netrunner ZAP server listening on addr behind a
+// Z-Wing post-quantum handshake. cfg must carry a LocalIdentity. The
+// server has no cleartext mode.
+func NewServer(addr string, cfg *zwing.Config, be Backend) (*Server, error) {
 	if be == nil {
 		return nil, errors.New("zapwire: nil backend")
 	}
-	listener, err := zap.Listen(addr, nil)
+	if cfg == nil || cfg.LocalIdentity == nil {
+		return nil, errors.New("zapwire: zwing.Config with LocalIdentity required")
+	}
+	listener, err := zwing.ListenZAP(addr, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("zapwire: listen %s: %w", addr, err)
 	}
