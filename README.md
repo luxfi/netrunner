@@ -613,7 +613,7 @@ cat <<EOF > /tmp/subnet-evm.genesis.json
     "petersburgBlock": 0,
     "istanbulBlock": 0,
     "muirGlacierBlock": 0,
-    "subnetEVMTimestamp": 0,
+    "evmTimestamp": 0,
     "feeConfig": {
       "gasLimit": 20000000,
       "minBaseFee": 1000000000,
