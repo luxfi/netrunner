@@ -106,6 +106,19 @@ func (b *stubBackend) Status(ctx context.Context) (*types.StatusResponse, error)
 	}, nil
 }
 
+func (b *stubBackend) Stop(ctx context.Context) (*types.StopResponse, error) {
+	return &types.StopResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames:   []string{},
+			NodeInfos:   map[string]*types.NodeInfo{},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     false,
+			NetworkID:   12345,
+		},
+	}, nil
+}
+
 func TestE2EPing(t *testing.T) {
 	srv, teardown := runServer(t, &stubBackend{pingPID: 42})
 	defer teardown()
@@ -232,5 +245,32 @@ func TestE2EStatus(t *testing.T) {
 	}
 	if string(chain.Genesis) != `{"chainId":96369}` {
 		t.Fatalf("Genesis round-trip mangled: %s", chain.Genesis)
+	}
+}
+
+func TestE2EStop(t *testing.T) {
+	srv, teardown := runServer(t, &stubBackend{})
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	resp, err := client.Stop(ctx)
+	if err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+	if resp.ClusterInfo == nil {
+		t.Fatal("ClusterInfo: nil")
+	}
+	if resp.ClusterInfo.Healthy {
+		t.Fatal("Healthy: should be false post-stop")
+	}
+	if resp.ClusterInfo.NetworkID != 12345 {
+		t.Fatalf("NetworkID: got %d, want 12345", resp.ClusterInfo.NetworkID)
 	}
 }

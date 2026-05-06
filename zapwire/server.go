@@ -22,6 +22,7 @@ type Backend interface {
 	Health(ctx context.Context) (*types.HealthResponse, error)
 	URIs(ctx context.Context) (*types.URIsResponse, error)
 	Status(ctx context.Context) (*types.StatusResponse, error)
+	Stop(ctx context.Context) (*types.StopResponse, error)
 }
 
 // Server hosts a netrunner control RPC over ZAP.
@@ -102,7 +103,11 @@ func (s *Server) handle(
 		return s.handleStartSub(ctx, msgType, sub)
 
 	case OpStop:
-		return 0, nil, errors.New("OpStop: not yet wired in zapwire")
+		resp, err := s.be.Stop(ctx)
+		if err != nil {
+			return 0, nil, err
+		}
+		return msgType, encodeResp(resp), nil
 
 	default:
 		return 0, nil, fmt.Errorf("zapwire: unknown opcode 0x%02x", byte(msgType))
