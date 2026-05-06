@@ -593,6 +593,58 @@ func (a *AttachPeerResponse) Decode(rd *zap.Reader) error {
 	return nil
 }
 
+// SendOutboundMessageRequest matches rpcpb.SendOutboundMessageRequest.
+// The proto field is named `bytes` (the AVM/p2p message body); we use
+// MsgBody to avoid collision with the Go builtin.
+type SendOutboundMessageRequest struct {
+	NodeName string
+	PeerID   string
+	Op       uint32
+	MsgBody  []byte
+}
+
+func (s *SendOutboundMessageRequest) Encode(b *zap.Buffer) {
+	b.WriteString(s.NodeName)
+	b.WriteString(s.PeerID)
+	b.WriteUint32(s.Op)
+	b.WriteBytes(s.MsgBody)
+}
+
+func (s *SendOutboundMessageRequest) Decode(rd *zap.Reader) error {
+	var err error
+	if s.NodeName, err = rd.ReadString(); err != nil {
+		return err
+	}
+	if s.PeerID, err = rd.ReadString(); err != nil {
+		return err
+	}
+	if s.Op, err = rd.ReadUint32(); err != nil {
+		return err
+	}
+	body, err := rd.ReadBytes()
+	if err != nil {
+		return err
+	}
+	// ReadBytes is zero-copy; copy because the request outlives the frame.
+	s.MsgBody = append([]byte(nil), body...)
+	return nil
+}
+
+// SendOutboundMessageResponse matches rpcpb.SendOutboundMessageResponse.
+type SendOutboundMessageResponse struct {
+	Sent bool
+}
+
+func (s *SendOutboundMessageResponse) Encode(b *zap.Buffer) { b.WriteBool(s.Sent) }
+func (s *SendOutboundMessageResponse) Decode(rd *zap.Reader) error {
+	v, err := rd.ReadBool()
+	if err != nil {
+		return err
+	}
+	s.Sent = v
+	return nil
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 

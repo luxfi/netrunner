@@ -47,7 +47,8 @@ type stubBackend struct {
 	lastRestartNode *types.RestartNodeRequest
 	lastPauseNode   *types.PauseNodeRequest
 	lastResumeNode  *types.ResumeNodeRequest
-	lastAttachPeer  *types.AttachPeerRequest
+	lastAttachPeer          *types.AttachPeerRequest
+	lastSendOutboundMessage *types.SendOutboundMessageRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -205,6 +206,11 @@ func (b *stubBackend) AttachPeer(ctx context.Context, req *types.AttachPeerReque
 		},
 		AttachedPeerInfo: &types.AttachedPeerInfo{ID: "peer-id-xyz"},
 	}, nil
+}
+
+func (b *stubBackend) SendOutboundMessage(ctx context.Context, req *types.SendOutboundMessageRequest) (*types.SendOutboundMessageResponse, error) {
+	b.lastSendOutboundMessage = req
+	return &types.SendOutboundMessageResponse{Sent: true}, nil
 }
 
 func (b *stubBackend) Stop(ctx context.Context) (*types.StopResponse, error) {
@@ -544,6 +550,44 @@ func TestE2EAttachPeer(t *testing.T) {
 	}
 	if resp.AttachedPeerInfo == nil || resp.AttachedPeerInfo.ID != "peer-id-xyz" {
 		t.Fatalf("AttachedPeerInfo: %+v", resp.AttachedPeerInfo)
+	}
+}
+
+func TestE2ESendOutboundMessage(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	req := &types.SendOutboundMessageRequest{
+		NodeName: "alpha",
+		PeerID:   "peer-1",
+		Op:       42,
+		MsgBody:  []byte{0xde, 0xad, 0xbe, 0xef},
+	}
+	resp, err := client.SendOutboundMessage(ctx, req)
+	if err != nil {
+		t.Fatalf("SendOutboundMessage: %v", err)
+	}
+	if !resp.Sent {
+		t.Fatal("Sent: false")
+	}
+	got := be.lastSendOutboundMessage
+	if got == nil {
+		t.Fatal("server did not see request")
+	}
+	if got.NodeName != "alpha" || got.PeerID != "peer-1" || got.Op != 42 {
+		t.Fatalf("scalar round-trip: %+v", got)
+	}
+	if len(got.MsgBody) != 4 || got.MsgBody[0] != 0xde || got.MsgBody[3] != 0xef {
+		t.Fatalf("MsgBody round-trip: %x", got.MsgBody)
 	}
 }
 

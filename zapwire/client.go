@@ -202,6 +202,16 @@ func (c *Client) AttachPeer(ctx context.Context, req *types.AttachPeerRequest) (
 	return resp, nil
 }
 
+// SendOutboundMessage sends a raw p2p message from the named node to a
+// peer; intended for adversarial / fuzzing tests.
+func (c *Client) SendOutboundMessage(ctx context.Context, req *types.SendOutboundMessageRequest) (*types.SendOutboundMessageResponse, error) {
+	resp := &types.SendOutboundMessageResponse{}
+	if err := c.callSub(ctx, OpStart, SubSendOutboundMessage, req, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}

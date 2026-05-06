@@ -29,6 +29,7 @@ type Backend interface {
 	PauseNode(ctx context.Context, req *types.PauseNodeRequest) (*types.PauseNodeResponse, error)
 	ResumeNode(ctx context.Context, req *types.ResumeNodeRequest) (*types.ResumeNodeResponse, error)
 	AttachPeer(ctx context.Context, req *types.AttachPeerRequest) (*types.AttachPeerResponse, error)
+	SendOutboundMessage(ctx context.Context, req *types.SendOutboundMessageRequest) (*types.SendOutboundMessageResponse, error)
 }
 
 // Server hosts a netrunner control RPC over ZAP.
@@ -201,6 +202,16 @@ func (s *Server) handleStartSub(
 			return 0, nil, err
 		}
 		resp, err := s.be.AttachPeer(ctx, req)
+		if err != nil {
+			return 0, nil, err
+		}
+		return msgType, encodeResp(resp), nil
+	case SubSendOutboundMessage:
+		req := &types.SendOutboundMessageRequest{}
+		if err := req.Decode(zap.NewReader(body)); err != nil {
+			return 0, nil, err
+		}
+		resp, err := s.be.SendOutboundMessage(ctx, req)
 		if err != nil {
 			return 0, nil, err
 		}
