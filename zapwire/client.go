@@ -156,6 +156,15 @@ func (c *Client) AddNode(ctx context.Context, req *types.AddNodeRequest) (*types
 	return resp, nil
 }
 
+// RemoveNode removes a single node from the running cluster.
+func (c *Client) RemoveNode(ctx context.Context, req *types.RemoveNodeRequest) (*types.RemoveNodeResponse, error) {
+	resp := &types.RemoveNodeResponse{}
+	if err := c.callSub(ctx, OpStart, SubRemoveNode, req, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}
