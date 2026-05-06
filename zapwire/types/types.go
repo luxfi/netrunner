@@ -433,6 +433,48 @@ func (r *RestartNodeResponse) Decode(rd *zap.Reader) error {
 	return r.ClusterInfo.Decode(rd)
 }
 
+// PauseNodeRequest matches rpcpb.PauseNodeRequest.
+type PauseNodeRequest struct {
+	Name string
+}
+
+func (p *PauseNodeRequest) Encode(b *zap.Buffer) { b.WriteString(p.Name) }
+func (p *PauseNodeRequest) Decode(rd *zap.Reader) error {
+	s, err := rd.ReadString()
+	if err != nil {
+		return err
+	}
+	p.Name = s
+	return nil
+}
+
+// PauseNodeResponse carries the post-pause cluster snapshot.
+type PauseNodeResponse struct {
+	ClusterInfo *ClusterInfo
+}
+
+func (p *PauseNodeResponse) Encode(b *zap.Buffer) {
+	if p.ClusterInfo == nil {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	p.ClusterInfo.Encode(b)
+}
+
+func (p *PauseNodeResponse) Decode(rd *zap.Reader) error {
+	present, err := rd.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if present == 0 {
+		p.ClusterInfo = nil
+		return nil
+	}
+	p.ClusterInfo = &ClusterInfo{}
+	return p.ClusterInfo.Decode(rd)
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 

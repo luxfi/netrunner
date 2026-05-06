@@ -174,6 +174,15 @@ func (c *Client) RestartNode(ctx context.Context, req *types.RestartNodeRequest)
 	return resp, nil
 }
 
+// PauseNode pauses a single node (process suspended, peers see it as offline).
+func (c *Client) PauseNode(ctx context.Context, req *types.PauseNodeRequest) (*types.PauseNodeResponse, error) {
+	resp := &types.PauseNodeResponse{}
+	if err := c.callSub(ctx, OpStart, SubPauseNode, req, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}
