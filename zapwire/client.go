@@ -147,6 +147,15 @@ func (c *Client) Status(ctx context.Context) (*types.StatusResponse, error) {
 	return resp, nil
 }
 
+// Stop terminates the cluster and returns the final snapshot.
+func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
+	resp := &types.StopResponse{}
+	if err := c.call(ctx, OpStop, &types.StopRequest{}, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // ---- Compatibility helpers ----
 
 // reqIDFromPayload is unused on the client side (zap.Conn handles IDs)

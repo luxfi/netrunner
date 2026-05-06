@@ -182,6 +182,39 @@ func (s *StatusResponse) Decode(r *zap.Reader) error {
 	return s.ClusterInfo.Decode(r)
 }
 
+// StopRequest is empty.
+type StopRequest struct{}
+
+func (*StopRequest) Encode(b *zap.Buffer)       {}
+func (*StopRequest) Decode(r *zap.Reader) error { return nil }
+
+// StopResponse carries the final cluster snapshot before shutdown.
+type StopResponse struct {
+	ClusterInfo *ClusterInfo
+}
+
+func (s *StopResponse) Encode(b *zap.Buffer) {
+	if s.ClusterInfo == nil {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	s.ClusterInfo.Encode(b)
+}
+
+func (s *StopResponse) Decode(r *zap.Reader) error {
+	present, err := r.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if present == 0 {
+		s.ClusterInfo = nil
+		return nil
+	}
+	s.ClusterInfo = &ClusterInfo{}
+	return s.ClusterInfo.Decode(r)
+}
+
 // ---- Composite types ----
 
 // NodeInfo is the per-node payload inside ClusterInfo.
