@@ -1,6 +1,6 @@
 module github.com/luxfi/netrunner
 
-go 1.26.1
+go 1.26.2
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
@@ -11,11 +11,11 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
 	github.com/luxfi/address v1.0.1
-	github.com/luxfi/api v1.0.3
+	github.com/luxfi/api v1.0.10
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.4.6
-	github.com/luxfi/crypto v1.17.44
+	github.com/luxfi/crypto v1.18.3
 	github.com/luxfi/genesis v1.7.1
 	github.com/luxfi/geth v1.16.76
 	github.com/luxfi/go-bip39 v1.1.2
@@ -25,7 +25,7 @@ require (
 	github.com/luxfi/math v1.4.0
 	github.com/luxfi/metric v1.5.0
 	github.com/luxfi/node v1.23.21
-	github.com/luxfi/p2p v1.19.2-zap
+	github.com/luxfi/p2p v1.19.2
 	github.com/luxfi/protocol v0.0.3
 	github.com/luxfi/sdk v1.16.46
 	github.com/luxfi/utxo v0.2.5
@@ -38,7 +38,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.49.0
+	golang.org/x/crypto v0.50.0
 	golang.org/x/mod v0.34.0
 	golang.org/x/sync v0.20.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260217215200-42d3e9bedb6d
@@ -77,12 +77,12 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/accel v1.0.1 // indirect
+	github.com/luxfi/accel v1.0.7 // indirect
 	github.com/luxfi/age v1.4.0 // indirect
 	github.com/luxfi/codec v1.1.4 // indirect
 	github.com/luxfi/compress v0.0.5 // indirect
 	github.com/luxfi/concurrent v0.0.3 // indirect
-	github.com/luxfi/consensus v1.22.69 // indirect
+	github.com/luxfi/consensus v1.22.85 // indirect
 	github.com/luxfi/container v0.0.4 // indirect
 	github.com/luxfi/filesystem v0.0.1 // indirect
 	github.com/luxfi/formatting v1.0.1 // indirect
@@ -92,6 +92,7 @@ require (
 	github.com/luxfi/sys v0.0.0-20260110090042-50187ec5ffd8 // indirect
 	github.com/luxfi/timer v1.0.2 // indirect
 	github.com/luxfi/utils v1.1.4 // indirect
+	github.com/luxfi/zwing v0.2.1 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -108,7 +109,7 @@ require (
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
-	golang.org/x/term v0.41.0 // indirect
+	golang.org/x/term v0.42.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
@@ -131,7 +132,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
-	github.com/consensys/gnark-crypto v0.19.2 // indirect
+	github.com/consensys/gnark-crypto v0.20.1 // indirect
 	github.com/crate-crypto/go-eth-kzg v1.5.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -181,7 +182,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
-	github.com/prometheus/procfs v0.19.2 // indirect
+	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -207,12 +208,12 @@ require (
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
 	golang.org/x/net v0.52.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
