@@ -42,8 +42,9 @@ type stubBackend struct {
 	pingPID int32
 
 	// captured request payloads for round-trip-integrity assertions
-	lastAddNode    *types.AddNodeRequest
-	lastRemoveNode *types.RemoveNodeRequest
+	lastAddNode     *types.AddNodeRequest
+	lastRemoveNode  *types.RemoveNodeRequest
+	lastRestartNode *types.RestartNodeRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -133,6 +134,20 @@ func (b *stubBackend) RemoveNode(ctx context.Context, req *types.RemoveNodeReque
 	return &types.RemoveNodeResponse{
 		ClusterInfo: &types.ClusterInfo{
 			NodeNames:   []string{"alpha"},
+			NodeInfos:   map[string]*types.NodeInfo{},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
+		},
+	}, nil
+}
+
+func (b *stubBackend) RestartNode(ctx context.Context, req *types.RestartNodeRequest) (*types.RestartNodeResponse, error) {
+	b.lastRestartNode = req
+	return &types.RestartNodeResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames:   []string{req.Name},
 			NodeInfos:   map[string]*types.NodeInfo{},
 			PID:         42,
 			RootDataDir: "/tmp/netrunner",
@@ -358,6 +373,52 @@ func TestE2ERemoveNode(t *testing.T) {
 	}
 	if be.lastRemoveNode == nil || be.lastRemoveNode.Name != "beta" {
 		t.Fatalf("Name round-trip: %+v", be.lastRemoveNode)
+	}
+}
+
+func TestE2ERestartNode(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	req := &types.RestartNodeRequest{
+		Name:        "alpha",
+		ExecPath:    "/usr/local/bin/luxd-v2",
+		ExecPathSet: true,
+		ChainConfigs: map[string]string{
+			"C": `{"new":"config"}`,
+		},
+		PluginDir: "/usr/local/lib/lux/plugins",
+	}
+	resp, err := client.RestartNode(ctx, req)
+	if err != nil {
+		t.Fatalf("RestartNode: %v", err)
+	}
+	if resp.ClusterInfo == nil {
+		t.Fatal("ClusterInfo: nil")
+	}
+	if be.lastRestartNode == nil {
+		t.Fatal("server did not see RestartNode request")
+	}
+	if be.lastRestartNode.Name != "alpha" {
+		t.Fatalf("Name: %q", be.lastRestartNode.Name)
+	}
+	if !be.lastRestartNode.ExecPathSet || be.lastRestartNode.ExecPath != "/usr/local/bin/luxd-v2" {
+		t.Fatalf("ExecPath round-trip: %+v", be.lastRestartNode)
+	}
+	if be.lastRestartNode.WhitelistedChainsSet {
+		t.Fatalf("WhitelistedChainsSet: should be false")
+	}
+	if be.lastRestartNode.ChainConfigs["C"] != `{"new":"config"}` {
+		t.Fatalf("ChainConfigs round-trip: %+v", be.lastRestartNode.ChainConfigs)
 	}
 }
 

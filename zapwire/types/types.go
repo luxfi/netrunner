@@ -357,6 +357,82 @@ func (r *RemoveNodeResponse) Decode(rd *zap.Reader) error {
 	return r.ClusterInfo.Decode(rd)
 }
 
+// RestartNodeRequest matches rpcpb.RestartNodeRequest.
+type RestartNodeRequest struct {
+	Name                  string
+	ExecPath              string // optional
+	ExecPathSet           bool
+	WhitelistedChains     string // optional (legacy field)
+	WhitelistedChainsSet  bool
+	ChainConfigs          map[string]string
+	UpgradeConfigs        map[string]string
+	ChainConfigFiles      map[string]string
+	PluginDir             string
+}
+
+func (r *RestartNodeRequest) Encode(b *zap.Buffer) {
+	b.WriteString(r.Name)
+	encodeOptString(b, r.ExecPathSet, r.ExecPath)
+	encodeOptString(b, r.WhitelistedChainsSet, r.WhitelistedChains)
+	encodeStringMap(b, r.ChainConfigs)
+	encodeStringMap(b, r.UpgradeConfigs)
+	encodeStringMap(b, r.ChainConfigFiles)
+	b.WriteString(r.PluginDir)
+}
+
+func (r *RestartNodeRequest) Decode(rd *zap.Reader) error {
+	var err error
+	if r.Name, err = rd.ReadString(); err != nil {
+		return err
+	}
+	if r.ExecPath, r.ExecPathSet, err = decodeOptString(rd); err != nil {
+		return err
+	}
+	if r.WhitelistedChains, r.WhitelistedChainsSet, err = decodeOptString(rd); err != nil {
+		return err
+	}
+	if r.ChainConfigs, err = decodeStringMap(rd); err != nil {
+		return err
+	}
+	if r.UpgradeConfigs, err = decodeStringMap(rd); err != nil {
+		return err
+	}
+	if r.ChainConfigFiles, err = decodeStringMap(rd); err != nil {
+		return err
+	}
+	if r.PluginDir, err = rd.ReadString(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RestartNodeResponse carries the post-restart cluster snapshot.
+type RestartNodeResponse struct {
+	ClusterInfo *ClusterInfo
+}
+
+func (r *RestartNodeResponse) Encode(b *zap.Buffer) {
+	if r.ClusterInfo == nil {
+		b.WriteUint8(0)
+		return
+	}
+	b.WriteUint8(1)
+	r.ClusterInfo.Encode(b)
+}
+
+func (r *RestartNodeResponse) Decode(rd *zap.Reader) error {
+	present, err := rd.ReadUint8()
+	if err != nil {
+		return err
+	}
+	if present == 0 {
+		r.ClusterInfo = nil
+		return nil
+	}
+	r.ClusterInfo = &ClusterInfo{}
+	return r.ClusterInfo.Decode(rd)
+}
+
 // StopRequest is empty.
 type StopRequest struct{}
 
