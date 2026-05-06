@@ -165,6 +165,15 @@ func (c *Client) RemoveNode(ctx context.Context, req *types.RemoveNodeRequest) (
 	return resp, nil
 }
 
+// RestartNode restarts a node, optionally with a new exec path / config.
+func (c *Client) RestartNode(ctx context.Context, req *types.RestartNodeRequest) (*types.RestartNodeResponse, error) {
+	resp := &types.RestartNodeResponse{}
+	if err := c.callSub(ctx, OpStart, SubRestartNode, req, resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Stop terminates the cluster and returns the final snapshot.
 func (c *Client) Stop(ctx context.Context) (*types.StopResponse, error) {
 	resp := &types.StopResponse{}
