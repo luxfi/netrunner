@@ -45,6 +45,7 @@ type stubBackend struct {
 	lastAddNode     *types.AddNodeRequest
 	lastRemoveNode  *types.RemoveNodeRequest
 	lastRestartNode *types.RestartNodeRequest
+	lastPauseNode   *types.PauseNodeRequest
 }
 
 func (b *stubBackend) Ping(ctx context.Context) (*types.PingResponse, error) {
@@ -149,6 +150,22 @@ func (b *stubBackend) RestartNode(ctx context.Context, req *types.RestartNodeReq
 		ClusterInfo: &types.ClusterInfo{
 			NodeNames:   []string{req.Name},
 			NodeInfos:   map[string]*types.NodeInfo{},
+			PID:         42,
+			RootDataDir: "/tmp/netrunner",
+			Healthy:     true,
+			NetworkID:   12345,
+		},
+	}, nil
+}
+
+func (b *stubBackend) PauseNode(ctx context.Context, req *types.PauseNodeRequest) (*types.PauseNodeResponse, error) {
+	b.lastPauseNode = req
+	return &types.PauseNodeResponse{
+		ClusterInfo: &types.ClusterInfo{
+			NodeNames: []string{req.Name},
+			NodeInfos: map[string]*types.NodeInfo{
+				req.Name: {Name: req.Name, Paused: true},
+			},
 			PID:         42,
 			RootDataDir: "/tmp/netrunner",
 			Healthy:     true,
@@ -419,6 +436,31 @@ func TestE2ERestartNode(t *testing.T) {
 	}
 	if be.lastRestartNode.ChainConfigs["C"] != `{"new":"config"}` {
 		t.Fatalf("ChainConfigs round-trip: %+v", be.lastRestartNode.ChainConfigs)
+	}
+}
+
+func TestE2EPauseNode(t *testing.T) {
+	be := &stubBackend{}
+	srv, teardown := runServer(t, be)
+	defer teardown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := Dial(ctx, srv.Addr())
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer client.Close()
+
+	resp, err := client.PauseNode(ctx, &types.PauseNodeRequest{Name: "alpha"})
+	if err != nil {
+		t.Fatalf("PauseNode: %v", err)
+	}
+	if be.lastPauseNode == nil || be.lastPauseNode.Name != "alpha" {
+		t.Fatalf("Name round-trip: %+v", be.lastPauseNode)
+	}
+	if !resp.ClusterInfo.NodeInfos["alpha"].Paused {
+		t.Fatalf("Paused flag not propagated")
 	}
 }
 
