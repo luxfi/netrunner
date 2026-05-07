@@ -14,9 +14,9 @@ require (
 	github.com/luxfi/api v1.0.10
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
-	github.com/luxfi/constants v1.4.6
+	github.com/luxfi/constants v1.5.2
 	github.com/luxfi/crypto v1.18.3
-	github.com/luxfi/genesis v1.7.1
+	github.com/luxfi/genesis v1.9.2
 	github.com/luxfi/geth v1.16.76
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.9

@@ -278,6 +278,10 @@ github.com/luxfi/consensus v1.22.85 h1:S/XpPF+eDapbZb4AIu0Vr1GXzg/sAxjrAff2M2mkO
 github.com/luxfi/consensus v1.22.85/go.mod h1:y6y+bVjvpDLkkTBCCKLcch6R4PRW8EA+lTfr+6sB6F8=
 github.com/luxfi/constants v1.4.6 h1:9a/ED2t/sRfeOfvNur2lssyjaw2I7tSyddTJHVSDYWg=
 github.com/luxfi/constants v1.4.6/go.mod h1:hOszZ2NDQ8gMZKncfcZ67PXkb5OIbnwAzXC3oFbQwW0=
+github.com/luxfi/constants v1.5.1 h1:Rejn5X9Ec6jwMlcq8MdH6jfUfWPSjWiuAfb2kl83NiM=
+github.com/luxfi/constants v1.5.1/go.mod h1:hOszZ2NDQ8gMZKncfcZ67PXkb5OIbnwAzXC3oFbQwW0=
+github.com/luxfi/constants v1.5.2 h1:fwQepO6viKAwf8ACnP9YV0TVUxndZuZM7U/aKcqe9EM=
+github.com/luxfi/constants v1.5.2/go.mod h1:hOszZ2NDQ8gMZKncfcZ67PXkb5OIbnwAzXC3oFbQwW0=
 github.com/luxfi/container v0.0.4 h1:BXhF82WyfqVP5mjlNcr7tP0Fcnvl0Ap1rkiu+rq5XuM=
 github.com/luxfi/container v0.0.4/go.mod h1:Z3SpmMF5d4t77MM0nHYXURpn+EMVaeu1fhbd/3BGaek=
 github.com/luxfi/crypto v1.17.44 h1:N3uWiHs1hC0DGsr2jwIdTfsEcpVR1Da583Z1LcqOaH8=
@@ -294,6 +298,12 @@ github.com/luxfi/formatting v1.0.1 h1:ZnE1rAdEUds9yAegdVdGDOBGN6hLMPOv6E03Fp8IEY
 github.com/luxfi/formatting v1.0.1/go.mod h1:mYzNf5DJOiqSSKUPzNj5dKy4tstFbN3pZlkI5716eKc=
 github.com/luxfi/genesis v1.7.1 h1:rMzmyt9kcSmF7wSf/ajoReDz8nBAX83v2xE4EgqgPOo=
 github.com/luxfi/genesis v1.7.1/go.mod h1:k26ZZvzES8e9cep9oWUDggBX+6oa5bnIQ7MmQP7dm4A=
+github.com/luxfi/genesis v1.8.2 h1:jFFMDO/yyzq1KzL5FaXzkDV84BIFt72446jP56jPdcQ=
+github.com/luxfi/genesis v1.8.2/go.mod h1:k26ZZvzES8e9cep9oWUDggBX+6oa5bnIQ7MmQP7dm4A=
+github.com/luxfi/genesis v1.9.1 h1:OSF8/5m4sKgQtvNu/k7/EqZZx1j4c0HSg98NuHMm/BQ=
+github.com/luxfi/genesis v1.9.1/go.mod h1:k26ZZvzES8e9cep9oWUDggBX+6oa5bnIQ7MmQP7dm4A=
+github.com/luxfi/genesis v1.9.2 h1:DMcFVLebRgcA+ElTbxAqaFOOMvXEU7UsBE8yBYGLum0=
+github.com/luxfi/genesis v1.9.2/go.mod h1:k26ZZvzES8e9cep9oWUDggBX+6oa5bnIQ7MmQP7dm4A=
 github.com/luxfi/geth v1.16.76 h1:CRh9BTuMUs3wYFg1X31F3Ld8nhDMZkJNkypMqrqVkvg=
 github.com/luxfi/geth v1.16.76/go.mod h1:/vA9J5jW9lF1iJ7VvEUDBWF8ZRXXz/9rmukQB/WAJhE=
 github.com/luxfi/go-bip32 v1.0.2 h1:7vFbb+Wr4Z499q2tuCLdd7wWjtn8sH+HWBlx76mhH9Y=
