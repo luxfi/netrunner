@@ -731,10 +731,10 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 			info: &rpcpb.CustomChainInfo{
 				ChainName:    blockchain.Name,
 				VmId:         blockchain.VMID.String(),
-				PchainId:     blockchain.ChainID.String(),
+				PchainId:     blockchain.NetID.String(),
 				BlockchainId: blockchain.ID.String(),
 			},
-			chainID:      blockchain.ChainID,
+			chainID:      blockchain.NetID,
 			blockchainID: blockchain.ID,
 		}
 	}
