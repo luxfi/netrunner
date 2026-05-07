@@ -142,8 +142,8 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 
 	// For local network (1337), use the genesis as-is since it already has stakers
 	// matching the pre-generated node keys
-	// Note: configs.CustomID is 1337 for custom local development network
-	if networkID == configs.CustomID {
+	// Note: configs.LocalID is 1337 for custom local development network
+	if networkID == configs.LocalID {
 		netConfig.Genesis = string(genesisJSON)
 		// Handle node count for local network
 		if int(numNodes) > len(netConfig.NodeConfigs) {
@@ -401,7 +401,7 @@ func NewTestnetConfig(binaryPath string, numNodes uint32) (network.Config, error
 // NewLocalConfig creates a network config for local development (network ID 1337)
 // This is equivalent to NewDefaultConfigNNodes but uses the configs package.
 func NewLocalConfig(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigForNetwork(binaryPath, numNodes, configs.CustomID)
+	return NewConfigForNetwork(binaryPath, numNodes, configs.LocalID)
 }
 
 // NewCanonicalMainnetConfig creates a mainnet network config using the CANONICAL genesis bytes.
@@ -429,7 +429,7 @@ func NewCanonicalDevnetConfig(binaryPath string, numNodes uint32) (network.Confi
 // NewCanonicalCustomConfig creates a custom (local) network config using the CANONICAL genesis bytes.
 // See NewCanonicalMainnetConfig for details on why this is critical.
 func NewCanonicalCustomConfig(binaryPath string, numNodes uint32) (network.Config, error) {
-	return newCanonicalConfig(binaryPath, numNodes, configs.CustomID, 9660)
+	return newCanonicalConfig(binaryPath, numNodes, configs.LocalID, 9660)
 }
 
 // newCanonicalConfig creates a network config with canonical (pre-serialized) genesis bytes
@@ -1176,7 +1176,7 @@ func NewDevnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Co
 // NewLocalConfigFromMnemonic creates local network config from LUX_MNEMONIC
 // This uses network ID 1337 with "custom" HRP, which is simpler for testing
 func NewLocalConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
-	return NewConfigFromMnemonic(binaryPath, configs.CustomID, numNodes)
+	return NewConfigFromMnemonic(binaryPath, configs.LocalID, numNodes)
 }
 
 // =============================================================================
