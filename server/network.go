@@ -158,7 +158,7 @@ func (lc *localNetwork) createConfig() error {
 	// If so, use the appropriate genesis configuration
 	var cfg network.Config
 	var err error
-	networkID := constants.CustomID // default to local (1337)
+	networkID := constants.LocalID // default to local (1337)
 	if networkIDVal, ok := globalConfig["network-id"]; ok {
 		switch v := networkIDVal.(type) {
 		case float64:
@@ -239,7 +239,7 @@ func (lc *localNetwork) createConfig() error {
 				ux.Print(lc.log, "%s", log.Green.Wrap("Loading CANONICAL devnet genesis (deterministic bytes)"))
 				cfg, err = local.NewCanonicalDevnetConfig(lc.options.execPath, lc.options.numNodes)
 			}
-		case constants.CustomID: // Custom/Local (1337)
+		case constants.LocalID: // Custom/Local (1337)
 			if useMnemonic {
 				ux.Print(lc.log, "%s", log.Green.Wrap("Loading custom genesis FROM MNEMONIC (funds allocated to derived address)"))
 				cfg, err = local.NewLocalConfigFromMnemonic(lc.options.execPath, lc.options.numNodes)
