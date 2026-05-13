@@ -1,6 +1,6 @@
 module github.com/luxfi/netrunner
 
-go 1.26.2
+go 1.26.3
 
 exclude google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 
@@ -15,7 +15,7 @@ require (
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.5.2
-	github.com/luxfi/crypto v1.18.3
+	github.com/luxfi/crypto v1.19.0
 	github.com/luxfi/genesis v1.9.2
 	github.com/luxfi/geth v1.16.87
 	github.com/luxfi/go-bip39 v1.1.2
