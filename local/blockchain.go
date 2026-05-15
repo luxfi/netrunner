@@ -1287,13 +1287,13 @@ type wallet struct {
 }
 
 // getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
-// Priority: LUX_MNEMONIC > LUX_PRIVATE_KEY > disk keys
+// Priority: MNEMONIC > PRIVATE_KEY > disk keys
 func getDefaultKey() (*secp256k1.PrivateKey, error) {
-	// If LUX_MNEMONIC is set, derive key using BIP44 path m/44'/60'/0'/0/0 (Ethereum standard)
+	// If MNEMONIC is set, derive key using BIP44 path m/44'/60'/0'/0/0 (Ethereum standard)
 	// CRITICAL: This MUST match the derivation path used in genesis allocations
 	// (keys.DeriveValidatorFromMnemonic uses m/44'/60'/0'/0/{index})
-	if mnemonic := os.Getenv("LUX_MNEMONIC"); mnemonic != "" {
-		fmt.Printf("🔑 getDefaultKey: Using LUX_MNEMONIC (len=%d)\n", len(mnemonic))
+	if mnemonic := os.Getenv("MNEMONIC"); mnemonic != "" {
+		fmt.Printf("🔑 getDefaultKey: Using MNEMONIC (len=%d)\n", len(mnemonic))
 
 		// Use the SAME derivation function as genesis allocations
 		// This ensures wallet operations use keys that have funds allocated in genesis
@@ -1313,12 +1313,12 @@ func getDefaultKey() (*secp256k1.PrivateKey, error) {
 		return privKey, nil
 	}
 
-	// If LUX_PRIVATE_KEY is set, use it directly (hex encoded, 64 chars = 32 bytes)
-	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
-		fmt.Printf("🔑 getDefaultKey: Using LUX_PRIVATE_KEY (len=%d): %s...\n", len(privKeyHex), privKeyHex[:16])
+	// If PRIVATE_KEY is set, use it directly (hex encoded, 64 chars = 32 bytes)
+	if privKeyHex := os.Getenv("PRIVATE_KEY"); privKeyHex != "" {
+		fmt.Printf("🔑 getDefaultKey: Using PRIVATE_KEY (len=%d): %s...\n", len(privKeyHex), privKeyHex[:16])
 		privKeyBytes, err := hex.DecodeString(privKeyHex)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode LUX_PRIVATE_KEY: %w", err)
+			return nil, fmt.Errorf("failed to decode PRIVATE_KEY: %w", err)
 		}
 		privKey, err := secp256k1.ToPrivateKey(privKeyBytes)
 		if err != nil {

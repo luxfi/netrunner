@@ -122,7 +122,7 @@ func activateCChainUpgrades(genesisJSON string) (string, error) {
 func main() {
 	logger := log.New()
 
-	binaryPath := os.Getenv("LUX_BINARY_PATH")
+	binaryPath := os.Getenv("BINARY_PATH")
 	if binaryPath == "" {
 		home, _ := os.UserHomeDir()
 		binaryPath = home + "/.lux/bin/luxd/luxd"
@@ -136,9 +136,9 @@ func main() {
 }
 
 func run(logger log.Logger, binaryPath string) error {
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	mnemonic := os.Getenv("MNEMONIC")
 	if mnemonic == "" {
-		return fmt.Errorf("LUX_MNEMONIC environment variable must be set")
+		return fmt.Errorf("MNEMONIC environment variable must be set")
 	}
 
 	// Create TESTNET network config (network ID 2)
