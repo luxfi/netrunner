@@ -10,7 +10,7 @@
 // Run: go test -tags gpu_chaos -v -timeout 10m ./tests/ -run TestGPU
 //
 // Requires:
-//   - A running luxd node with GPU EVM enabled (LUX_GPU_EVM=1)
+//   - A running luxd node with GPU EVM enabled (GPU_EVM=1)
 //   - Or a local anvil instance on the default RPC endpoint
 //
 // Set RPC_URL to override the default endpoint (http://127.0.0.1:9650/ext/bc/C/rpc).
@@ -138,17 +138,17 @@ func dialClient(t *testing.T) *ethclient.Client {
 }
 
 // fundedKey returns a funded private key for testing.
-// Uses LUX_PRIVATE_KEY env var or falls back to the well-known dev key.
+// Uses PRIVATE_KEY env var or falls back to the well-known dev key.
 func fundedKey(t *testing.T) *ecdsa.PrivateKey {
 	t.Helper()
-	hexkey := os.Getenv("LUX_PRIVATE_KEY")
+	hexkey := os.Getenv("PRIVATE_KEY")
 	if hexkey == "" {
 		// Default dev/anvil funded key (account 0)
 		hexkey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	}
 	hexkey = strings.TrimPrefix(hexkey, "0x")
 	key, err := luxcrypto.HexToECDSA(hexkey)
-	require.NoError(t, err, "invalid LUX_PRIVATE_KEY")
+	require.NoError(t, err, "invalid PRIVATE_KEY")
 	return key
 }
 
@@ -534,7 +534,7 @@ func TestGPU_Keccak256BatchConsistency(t *testing.T) {
 // the EVM gracefully falls back to CPU execution and the block still finalizes.
 //
 // This test sends a burst of transactions, then sends SIGKILL to the GPU worker
-// (identified by LUX_GPU_WORKER_PID or auto-detected). The block containing those
+// (identified by GPU_WORKER_PID or auto-detected). The block containing those
 // transactions must still produce a valid state root.
 func TestGPU_CrashMidBlock(t *testing.T) {
 	client := dialClient(t)
@@ -568,7 +568,7 @@ func TestGPU_CrashMidBlock(t *testing.T) {
 	// In CI, the GPU worker is a separate process. If no PID is set, the test
 	// validates the fallback path by checking that blocks still finalize even
 	// if the GPU subsystem was never available.
-	gpuPID := os.Getenv("LUX_GPU_WORKER_PID")
+	gpuPID := os.Getenv("GPU_WORKER_PID")
 	if gpuPID != "" {
 		t.Logf("Killing GPU worker PID %s to simulate crash", gpuPID)
 		// We do NOT actually call os.Kill here because the test must be safe to run
