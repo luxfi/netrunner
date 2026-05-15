@@ -207,9 +207,9 @@ func (lc *localNetwork) createConfig() error {
 		// deterministic output. This prevents "db contains invalid genesis hash" errors on restart.
 		// The canonical genesis files are pre-serialized and never re-generated.
 
-		// Check if LUX_MNEMONIC is set - if so, use mnemonic-based config to generate
+		// Check if MNEMONIC is set - if so, use mnemonic-based config to generate
 		// genesis with funds allocated to the mnemonic-derived address
-		mnemonic := os.Getenv("LUX_MNEMONIC")
+		mnemonic := os.Getenv("MNEMONIC")
 		useMnemonic := mnemonic != ""
 
 		switch networkID {
