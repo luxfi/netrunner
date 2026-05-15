@@ -28,8 +28,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Use LUX_KEYS_DIR if set, otherwise default
-	keysDir := os.Getenv("LUX_KEYS_DIR")
+	// Use KEYS_DIR if set, otherwise default
+	keysDir := os.Getenv("KEYS_DIR")
 	if keysDir == "" {
 		home, _ := os.UserHomeDir()
 		keysDir = filepath.Join(home, ".lux", "keys")
