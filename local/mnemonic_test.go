@@ -13,9 +13,9 @@ import (
 )
 
 func TestMnemonicDerivation(t *testing.T) {
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	mnemonic := os.Getenv("MNEMONIC")
 	if mnemonic == "" {
-		t.Skip("LUX_MNEMONIC not set")
+		t.Skip("MNEMONIC not set")
 	}
 
 	fmt.Printf("Mnemonic: %s...\n", mnemonic[:20])

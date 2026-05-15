@@ -33,12 +33,9 @@ import (
 )
 
 // getMnemonic returns the mnemonic from environment variables.
-// Priority: MNEMONIC > LUX_MNEMONIC > LIGHT_MNEMONIC
+// Priority: MNEMONIC > LIGHT_MNEMONIC
 func getMnemonic() string {
 	if v := os.Getenv("MNEMONIC"); v != "" {
-		return v
-	}
-	if v := getMnemonic(); v != "" {
 		return v
 	}
 	return os.Getenv("LIGHT_MNEMONIC")
@@ -213,7 +210,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 		// Build P/X-chain allocations for wallet keys
 		var newAllocations []map[string]interface{}
 
-		// If LUX_MNEMONIC is set, create allocations for mnemonic-derived key
+		// If MNEMONIC is set, create allocations for mnemonic-derived key
 		if mnemonic := getMnemonic(); mnemonic != "" {
 			validatorKeys, err := keys.DeriveValidatorsFromMnemonic(mnemonic, 1)
 			if err == nil && len(validatorKeys) > 0 {
@@ -243,8 +240,8 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 			}
 		}
 
-		// If LUX_PRIVATE_KEY is set, also create X+P allocations for it
-		if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+		// If PRIVATE_KEY is set, also create X+P allocations for it
+		if privKeyHex := os.Getenv("PRIVATE_KEY"); privKeyHex != "" {
 			privKeyBytes, err := hex.DecodeString(privKeyHex)
 			if err == nil && len(privKeyBytes) == 32 {
 				luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
@@ -254,7 +251,7 @@ func NewConfigForNetwork(binaryPath string, numNodes uint32, networkID uint32) (
 					xLuxAddr, errX := address.Format("X", hrp, addr[:])
 					pLuxAddr, errP := address.Format("P", hrp, addr[:])
 					if errX == nil && errP == nil {
-						fmt.Printf("🔑 Adding X+P allocations for LUX_PRIVATE_KEY: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
+						fmt.Printf("🔑 Adding X+P allocations for PRIVATE_KEY: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
 						ethAddr := "0x" + hex.EncodeToString(addr[:])
 						newAllocations = append(newAllocations, map[string]interface{}{
 							"ethAddr":        ethAddr,
@@ -446,7 +443,7 @@ func newCanonicalConfig(binaryPath string, numNodes uint32, networkID uint32, po
 	}
 
 	// Load validator keys from ~/.lux/keys/ FIRST so we can patch genesis with them
-	keysDir := os.Getenv("LUX_KEYS_DIR")
+	keysDir := os.Getenv("KEYS_DIR")
 	if keysDir == "" {
 		keysDir = validatorKeysDir()
 	}
@@ -786,7 +783,7 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 
 	// Add private key allocation if set
 	var initialStakedFunds []string
-	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+	if privKeyHex := os.Getenv("PRIVATE_KEY"); privKeyHex != "" {
 		privKeyBytes, err := hex.DecodeString(privKeyHex)
 		if err == nil && len(privKeyBytes) == 32 {
 			luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
@@ -797,7 +794,7 @@ func NewConfigWithPreExistingKeys(binaryPath string, networkID uint32, keysDir s
 				pLuxAddr, errP := address.Format("P", hrp, pChainAddr[:])
 				if errX == nil && errP == nil {
 					ethAddr := "0x" + hex.EncodeToString(pChainAddr[:])
-					fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
+					fmt.Printf("🔑 Adding PRIVATE_KEY allocations: X=%s, P=%s (1B each)\n", xLuxAddr, pLuxAddr)
 					allocations = append(allocations, map[string]interface{}{
 						"ethAddr":        ethAddr,
 						"luxAddr":        xLuxAddr,
@@ -889,7 +886,7 @@ func validatorKeysDir() string {
 	return filepath.Join(home, ".lux", "keys")
 }
 
-// NewConfigFromMnemonic creates a network config by deriving validator keys from LUX_MNEMONIC.
+// NewConfigFromMnemonic creates a network config by deriving validator keys from MNEMONIC.
 // This is the preferred method for starting mainnet/testnet.
 //
 // IMPORTANT: Keys are derived from mnemonic ONCE and persisted to disk (~/.lux/netrunner-validators/).
@@ -903,11 +900,11 @@ func validatorKeysDir() string {
 func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32) (network.Config, error) {
 	mnemonic := getMnemonic()
 	if mnemonic == "" {
-		return network.Config{}, fmt.Errorf("mnemonic not set (set LIGHT_MNEMONIC, LUX_MNEMONIC, or MNEMONIC)")
+		return network.Config{}, fmt.Errorf("mnemonic not set (set MNEMONIC or LIGHT_MNEMONIC)")
 	}
 
 	// Check if persisted validator keys exist
-	keysDir := os.Getenv("LUX_KEYS_DIR")
+	keysDir := os.Getenv("KEYS_DIR")
 	if keysDir == "" {
 		keysDir = validatorKeysDir()
 	}
@@ -1067,8 +1064,8 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 		fmt.Printf("  Wallet: %s -> X:%s P:%s (1B each)\n", walletKey.PChainAddr.String(), walletXAddr, walletPAddr)
 	}
 
-	// Add LUX_PRIVATE_KEY allocations if set and different from wallet key
-	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+	// Add PRIVATE_KEY allocations if set and different from wallet key
+	if privKeyHex := os.Getenv("PRIVATE_KEY"); privKeyHex != "" {
 		privKeyBytes, err := hex.DecodeString(privKeyHex)
 		if err == nil && len(privKeyBytes) == 32 {
 			luxPrivKey, err := luxcrypto.ToPrivateKey(privKeyBytes)
@@ -1080,7 +1077,7 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 					privKeyXAddr, errX := address.Format("X", hrp, privKeyAddr[:])
 					privKeyPAddr, errP := address.Format("P", hrp, privKeyAddr[:])
 					if errX == nil && errP == nil {
-						fmt.Printf("🔑 Adding LUX_PRIVATE_KEY allocations: X=%s P=%s (1B each)\n", privKeyXAddr, privKeyPAddr)
+						fmt.Printf("🔑 Adding PRIVATE_KEY allocations: X=%s P=%s (1B each)\n", privKeyXAddr, privKeyPAddr)
 						ethAddr := "0x" + hex.EncodeToString(privKeyAddr[:])
 						allocations = append(allocations, map[string]interface{}{
 							"ethAddr":        ethAddr,
@@ -1158,29 +1155,29 @@ func NewConfigFromMnemonic(binaryPath string, networkID uint32, numNodes uint32)
 	return netConfig, nil
 }
 
-// NewMainnetConfigFromMnemonic creates mainnet config from LUX_MNEMONIC
+// NewMainnetConfigFromMnemonic creates mainnet config from MNEMONIC
 func NewMainnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
 	return NewConfigFromMnemonic(binaryPath, constants.MainnetID, numNodes)
 }
 
-// NewTestnetConfigFromMnemonic creates testnet config from LUX_MNEMONIC
+// NewTestnetConfigFromMnemonic creates testnet config from MNEMONIC
 func NewTestnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
 	return NewConfigFromMnemonic(binaryPath, constants.TestnetID, numNodes)
 }
 
-// NewDevnetConfigFromMnemonic creates devnet config from LUX_MNEMONIC
+// NewDevnetConfigFromMnemonic creates devnet config from MNEMONIC
 func NewDevnetConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
 	return NewConfigFromMnemonic(binaryPath, constants.DevnetID, numNodes)
 }
 
-// NewLocalConfigFromMnemonic creates local network config from LUX_MNEMONIC
+// NewLocalConfigFromMnemonic creates local network config from MNEMONIC
 // This uses network ID 1337 with "custom" HRP, which is simpler for testing
 func NewLocalConfigFromMnemonic(binaryPath string, numNodes uint32) (network.Config, error) {
 	return NewConfigFromMnemonic(binaryPath, configs.LocalID, numNodes)
 }
 
 // =============================================================================
-// CLEAN CONFIG FUNCTIONS - No LUX_MNEMONIC, No Genesis Patching
+// CLEAN CONFIG FUNCTIONS - No mnemonic env var, No Genesis Patching
 // =============================================================================
 
 // NewConfigFromDisk creates a network config by loading keys from disk and using
