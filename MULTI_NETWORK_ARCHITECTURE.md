@@ -509,9 +509,9 @@ lux chain deploy <chain> --network local
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `LUX_NETWORK_TYPE` | Network type for backend | `mainnet` |
-| `LUX_MNEMONIC` | HD wallet seed for key derivation | `word1 word2 ...` |
-| `LUX_PRIVATE_KEY` | Direct private key (hex) | `0x123...` |
+| `NETWORK_TYPE` | Network type for backend | `mainnet` |
+| `MNEMONIC` | HD wallet seed for key derivation | `word1 word2 ...` |
+| `PRIVATE_KEY` | Direct private key (hex) | `0x123...` |
 
 ---
 
