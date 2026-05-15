@@ -89,8 +89,8 @@ func createZooGenesis() ([]byte, error) {
 func main() {
 	logger := log.New()
 
-	// Check for LUX_BINARY_PATH env var or use default
-	binaryPath := os.Getenv("LUX_BINARY_PATH")
+	// Check for BINARY_PATH env var or use default
+	binaryPath := os.Getenv("BINARY_PATH")
 	if binaryPath == "" {
 		home, _ := os.UserHomeDir()
 		binaryPath = home + "/.lux/bin/luxd/luxd"
@@ -103,10 +103,10 @@ func main() {
 }
 
 func run(logger log.Logger, binaryPath string) error {
-	// Check for LUX_MNEMONIC environment variable
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	// Check for MNEMONIC environment variable
+	mnemonic := os.Getenv("MNEMONIC")
 	if mnemonic == "" {
-		return fmt.Errorf("LUX_MNEMONIC environment variable must be set")
+		return fmt.Errorf("MNEMONIC environment variable must be set")
 	}
 
 	// Create the network config from mnemonic
