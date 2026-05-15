@@ -189,8 +189,8 @@ func init() {
 		}
 	}
 
-	// If LUX_PRIVATE_KEY is set, also allocate funds to that address for chain creation
-	if privKeyHex := os.Getenv("LUX_PRIVATE_KEY"); privKeyHex != "" {
+	// If PRIVATE_KEY is set, also allocate funds to that address for chain creation
+	if privKeyHex := os.Getenv("PRIVATE_KEY"); privKeyHex != "" {
 		privKeyBytes, err := hex.DecodeString(privKeyHex)
 		if err == nil && len(privKeyBytes) == 32 {
 			// Derive P-chain address from private key
@@ -201,7 +201,7 @@ func init() {
 				// For default network (local, ID 1337), use "custom" HRP
 				luxAddr, err := address.Format("X", "custom", pChainAddr[:])
 				if err == nil {
-					fmt.Printf("🔑 Adding default network allocation for LUX_PRIVATE_KEY address: %s\n", luxAddr)
+					fmt.Printf("🔑 Adding default network allocation for PRIVATE_KEY address: %s\n", luxAddr)
 					privKeyAlloc := map[string]interface{}{
 						"ethAddr":       "0x" + hex.EncodeToString(pChainAddr[:]),
 						"luxAddr":       luxAddr,
@@ -461,8 +461,8 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 		netConfig.NodeConfigs = netConfig.NodeConfigs[:numNodes]
 	}
 
-	// If LUX_MNEMONIC is set, add allocations for mnemonic-derived address
-	mnemonic := os.Getenv("LUX_MNEMONIC")
+	// If MNEMONIC is set, add allocations for mnemonic-derived address
+	mnemonic := os.Getenv("MNEMONIC")
 	if mnemonic != "" {
 		vk, err := keys.DeriveValidatorFromMnemonic(mnemonic, 0)
 		if err != nil {
@@ -487,7 +487,7 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 			return netConfig, fmt.Errorf("failed to format P-chain address: %w", err)
 		}
 
-		fmt.Printf("🔑 Adding local network allocations for LUX_MNEMONIC: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
+		fmt.Printf("🔑 Adding local network allocations for MNEMONIC: X=%s, P=%s (2B each)\n", xLuxAddr, pLuxAddr)
 
 		// Get existing allocations
 		allocations, _ := genesis["allocations"].([]interface{})
