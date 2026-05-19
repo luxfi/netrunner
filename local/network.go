@@ -1304,15 +1304,18 @@ func (ln *localNetwork) buildArgs(
 	}
 
 	// Flags for Lux
+	// luxd accepts --bootstrap-ips and --bootstrap-ids as separate flags
+	// (no combined --bootstrap-nodes). Emit both, paired index-by-index.
 	flags := map[string]string{
-		config.NetworkIDKey:      fmt.Sprintf("%d", ln.networkID),
-		config.DataDirKey:        dataDir,
-		config.DBPathKey:         dbDir,
-		config.LogsDirKey:        logsDir,
-		config.PluginDirKey:      pluginDir, // Always pass plugin dir for consistency
-		config.HTTPPortKey:       fmt.Sprintf("%d", apiPort),
-		config.StakingPortKey:    fmt.Sprintf("%d", p2pPort),
-		config.BootstrapNodesKey: ln.bootstraps.IPsArg(),
+		config.NetworkIDKey:    fmt.Sprintf("%d", ln.networkID),
+		config.DataDirKey:      dataDir,
+		config.DBPathKey:       dbDir,
+		config.LogsDirKey:      logsDir,
+		config.PluginDirKey:    pluginDir, // Always pass plugin dir for consistency
+		config.HTTPPortKey:     fmt.Sprintf("%d", apiPort),
+		config.StakingPortKey:  fmt.Sprintf("%d", p2pPort),
+		config.BootstrapIPsKey: ln.bootstraps.IPsArg(),
+		config.BootstrapIDsKey: ln.bootstraps.IDsArg(),
 	}
 
 	// Write staking key/cert etc. to disk so the new node can use them,
