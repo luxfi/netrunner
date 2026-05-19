@@ -21,7 +21,7 @@ import (
 	"github.com/luxfi/keys"
 
 	"github.com/luxfi/genesis/pkg/genesis"
-	"github.com/luxfi/protocol/p/reward"
+	"github.com/luxfi/proto/p/reward"
 
 	"github.com/luxfi/sdk/wallet/chain/x"
 	"github.com/luxfi/utxo"
@@ -40,8 +40,8 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/protocol/p/signer"
-	"github.com/luxfi/protocol/p/txs"
+	"github.com/luxfi/proto/p/signer"
+	"github.com/luxfi/proto/p/txs"
 	"github.com/luxfi/sdk/admin"
 	"github.com/luxfi/sdk/platformvm"
 	pwallet "github.com/luxfi/sdk/wallet/chain/p"

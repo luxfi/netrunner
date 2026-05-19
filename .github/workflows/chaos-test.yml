@@ -1,0 +1,94 @@
+name: Chaos tests
+
+# Runs the netrunner chaos suite against a freshly-built luxd. Gated on
+# changes to paths that affect partition / replication / bridge semantics
+# so we don't waste runners on docs-only PRs. Build tag `chaos` + env
+# `RUN_CHAOS=1` gate the tests at the Go level — without both the tests
+# are no-ops, so a passing run with neither set still proves the build
+# compiles.
+#
+# Followup (#54): once the PartitionNetwork RPC + iptables/pfctl
+# plumbing lands, this workflow will exercise real network partition
+# scenarios. Today it covers the in-memory bft messageFilter primitive
+# + the existing PauseNode (node-failure) scenarios.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/**'
+      - 'local/**'
+      - 'server/**'
+      - 'rpcpb/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/chaos-test.yml'
+  pull_request:
+    paths:
+      - 'tests/**'
+      - 'local/**'
+      - 'server/**'
+      - 'rpcpb/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/chaos-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: off
+  CGO_ENABLED: "0"
+  RUN_CHAOS: "1"
+  LUXD_VERSION: "1.22.79"
+
+jobs:
+  chaos:
+    name: Chaos suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout netrunner
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+          check-latest: true
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-chaos-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-chaos-
+
+      # luxd is fetched from the luxfi/node release artifacts. The chaos
+      # tests pass LUXD_PATH so netrunner-managed networks point at this
+      # binary instead of trying to compile one on the fly.
+      - name: Fetch luxd
+        run: |
+          set -e
+          curl -fsSL -o /tmp/luxd.tgz \
+            "https://github.com/luxfi/node/releases/download/v${LUXD_VERSION}/luxd-linux-amd64-v${LUXD_VERSION}.tar.gz"
+          mkdir -p /tmp/luxd-bin
+          tar -xzf /tmp/luxd.tgz -C /tmp/luxd-bin --strip-components=1
+          /tmp/luxd-bin/luxd --version
+          echo "LUXD_PATH=/tmp/luxd-bin/luxd" >> "$GITHUB_ENV"
+
+      - name: Run chaos tests
+        env:
+          # Tests gated by build tag `chaos` skip themselves unless this
+          # tag is set; gated by env `RUN_CHAOS=1` to also catch the
+          # check inside the test bodies.
+          RUN_CHAOS: "1"
+          LUXD_PATH: ${{ env.LUXD_PATH }}
+        run: |
+          go test -tags chaos -timeout 25m -count=1 ./tests/... \
+            -run "TestConsensus_|TestBridge_|TestDEX_" \
+            -v
