@@ -26,7 +26,7 @@ import (
 	"github.com/luxfi/netrunner/network"
 	"github.com/luxfi/netrunner/network/node"
 	"github.com/luxfi/netrunner/utils"
-	"github.com/luxfi/protocol/p/signer"
+	"github.com/luxfi/proto/p/signer"
 
 	"github.com/luxfi/address"
 	luxtls "github.com/luxfi/tls"
