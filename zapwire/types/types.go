@@ -594,7 +594,7 @@ func (a *AttachPeerResponse) Decode(rd *zap.Reader) error {
 }
 
 // SendOutboundMessageRequest matches rpcpb.SendOutboundMessageRequest.
-// The proto field is named `bytes` (the AVM/p2p message body); we use
+// The proto field is named `bytes` (the XVM/p2p message body); we use
 // MsgBody to avoid collision with the Go builtin.
 type SendOutboundMessageRequest struct {
 	NodeName string
