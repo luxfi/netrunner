@@ -579,12 +579,12 @@ func (ln *localNetwork) loadConfig(ctx context.Context, networkConfig network.Co
 			return fmt.Errorf("error adding node %s: %w", nodeConfig.Name, err)
 		}
 
-		// For beacon nodes (except the last one), wait for P2P port to be ready
-		// before starting subsequent nodes. This ensures bootstrap IPs are reachable.
+		// Beacons must accept TCP on their staking port before any other
+		// node tries to dial them — bootstrap IPs are otherwise unreachable.
 		if nodeConfig.IsBeacon && i < len(nodeConfigs)-1 {
 			ln.logger.Info("waiting for beacon node P2P port to be ready", log.String("node", nodeConfig.Name))
 			if err := ln.waitForP2PPort(ctx, node); err != nil {
-				ln.logger.Warn("beacon node P2P port not ready, continuing anyway", log.String("node", nodeConfig.Name), log.Err(err))
+				return fmt.Errorf("beacon %s P2P port not ready: %w", nodeConfig.Name, err)
 			}
 		}
 	}
@@ -1392,6 +1392,15 @@ func (ln *localNetwork) getNodeSemVer(nodeConfig node.Config) (string, error) {
 // ensure flags are compatible with the running node version
 func getFlagsForLuxdVersion(luxdVersion string, givenFlags map[string]string) map[string]string {
 	flags := maps.Clone(givenFlags)
+	// Empty/unparseable version means "we couldn't detect" — assume the
+	// luxd binary is current (no downgrade needed). Previously this
+	// branch incorrectly compared "" < "v1.9.6" → -1, which caused the
+	// downgrade table to fire on every modern luxd and inject the
+	// deprecated --build-dir / --whitelisted-subnets flags. Modern
+	// luxd rejects those flags with "unknown flag" and node1 exits 1.
+	if luxdVersion == "" || !semver.IsValid(luxdVersion) {
+		return flags
+	}
 	for _, deprecatedFlagInfo := range deprecatedFlagsSupport {
 		if semver.Compare(luxdVersion, deprecatedFlagInfo.Version) < 0 {
 			if v, ok := flags[deprecatedFlagInfo.NewName]; ok {
