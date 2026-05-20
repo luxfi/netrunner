@@ -26,7 +26,7 @@ require (
 	github.com/luxfi/metric v1.5.1
 	github.com/luxfi/node v1.26.26
 	github.com/luxfi/p2p v1.19.2
-	github.com/luxfi/proto v1.0.0
+	github.com/luxfi/protocol v0.0.4
 	github.com/luxfi/sdk v1.16.60
 	github.com/luxfi/utxo v0.3.0
 	github.com/luxfi/validators v1.2.0
@@ -219,4 +219,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
-
