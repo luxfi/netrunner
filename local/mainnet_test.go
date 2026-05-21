@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	luxdBinaryPath   = "/Users/z/go/bin/luxd"
+	luxdBinaryPath   = os.ExpandEnv("$HOME/go/bin/luxd")
 	healthyTimeout   = 3 * time.Minute
 	mainnetNetworkID = uint32(96369)
 )
