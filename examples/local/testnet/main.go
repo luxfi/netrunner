@@ -36,7 +36,7 @@ func shutdownOnSignal(
 }
 
 func createZooTestnetGenesis() ([]byte, error) {
-	data, err := os.ReadFile("/Users/z/work/lux/genesis/configs/zoo-testnet/genesis.json")
+	data, err := os.ReadFile(os.ExpandEnv("$HOME/work/lux/genesis/configs/zoo-testnet/genesis.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func run(logger log.Logger, binaryPath string) error {
 	netConfig.Genesis = updatedGenesis
 	netConfig.Flags["track-all-chains"] = true
 
-	corethConfig, err := createCorethDebugConfig("/Users/z/work/lux/state/rlp/lux-testnet/lux-testnet-96368.rlp")
+	corethConfig, err := createCorethDebugConfig(os.ExpandEnv("$HOME/work/lux/state/rlp/lux-testnet/lux-testnet-96368.rlp"))
 	if err != nil {
 		return fmt.Errorf("failed to create coreth debug config: %w", err)
 	}
@@ -219,7 +219,7 @@ func run(logger log.Logger, binaryPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create zoo testnet genesis: %w", err)
 	}
-	zooCorethConfig, err := createCorethDebugConfig("/Users/z/work/lux/state/rlp/zoo-testnet/zoo-testnet-200201.rlp")
+	zooCorethConfig, err := createCorethDebugConfig(os.ExpandEnv("$HOME/work/lux/state/rlp/zoo-testnet/zoo-testnet-200201.rlp"))
 	if err != nil {
 		return fmt.Errorf("failed to create zoo testnet coreth config: %w", err)
 	}

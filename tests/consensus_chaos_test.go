@@ -43,7 +43,7 @@ func newConsensusTestEnv(t *testing.T) *consensusTestEnv {
 
 	luxdPath := os.Getenv("LUXD_PATH")
 	if luxdPath == "" {
-		luxdPath = "/Users/z/work/lux/node/build/luxd"
+		luxdPath = os.ExpandEnv("$HOME/work/lux/node/build/luxd")
 	}
 
 	net, err := local.NewDefaultNetwork(logger, luxdPath, true)
