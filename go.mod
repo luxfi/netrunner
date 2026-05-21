@@ -14,9 +14,9 @@ require (
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.5.2
-	github.com/luxfi/crypto v1.19.0
+	github.com/luxfi/crypto v1.19.3
 	github.com/luxfi/genesis v1.9.8-0.20260512210243-caa876fa623c
-	github.com/luxfi/geth v1.16.90
+	github.com/luxfi/geth v1.16.98
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.10
 	github.com/luxfi/keys v1.0.8
@@ -27,10 +27,10 @@ require (
 	github.com/luxfi/p2p v1.19.2
 	github.com/luxfi/proto v1.0.0
 	github.com/luxfi/sdk v1.16.60
-	github.com/luxfi/zap v0.2.0
 	github.com/luxfi/utxo v0.3.0
 	github.com/luxfi/validators v1.2.0
 	github.com/luxfi/version v1.0.1
+	github.com/luxfi/zap v0.2.0
 	github.com/luxfi/zapdb v1.10.0
 	github.com/luxfi/zwing v0.5.2
 	github.com/onsi/ginkgo/v2 v2.28.1
@@ -42,6 +42,7 @@ require (
 	golang.org/x/crypto v0.50.0
 	golang.org/x/mod v0.34.0
 	golang.org/x/sync v0.20.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.35.1
@@ -53,6 +54,7 @@ require (
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/DataDog/zstd v1.5.7 // indirect
 	github.com/btcsuite/btcutil v1.0.2 // indirect
+	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cockroachdb/errors v1.12.0 // indirect
 	github.com/cockroachdb/fifo v0.0.0-20240816210425-c5d0cb0b6fc0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20241215232642-bb51bb14a506 // indirect
@@ -70,13 +72,15 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20260302011040-a15ffb7f9dcc // indirect
+	github.com/grandcat/zeroconf v1.0.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/accel v1.0.9 // indirect
+	github.com/luxfi/accel v1.1.0 // indirect
 	github.com/luxfi/age v1.5.0 // indirect
 	github.com/luxfi/codec v1.1.4 // indirect
 	github.com/luxfi/compress v0.0.5 // indirect
@@ -86,8 +90,10 @@ require (
 	github.com/luxfi/crypto/ipa v1.2.4 // indirect
 	github.com/luxfi/filesystem v0.0.1 // indirect
 	github.com/luxfi/formatting v1.0.1 // indirect
+	github.com/luxfi/mdns v0.1.0 // indirect
 	github.com/luxfi/net v0.0.4 // indirect
 	github.com/luxfi/pq v1.0.3 // indirect
+	github.com/luxfi/protocol v0.0.4 // indirect
 	github.com/luxfi/runtime v1.0.1 // indirect
 	github.com/luxfi/staking v1.1.0 // indirect
 	github.com/luxfi/sys v0.0.0-20260110090042-50187ec5ffd8 // indirect
@@ -96,6 +102,7 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/miekg/dns v1.1.66 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.100 // indirect
@@ -110,6 +117,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/term v0.42.0 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
@@ -124,7 +132,6 @@ require (
 require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20260311194731-d5b7577c683d // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.6 // indirect
