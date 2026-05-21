@@ -1,8 +1,16 @@
 // Copyright (C) 2025, Lux Industries Inc. All rights reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 
+//go:build k8s
+
 // Package k8s provides a Kubernetes-based deployment engine for Lux networks.
 // It implements the Engine interface to deploy validator nodes as StatefulSets.
+//
+// Gated behind -tags k8s. k8s.io/client-go transitively imports
+// google.golang.org/protobuf via gnostic-models; the project rule
+// (ZAP internal, no proto on the wire) means we keep that out of the
+// default netrunner binary. Build with `go build -tags k8s ./...` when
+// you need Kubernetes deployment.
 package k8s
 
 import (
