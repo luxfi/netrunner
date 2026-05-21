@@ -152,8 +152,8 @@ func NewGenesis(
 		NetworkID: networkID,
 		Allocations: []genesis.UnparsedAllocation{
 			{
-				ETHAddr:       zeroEthAddr,         // Zero address as hex string
-				LUXAddr:       genesisVdrStakeAddr, // Bech32 formatted address
+				EVMAddr:       zeroEthAddr,         // Zero address as hex string
+				UTXOAddr:      genesisVdrStakeAddr, // Bech32 formatted address
 				InitialAmount: 0,
 				UnlockSchedule: []genesis.LockedAmount{ // Provides stake to validators
 					{
@@ -178,8 +178,8 @@ func NewGenesis(
 		config.Allocations = append(
 			config.Allocations,
 			genesis.UnparsedAllocation{
-				ETHAddr:       zeroEthAddr, // Zero address as hex string
-				LUXAddr:       luxAddr,     // Bech32 formatted address
+				EVMAddr:       zeroEthAddr, // Zero address as hex string
+				UTXOAddr:      luxAddr,     // Bech32 formatted address
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
 					{
