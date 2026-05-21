@@ -29,7 +29,6 @@ var (
 	logDir             string
 	port               string
 	gwPort             string
-	gwDisabled         bool
 	dialTimeout        time.Duration
 	disableNodesOutput bool
 	snapshotsDir       string
@@ -45,9 +44,8 @@ func NewCommand() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&logLevel, "log-level", log.InfoLevel.String(), "log level for server logs")
 	cmd.PersistentFlags().StringVar(&logDir, "log-dir", "", "log directory")
-	cmd.PersistentFlags().StringVar(&port, "port", ":9000", "server port")
-	cmd.PersistentFlags().StringVar(&gwPort, "grpc-gateway-port", ":9001", "grpc-gateway server port")
-	cmd.PersistentFlags().BoolVar(&gwDisabled, "disable-grpc-gateway", false, "true to disable grpc-gateway server (overrides --grpc-gateway-port)")
+	cmd.PersistentFlags().StringVar(&port, "port", ":9000", "ZAP server port")
+	cmd.PersistentFlags().StringVar(&gwPort, "gateway-port", "", "reserved for the optional ZIP HTTP edge — empty disables")
 	cmd.PersistentFlags().DurationVar(&dialTimeout, "dial-timeout", 10*time.Second, "server dial timeout")
 	cmd.PersistentFlags().BoolVar(&disableNodesOutput, "disable-nodes-output", false, "true to disable nodes stdout/stderr")
 	cmd.PersistentFlags().StringVar(&snapshotsDir, "snapshots-dir", "", "directory for snapshots")
@@ -89,7 +87,6 @@ func serverFunc(*cobra.Command, []string) (err error) {
 	s, err := server.New(server.Config{
 		Port:                port,
 		GwPort:              gwPort,
-		GwDisabled:          gwDisabled,
 		DialTimeout:         dialTimeout,
 		RedirectNodesOutput: !disableNodesOutput,
 		SnapshotsDir:        snapshotsDir,
