@@ -40,3 +40,6 @@ netrunner
 magic.mgc
 network/default/
 *.bak
+
+# Built example binaries
+/examples/local/testnet/testnet
