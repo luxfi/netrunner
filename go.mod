@@ -9,7 +9,6 @@ exclude github.com/luxfi/geth v1.16.1
 require (
 	github.com/btcsuite/btcd v0.25.0
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
 	github.com/luxfi/address v1.0.1
 	github.com/luxfi/api v1.0.10
 	github.com/luxfi/atomic v1.0.0
@@ -26,8 +25,9 @@ require (
 	github.com/luxfi/metric v1.5.1
 	github.com/luxfi/node v1.26.26
 	github.com/luxfi/p2p v1.19.2
-	github.com/luxfi/protocol v0.0.4
+	github.com/luxfi/proto v1.0.0
 	github.com/luxfi/sdk v1.16.60
+	github.com/luxfi/zap v0.2.0
 	github.com/luxfi/utxo v0.3.0
 	github.com/luxfi/validators v1.2.0
 	github.com/luxfi/version v1.0.1
@@ -42,8 +42,6 @@ require (
 	golang.org/x/crypto v0.50.0
 	golang.org/x/mod v0.34.0
 	golang.org/x/sync v0.20.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9
-	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.35.1

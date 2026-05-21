@@ -9,12 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -30,16 +28,12 @@ import (
 	"github.com/luxfi/netrunner/rpcpb"
 	"github.com/luxfi/netrunner/utils"
 	"github.com/luxfi/netrunner/utils/constants"
+	"github.com/luxfi/netrunner/zaprpc"
 	"github.com/luxfi/p2p/message"
 	"github.com/luxfi/p2p/peer"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	log "github.com/luxfi/log"
 	"github.com/luxfi/math/set"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -74,7 +68,7 @@ var (
 	ErrNotBootstrapped        = errors.New("not bootstrapped")
 	ErrNodeNotFound           = errors.New("node not found")
 	ErrPeerNotFound           = errors.New("peer not found")
-	ErrStatusCanceled         = errors.New("gRPC stream status canceled")
+	ErrStatusCanceled         = errors.New("status stream canceled")
 	ErrNoChainSpec            = errors.New("no blockchain spec was provided")
 	ErrNoChainID              = errors.New("chainID is missing")
 	ErrNoElasticChainSpec     = errors.New("no elastic chain spec was provided")
@@ -158,10 +152,14 @@ func getNetworkNameFromRootDir(rootDir string) string {
 }
 
 type Config struct {
-	Port   string
-	GwPort string
-	// true to disable grpc-gateway server
-	GwDisabled          bool
+	// Port is the TCP address the netrunner ZAP server listens on,
+	// e.g. ":8546" or "127.0.0.1:8546".
+	Port string
+	// GwPort is reserved for the optional ZIP edge surface (Fiber v3 /
+	// fasthttp). Empty means no HTTP edge — clients talk ZAP directly.
+	// The previous grpc-gateway HTTP→gRPC bridge is gone with the gRPC
+	// transport itself.
+	GwPort              string
 	DialTimeout         time.Duration
 	RedirectNodesOutput bool
 	SnapshotsDir        string
@@ -182,11 +180,7 @@ type server struct {
 	rootCancel context.CancelFunc
 	closed     chan struct{}
 
-	ln         net.Listener
-	gRPCServer *grpc.Server
-
-	gwMux    *runtime.ServeMux
-	gwServer *http.Server
+	zapServer *zaprpc.Server
 
 	// Multi-network support: map from network name to network instance
 	networks     map[string]*localNetwork
@@ -195,144 +189,79 @@ type server struct {
 	// Invariant: If [networks] is non-nil, then [clusterInfos] is non-nil.
 
 	asyncErrCh chan error
-
-	rpcpb.UnimplementedPingServiceServer
-	rpcpb.UnimplementedControlServiceServer
 }
 
-// grpc encapsulates the non protocol-related, ANR server domain errors,
-// inside grpc.status.Status structs, with status.Code() code.Unknown,
-// and original error msg inside status.Message() string
-// this aux function is to be used by clients, to check for the appropriate
-// ANR domain error kind
+// IsServerError reports whether err's text matches serverError's text. Used
+// by callers to recognise domain errors that round-tripped as plain strings
+// across the ZAP envelope (we don't ship typed gRPC status codes anymore).
 func IsServerError(err error, serverError error) bool {
-	status := status.Convert(err)
-	return status.Code() == codes.Unknown && status.Message() == serverError.Error()
+	if err == nil || serverError == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), serverError.Error())
 }
 
 func New(cfg Config, logger log.Logger) (Server, error) {
-	if cfg.Port == "" || cfg.GwPort == "" {
+	if cfg.Port == "" {
 		return nil, ErrInvalidPort
-	}
-
-	listener, err := net.Listen("tcp", cfg.Port)
-	if err != nil {
-		return nil, err
 	}
 
 	s := &server{
 		cfg:          cfg,
 		logger:       logger,
 		closed:       make(chan struct{}),
-		ln:           listener,
-		gRPCServer:   grpc.NewServer(),
 		mu:           new(sync.RWMutex),
 		asyncErrCh:   make(chan error, 1),
 		networks:     make(map[string]*localNetwork),
 		clusterInfos: make(map[string]*rpcpb.ClusterInfo),
 	}
-	if !cfg.GwDisabled {
-		s.gwMux = runtime.NewServeMux()
-		s.gwServer = &http.Server{ //nolint // TODO add ReadHeaderTimeout
-			Addr:    cfg.GwPort,
-			Handler: s.gwMux,
-		}
+
+	port, err := portFromAddr(cfg.Port)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPort, err)
 	}
+	s.zapServer = zaprpc.NewServer(zaprpc.ServerConfig{
+		NodeID: "netrunner-server",
+		Port:   port,
+	}, bindZAP(s))
 
 	return s, nil
 }
 
-// Blocking call until server listeners return.
+// portFromAddr accepts ":8546" or "host:8546" and returns the int port —
+// the ZAP server binds by port number, not by string address.
+func portFromAddr(addr string) (int, error) {
+	host := addr
+	if i := strings.LastIndex(addr, ":"); i >= 0 {
+		host = addr[i+1:]
+	}
+	return strconv.Atoi(host)
+}
+
+// Run starts the ZAP server and blocks until rootCtx is canceled.
 func (s *server) Run(rootCtx context.Context) (err error) {
 	s.rootCtx, s.rootCancel = context.WithCancel(rootCtx)
 
-	rpcpb.RegisterPingServiceServer(s.gRPCServer, s)
-	rpcpb.RegisterControlServiceServer(s.gRPCServer, s)
-
-	gRPCErrChan := make(chan error)
-	go func() {
-		s.logger.Info("serving gRPC server", log.String("port", s.cfg.Port))
-		gRPCErrChan <- s.gRPCServer.Serve(s.ln)
-	}()
-
-	gwErrChan := make(chan error)
-	if s.cfg.GwDisabled {
-		s.logger.Info("gRPC gateway server is disabled")
-	} else {
-		// Set up gRPC gateway to allow for HTTP requests to [s.gRPCServer].
-		go func() {
-			s.logger.Info("dialing gRPC server for gRPC gateway", log.String("port", s.cfg.Port))
-			ctx, cancel := context.WithTimeout(rootCtx, s.cfg.DialTimeout)
-			gwConn, err := grpc.DialContext(
-				ctx,
-				"0.0.0.0"+s.cfg.Port,
-				grpc.WithBlock(),
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-			)
-			cancel()
-			if err != nil {
-				gwErrChan <- err
-				return
-			}
-			defer gwConn.Close()
-
-			if err := rpcpb.RegisterPingServiceHandler(rootCtx, s.gwMux, gwConn); err != nil {
-				gwErrChan <- err
-				return
-			}
-			if err := rpcpb.RegisterControlServiceHandler(rootCtx, s.gwMux, gwConn); err != nil {
-				gwErrChan <- err
-				return
-			}
-
-			s.logger.Info("serving gRPC gateway", log.String("port", s.cfg.GwPort))
-			gwErrChan <- s.gwServer.ListenAndServe()
-		}()
+	s.logger.Info("starting netrunner ZAP server", log.String("port", s.cfg.Port))
+	if err := s.zapServer.Start(); err != nil {
+		return fmt.Errorf("start ZAP server: %w", err)
 	}
 
-	select {
-	case <-rootCtx.Done():
-		s.logger.Warn("root context is done")
-
-		if !s.cfg.GwDisabled {
-			s.logger.Warn("closed gRPC gateway server", log.Err(s.gwServer.Close()))
-			<-gwErrChan
-		}
-
-		s.gRPCServer.Stop()
-		s.logger.Warn("closed gRPC server")
-		<-gRPCErrChan // Wait for [s.gRPCServer.Serve] to return.
-		s.logger.Warn("gRPC terminated")
-
-	case err = <-gRPCErrChan:
-		s.logger.Warn("gRPC server failed", log.Err(err))
-
-		// [s.grpcServer] is already stopped.
-		if !s.cfg.GwDisabled {
-			s.logger.Warn("closed gRPC gateway server", log.Err(s.gwServer.Close()))
-			<-gwErrChan
-		}
-
-	case err = <-gwErrChan: // if disabled, this will never be selected
-		// [s.gwServer] is already closed.
-		s.logger.Warn("gRPC gateway server failed", log.Err(err))
-		s.gRPCServer.Stop()
-		s.logger.Warn("closed gRPC server")
-		<-gRPCErrChan // Wait for [s.gRPCServer.Serve] to return.
-	}
+	<-s.rootCtx.Done()
+	s.logger.Warn("root context is done")
+	s.zapServer.Stop()
+	s.logger.Warn("closed ZAP server")
 
 	// Grab lock to ensure [s.networks] isn't being used.
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	for name := range s.networks {
-		// Close the network.
 		s.stopAndRemoveNetwork(name, nil)
 		s.logger.Warn("network stopped", log.String("network", name))
 	}
 
 	s.rootCancel()
-	return err
+	return nil
 }
 
 func (s *server) Ping(context.Context, *rpcpb.PingRequest) (*rpcpb.PingResponse, error) {
@@ -1074,104 +1003,15 @@ func (s *server) stopAndRemoveNetwork(networkName string, err error) {
 	}
 }
 
-// TODO document this
-func (s *server) StreamStatus(req *rpcpb.StreamStatusRequest, stream rpcpb.ControlService_StreamStatusServer) (err error) {
-	s.logger.Debug("StreamStatus")
-
-	interval := time.Duration(req.PushInterval)
-
-	// returns this method, then server closes the stream
-	s.logger.Info("pushing status updates to the stream", log.String("interval", interval.String()))
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		s.sendLoop(stream, interval)
-		wg.Done()
-	}()
-
-	errCh := make(chan error, 1)
-	go func() {
-		err := s.recvLoop(stream)
-		if err != nil {
-			if isClientCanceled(stream.Context().Err(), err) {
-				s.logger.Warn("failed to receive status request from gRPC stream due to client cancellation", log.Err(err))
-			} else {
-				s.logger.Warn("failed to receive status request from gRPC stream", log.Err(err))
-			}
-		}
-		errCh <- err
-	}()
-
-	select {
-	case err = <-errCh:
-		if errors.Is(err, context.Canceled) {
-			err = ErrStatusCanceled
-		}
-	case <-stream.Context().Done():
-		err = stream.Context().Err()
-		if errors.Is(err, context.Canceled) {
-			err = ErrStatusCanceled
-		}
-	}
-
-	wg.Wait()
-	return err
-}
-
-// TODO document this
-func (s *server) sendLoop(stream rpcpb.ControlService_StreamStatusServer, interval time.Duration) {
-	s.logger.Info("start status send loop")
-
-	tc := time.NewTicker(1)
-	defer tc.Stop()
-
-	for {
-		select {
-		case <-s.rootCtx.Done():
-			return
-		case <-tc.C:
-			tc.Reset(interval)
-		}
-
-		s.logger.Debug("sending cluster info")
-
-		s.mu.RLock()
-		err := stream.Send(&rpcpb.StreamStatusResponse{ClusterInfo: s.clusterInfos["mainnet"]})
-		s.mu.RUnlock()
-		if err != nil {
-			if isClientCanceled(stream.Context().Err(), err) {
-				s.logger.Debug("client stream canceled", log.Err(err))
-				return
-			}
-			s.logger.Warn("failed to send an event", log.Err(err))
-			return
-		}
-	}
-}
-
-// TODO document this
-func (s *server) recvLoop(stream rpcpb.ControlService_StreamStatusServer) error {
-	s.logger.Info("start status receive loop")
-
-	for {
-		select {
-		case <-s.rootCtx.Done():
-			return s.rootCtx.Err()
-		default:
-		}
-
-		// receive data from stream
-		req := new(rpcpb.StatusRequest)
-		err := stream.RecvMsg(req)
-		if errors.Is(err, io.EOF) {
-			s.logger.Debug("received EOF from client; returning to close the stream from server side")
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-	}
-}
+// StreamStatus over ZAP works as client-driven polling: client.StreamStatus
+// in the netrunner client package opens a goroutine that calls Status() on
+// the requested interval and emits ClusterInfo values into the returned
+// channel. Server-side, the only thing we need to ensure is that the
+// Status RPC returns fresh data — see (*server).Status.
+//
+// (The original gRPC StreamStatus used a server-streaming RPC. ZAP doesn't
+// model streams natively; polling matches the same observable contract with
+// strictly less plumbing and works over a single Call() round-trip per tick.)
 
 func (s *server) AddNode(_ context.Context, req *rpcpb.AddNodeRequest) (*rpcpb.AddNodeResponse, error) {
 	s.mu.Lock()
@@ -1639,38 +1479,6 @@ func (s *server) GetSnapshotNames(ctx context.Context, req *rpcpb.GetSnapshotNam
 		return nil, err
 	}
 	return &rpcpb.GetSnapshotNamesResponse{SnapshotNames: snapshotNames}, nil
-}
-
-func isClientCanceled(ctxErr error, err error) bool {
-	if ctxErr != nil {
-		return true
-	}
-
-	ev, ok := status.FromError(err)
-	if !ok {
-		return false
-	}
-
-	switch ev.Code() {
-	case codes.Canceled, codes.DeadlineExceeded:
-		// client-side context cancel or deadline exceeded
-		// "rpc error: code = Canceled desc = context canceled"
-		// "rpc error: code = DeadlineExceeded desc = context deadline exceeded"
-		return true
-	case codes.Unavailable:
-		msg := ev.Message()
-		// client-side context cancel or deadline exceeded with TLS ("http2.errClientDisconnected")
-		// "rpc error: code = Unavailable desc = client disconnected"
-		if msg == "client disconnected" {
-			return true
-		}
-		// "grpc/transport.ClientTransport.CloseStream" on canceled streams
-		// "rpc error: code = Unavailable desc = stream error: stream ID 21; CANCEL")
-		if strings.HasPrefix(msg, "stream error: ") && strings.HasSuffix(msg, "; CANCEL") {
-			return true
-		}
-	}
-	return false
 }
 
 func getNetworkElasticChainSpec(
