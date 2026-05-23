@@ -203,8 +203,8 @@ func init() {
 				if err == nil {
 					fmt.Printf("🔑 Adding default network allocation for PRIVATE_KEY address: %s\n", luxAddr)
 					privKeyAlloc := map[string]interface{}{
-						"ethAddr":       "0x" + hex.EncodeToString(pChainAddr[:]),
-						"luxAddr":       luxAddr,
+						"evmAddr":       "0x" + hex.EncodeToString(pChainAddr[:]),
+						"utxoAddr":       luxAddr,
 						"initialAmount": float64(0),
 						"unlockSchedule": []interface{}{
 							map[string]interface{}{
@@ -494,16 +494,16 @@ func NewDefaultConfigNNodes(binaryPath string, numNodes uint32) (network.Config,
 
 		// Add X-chain allocation
 		allocations = append(allocations, map[string]interface{}{
-			"luxAddr":        xLuxAddr,
-			"ethAddr":        "0x0000000000000000000000000000000000000000",
+			"utxoAddr":        xLuxAddr,
+			"evmAddr":        "0x0000000000000000000000000000000000000000",
 			"initialAmount":  2_000_000_000_000_000_000, // 2B LUX
 			"unlockSchedule": []interface{}{},
 		})
 
 		// Add P-chain allocation with unlockSchedule (builder only reads P-chain amounts from unlockSchedule)
 		allocations = append(allocations, map[string]interface{}{
-			"luxAddr":       pLuxAddr,
-			"ethAddr":       "0x0000000000000000000000000000000000000000",
+			"utxoAddr":       pLuxAddr,
+			"evmAddr":       "0x0000000000000000000000000000000000000000",
 			"initialAmount": 0, // Not used for P-chain - amounts come from unlockSchedule
 			"unlockSchedule": []interface{}{
 				map[string]interface{}{

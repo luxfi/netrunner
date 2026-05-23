@@ -13,8 +13,8 @@ var genesis = []byte(
 		"networkID": 1337,
 		"allocations": [
 		  {
-			"ethAddr": "0xb3d82b1367d362de99ab59a658165aff520cbd4d",
-			"luxAddr": "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
+			"evmAddr": "0xb3d82b1367d362de99ab59a658165aff520cbd4d",
+			"utxoAddr": "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
 			"initialAmount": 0,
 			"unlockSchedule": [
 			  {
