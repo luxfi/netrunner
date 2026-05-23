@@ -141,8 +141,8 @@ func GenerateValidatorAllocations(numValidators uint32, hrp string) ([]map[strin
 		}
 
 		allocations[i] = map[string]interface{}{
-			"ethAddr":       key.EthAddr,
-			"luxAddr":       luxAddr,
+			"evmAddr":       key.EthAddr,
+			"utxoAddr":       luxAddr,
 			"initialAmount": uint64(0),
 			"unlockSchedule": []map[string]interface{}{
 				{
