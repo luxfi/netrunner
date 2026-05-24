@@ -142,7 +142,7 @@ func NewGenesis(
 	hrp := constants.GetHRP(networkID)
 
 	// Format addresses as strings for the JSON config
-	zeroEthAddr := fmt.Sprintf("0x%s", ids.ShortID{}.Hex())
+	zeroEVMAddr := fmt.Sprintf("0x%s", ids.ShortID{}.Hex())
 	genesisVdrStakeAddr, err := address.Format("P", hrp, genesisVdrStakeShortID[:])
 	if err != nil {
 		return nil, fmt.Errorf("failed to format genesis validator stake address: %w", err)
@@ -152,7 +152,7 @@ func NewGenesis(
 		NetworkID: networkID,
 		Allocations: []genesis.AllocationJSON{
 			{
-				ETHAddr:       zeroEthAddr,         // Zero address as hex string
+				EVMAddr:       zeroEVMAddr,         // Zero address as hex string
 				UTXOAddr:      genesisVdrStakeAddr, // Bech32 formatted address
 				InitialAmount: 0,
 				UnlockSchedule: []genesis.LockedAmount{ // Provides stake to validators
@@ -178,7 +178,7 @@ func NewGenesis(
 		config.Allocations = append(
 			config.Allocations,
 			genesis.AllocationJSON{
-				ETHAddr:       zeroEthAddr, // Zero address as hex string
+				EVMAddr:       zeroEVMAddr, // Zero address as hex string
 				UTXOAddr:      luxAddr,     // Bech32 formatted address
 				InitialAmount: xChainBal.Balance.Uint64(),
 				UnlockSchedule: []genesis.LockedAmount{
