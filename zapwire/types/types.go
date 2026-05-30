@@ -727,7 +727,7 @@ type NodeInfo struct {
 	DBDir              string
 	Config             []byte
 	PluginDir          string
-	WhitelistedSubnets string // legacy field name preserved for migration; rename pending
+	WhitelistedChains string
 	Paused             bool
 }
 
@@ -740,7 +740,7 @@ func (n *NodeInfo) Encode(b *zap.Buffer) {
 	b.WriteString(n.DBDir)
 	b.WriteBytes(n.Config)
 	b.WriteString(n.PluginDir)
-	b.WriteString(n.WhitelistedSubnets)
+	b.WriteString(n.WhitelistedChains)
 	b.WriteBool(n.Paused)
 }
 
@@ -773,7 +773,7 @@ func (n *NodeInfo) Decode(r *zap.Reader) error {
 	if n.PluginDir, err = r.ReadString(); err != nil {
 		return err
 	}
-	if n.WhitelistedSubnets, err = r.ReadString(); err != nil {
+	if n.WhitelistedChains, err = r.ReadString(); err != nil {
 		return err
 	}
 	if n.Paused, err = r.ReadBool(); err != nil {
@@ -788,7 +788,7 @@ type ChainInfo struct {
 	VMID      string
 	VMName    string
 	ChainID   string
-	SubnetID  string // P-Chain validator-set identifier — distinct from ChainID
+	NetworkID string // P-Chain validator-set identifier — distinct from ChainID
 	Genesis   []byte
 }
 
@@ -797,7 +797,7 @@ func (c *ChainInfo) Encode(b *zap.Buffer) {
 	b.WriteString(c.VMID)
 	b.WriteString(c.VMName)
 	b.WriteString(c.ChainID)
-	b.WriteString(c.SubnetID)
+	b.WriteString(c.NetworkID)
 	b.WriteBytes(c.Genesis)
 }
 
@@ -815,7 +815,7 @@ func (c *ChainInfo) Decode(r *zap.Reader) error {
 	if c.ChainID, err = r.ReadString(); err != nil {
 		return err
 	}
-	if c.SubnetID, err = r.ReadString(); err != nil {
+	if c.NetworkID, err = r.ReadString(); err != nil {
 		return err
 	}
 	gen, err := r.ReadBytes()
@@ -835,7 +835,7 @@ type ClusterInfo struct {
 	RootDataDir  string
 	Healthy      bool
 	CustomChains map[string]*ChainInfo // keyed by chain ID
-	Subnets      []string              // P-Chain validator sets
+	Networks []string // P-Chain validator-set identifiers
 	NetworkID    uint32
 }
 
@@ -855,8 +855,8 @@ func (c *ClusterInfo) Encode(b *zap.Buffer) {
 	for _, ch := range c.CustomChains {
 		ch.Encode(b)
 	}
-	b.WriteUint32(uint32(len(c.Subnets)))
-	for _, s := range c.Subnets {
+	b.WriteUint32(uint32(len(c.Networks)))
+	for _, s := range c.Networks {
 		b.WriteString(s)
 	}
 	b.WriteUint32(c.NetworkID)
@@ -910,9 +910,9 @@ func (c *ClusterInfo) Decode(r *zap.Reader) error {
 	if err != nil {
 		return err
 	}
-	c.Subnets = make([]string, n)
+	c.Networks = make([]string, n)
 	for i := uint32(0); i < n; i++ {
-		if c.Subnets[i], err = r.ReadString(); err != nil {
+		if c.Networks[i], err = r.ReadString(); err != nil {
 			return err
 		}
 	}
