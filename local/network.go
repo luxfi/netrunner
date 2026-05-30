@@ -1396,7 +1396,7 @@ func getFlagsForLuxdVersion(luxdVersion string, givenFlags map[string]string) ma
 	// luxd binary is current (no downgrade needed). Previously this
 	// branch incorrectly compared "" < "v1.9.6" → -1, which caused the
 	// downgrade table to fire on every modern luxd and inject the
-	// deprecated --build-dir / --whitelisted-subnets flags. Modern
+	// deprecated --build-dir / --whitelisted-chains flags. Modern
 	// luxd rejects those flags with "unknown flag" and node1 exits 1.
 	if luxdVersion == "" || !semver.IsValid(luxdVersion) {
 		return flags
