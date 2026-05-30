@@ -1405,7 +1405,7 @@ func newWallet(
 	xSigner := xsigner.New(wrappedKC, xBackend)
 	w.xWallet = x.NewWallet(xBuilder, xSigner, xBackend)
 	w.xChainID = xChainID
-	w.luxAssetID = luxState.PCTX.XAssetID
+	w.luxAssetID = luxState.PCTX.UTXOAssetID
 	return &w, nil
 }
 
