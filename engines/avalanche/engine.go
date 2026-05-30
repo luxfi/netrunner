@@ -247,11 +247,11 @@ func getLuxNetwork(networkID uint32) string {
 	case 1:
 		return "mainnet"
 	case 5:
-		return "fuji"
+		return "testnet"
 	case 43114:
 		return "mainnet" // C-Chain ID
 	case 43113:
-		return "fuji" // Fuji C-Chain
+		return "testnet" // testnet C-Chain
 	default:
 		return fmt.Sprintf("%d", networkID)
 	}
