@@ -20,6 +20,7 @@ require (
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.10
 	github.com/luxfi/keys v1.0.8
+	github.com/luxfi/kms v1.9.12
 	github.com/luxfi/log v1.4.1
 	github.com/luxfi/math v1.4.1
 	github.com/luxfi/metric v1.5.5
@@ -102,7 +103,7 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/miekg/dns v1.1.66 // indirect
+	github.com/miekg/dns v1.1.72 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.100 // indirect

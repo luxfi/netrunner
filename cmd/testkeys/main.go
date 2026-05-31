@@ -1,18 +1,27 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/luxfi/keys"
+	"github.com/luxfi/kms/pkg/zapclient"
 )
 
 func main() {
-	mnemonic := os.Getenv("MNEMONIC")
-	if mnemonic == "" {
-		fmt.Println("MNEMONIC not set")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	mnemonic, err := zapclient.LoadMnemonic(ctx,
+		os.Getenv("KMS_ADDR"),
+		os.Getenv("KMS_ENV"),
+		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
+	if err != nil {
+		fmt.Printf("ERROR: load mnemonic: %v\n", err)
+		fmt.Println("Set MNEMONIC env var, or KMS_ADDR + KMS_ENV + KMS_MNEMONIC_PATH for native ZAP.")
 		os.Exit(1)
 	}
 
@@ -74,4 +83,12 @@ func main() {
 	for _, n := range names {
 		fmt.Printf("  %s\n", n)
 	}
+}
+
+// envOr returns the value of env var `name` if set + non-empty, else def.
+func envOr(name, def string) string {
+	if v := strings.TrimSpace(os.Getenv(name)); v != "" {
+		return v
+	}
+	return def
 }
