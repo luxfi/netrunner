@@ -3,7 +3,7 @@ set -e
 
 export RUN_E2E="true"
 # e.g.,
-# ./scripts/tests.e2e.sh $DEFAULT_VERSION1 $DEFAULT_VERSION2 $DEFAULT_SUBNET_EVM_VERSION
+# ./scripts/tests.e2e.sh $DEFAULT_VERSION1 $DEFAULT_VERSION2 $DEFAULT_EVM_VERSION
 if ! [[ "$0" =~ scripts/tests.e2e.sh ]]; then
   echo "must be run from repository root"
   exit 255
@@ -11,29 +11,29 @@ fi
 
 DEFAULT_VERSION_1=1.22.80
 DEFAULT_VERSION_2=1.22.79
-DEFAULT_SUBNET_EVM_VERSION=0.8.35
+DEFAULT_EVM_VERSION=0.8.35
 
 if [ $# == 0 ]; then
     VERSION_1=$DEFAULT_VERSION_1
     VERSION_2=$DEFAULT_VERSION_2
-    SUBNET_EVM_VERSION=$DEFAULT_SUBNET_EVM_VERSION
+    EVM_VERSION=$DEFAULT_EVM_VERSION
 else
     VERSION_1=$1
     if [[ -z "${VERSION_1}" ]]; then
       echo "Missing version argument!"
-      echo "Usage: ${0} [VERSION_1] [VERSION_2] [SUBNET_EVM_VERSION]" >> /dev/stderr
+      echo "Usage: ${0} [VERSION_1] [VERSION_2] [EVM_VERSION]" >> /dev/stderr
       exit 255
     fi
     VERSION_2=$2
     if [[ -z "${VERSION_2}" ]]; then
       echo "Missing version argument!"
-      echo "Usage: ${0} [VERSION_1] [VERSION_2] [SUBNET_EVM_VERSION]" >> /dev/stderr
+      echo "Usage: ${0} [VERSION_1] [VERSION_2] [EVM_VERSION]" >> /dev/stderr
       exit 255
     fi
-    SUBNET_EVM_VERSION=$3
-    if [[ -z "${SUBNET_EVM_VERSION}" ]]; then
+    EVM_VERSION=$3
+    if [[ -z "${EVM_VERSION}" ]]; then
       echo "Missing version argument!"
-      echo "Usage: ${0} [VERSION_1] [VERSION_2] [SUBNET_EVM_VERSION]" >> /dev/stderr
+      echo "Usage: ${0} [VERSION_1] [VERSION_2] [EVM_VERSION]" >> /dev/stderr
       exit 255
     fi
 fi
@@ -41,7 +41,7 @@ fi
 echo "Running e2e tests with:"
 echo VERSION_1: ${VERSION_1}
 echo VERSION_2: ${VERSION_2}
-echo SUBNET_EVM_VERSION: ${SUBNET_EVM_VERSION}
+echo EVM_VERSION: ${EVM_VERSION}
 
 if [ ! -f /tmp/node-v${VERSION_1}/node ]
 then
@@ -115,7 +115,7 @@ then
     find /tmp/node-v${VERSION_2}
 fi
 
-if [ ! -f /tmp/evm-v${SUBNET_EVM_VERSION}/evm ]
+if [ ! -f /tmp/evm-v${EVM_VERSION}/evm ]
 then
     ############################
     # download evm plugin
@@ -123,22 +123,22 @@ then
     GOARCH=$(go env GOARCH)
     GOOS=$(go env GOOS)
     # evm releases are raw binaries named evm-plugin-{os}-{arch}
-    DOWNLOAD_URL=https://github.com/luxfi/evm/releases/download/v${SUBNET_EVM_VERSION}/evm-plugin-linux-${GOARCH}
+    DOWNLOAD_URL=https://github.com/luxfi/evm/releases/download/v${EVM_VERSION}/evm-plugin-linux-${GOARCH}
     if [[ ${GOOS} == "darwin" ]]; then
-      DOWNLOAD_URL=https://github.com/luxfi/evm/releases/download/v${SUBNET_EVM_VERSION}/evm-plugin-darwin-${GOARCH}
+      DOWNLOAD_URL=https://github.com/luxfi/evm/releases/download/v${EVM_VERSION}/evm-plugin-darwin-${GOARCH}
     fi
 
-    rm -rf /tmp/evm-v${SUBNET_EVM_VERSION}
-    mkdir -p /tmp/evm-v${SUBNET_EVM_VERSION}
+    rm -rf /tmp/evm-v${EVM_VERSION}
+    mkdir -p /tmp/evm-v${EVM_VERSION}
 
-    echo "downloading evm ${SUBNET_EVM_VERSION} at ${DOWNLOAD_URL}"
-    curl -L ${DOWNLOAD_URL} -o /tmp/evm-v${SUBNET_EVM_VERSION}/evm
-    chmod +x /tmp/evm-v${SUBNET_EVM_VERSION}/evm
+    echo "downloading evm ${EVM_VERSION} at ${DOWNLOAD_URL}"
+    curl -L ${DOWNLOAD_URL} -o /tmp/evm-v${EVM_VERSION}/evm
+    chmod +x /tmp/evm-v${EVM_VERSION}/evm
 
     # NOTE: We are copying the evm binary here to a plugin hardcoded as srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy which corresponds to the VM name `subnetevm` used as such in the test
     mkdir -p /tmp/node-v${VERSION_1}/plugins/
-    cp /tmp/evm-v${SUBNET_EVM_VERSION}/evm /tmp/node-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
-    find /tmp/evm-v${SUBNET_EVM_VERSION}/evm
+    cp /tmp/evm-v${EVM_VERSION}/evm /tmp/node-v${VERSION_1}/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
+    find /tmp/evm-v${EVM_VERSION}/evm
 fi
 ############################
 echo "building runner"
@@ -187,4 +187,4 @@ echo "running e2e tests"
 --grpc-gateway-endpoint="0.0.0.0:8081" \
 --node-path-1=/tmp/node-v${VERSION_1}/node \
 --node-path-2=/tmp/node-v${VERSION_2}/node \
---subnet-evm-path=/tmp/evm-v${SUBNET_EVM_VERSION}/evm
+--evm-path=/tmp/evm-v${EVM_VERSION}/evm
