@@ -1,14 +1,26 @@
-// genkeys generates mainnet validator keys from MNEMONIC
+// genkeys generates mainnet validator keys from a BIP-39 mnemonic.
+//
+// Mnemonic source (priority order, handled inside the shared luxfi/kms
+// zapclient.LoadMnemonic loader so every Lux-derived tool resolves keys
+// the same way):
+//
+//	1. MNEMONIC env var                 — local dev + CI test seam
+//	2. KMS_ADDR + KMS_ENV +             — native ZAP from Liquid KMS
+//	   KMS_MNEMONIC_PATH
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/luxfi/keys"
+	"github.com/luxfi/kms/pkg/zapclient"
 )
 
 type ValidatorBackup struct {
@@ -22,9 +34,15 @@ type ValidatorBackup struct {
 }
 
 func main() {
-	mnemonic := os.Getenv("MNEMONIC")
-	if mnemonic == "" {
-		fmt.Println("ERROR: MNEMONIC not set")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	mnemonic, err := zapclient.LoadMnemonic(ctx,
+		os.Getenv("KMS_ADDR"),
+		os.Getenv("KMS_ENV"),
+		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
+	if err != nil {
+		fmt.Printf("ERROR: load mnemonic: %v\n", err)
+		fmt.Println("Set MNEMONIC env var, or KMS_ADDR + KMS_ENV + KMS_MNEMONIC_PATH for native ZAP.")
 		os.Exit(1)
 	}
 
@@ -125,4 +143,12 @@ func main() {
 			}
 		}())
 	}
+}
+
+// envOr returns the value of env var `name` if set + non-empty, else def.
+func envOr(name, def string) string {
+	if v := strings.TrimSpace(os.Getenv(name)); v != "" {
+		return v
+	}
+	return def
 }
