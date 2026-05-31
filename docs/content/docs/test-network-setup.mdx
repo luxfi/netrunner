@@ -194,26 +194,26 @@ cat > elastic-network.json <<EOF
 EOF
 
 # Create elastic network
-netrunner control create-elastic-subnet elastic-network.json
+netrunner control create-elastic-chain elastic-network.json
 ```
 
 ## Custom Blockchain Deployment
 
-### Deploy Subnet-EVM
+### Deploy EVM Chain
 
 ```bash
 # Generate VM ID
-subnet-cli create VMID subnetevm
+lux chain create VMID evm
 # Output: srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
 
 # Build the plugin
-cd ${HOME}/go/src/github.com/luxfi/subnet-evm
+cd ${HOME}/go/src/github.com/luxfi/evm
 go build -v \
   -o ${LUXD_PLUGIN_PATH}/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
   ./plugin
 
 # Create genesis
-cat > /tmp/subnet-evm.genesis.json <<EOF
+cat > /tmp/evm.genesis.json <<EOF
 {
   "config": {
     "chainId": 99999,
@@ -250,15 +250,15 @@ cat > /tmp/subnet-evm.genesis.json <<EOF
 }
 EOF
 
-# Start network with subnet-evm
+# Start network with EVM
 netrunner control start \
   --endpoint="0.0.0.0:8080" \
   --number-of-nodes=3 \
   --node-path ${LUXD_EXEC_PATH} \
   --plugin-dir ${LUXD_PLUGIN_PATH} \
   --blockchain-specs '[{
-    "vm_name": "subnetevm",
-    "genesis": "/tmp/subnet-evm.genesis.json"
+    "vm_name": "evm",
+    "genesis": "/tmp/evm.genesis.json"
   }]'
 ```
 

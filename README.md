@@ -137,7 +137,7 @@ Additional optional parameters which can be passed to the start command:
 
 ```bash
 --plugin-dir ${LUXD_PLUGIN_PATH} \
---blockchain-specs '[{"vm_name": "subnetevm", "genesis": "/tmp/subnet-evm.genesis.json"}]'
+--blockchain-specs '[{"vm_name": "evm", "genesis": "/tmp/evm.genesis.json"}]'
 --global-node-config '{"index-enabled":false, "api-admin-enabled":true,"network-peer-list-gossip-frequency":"300ms"}'
 --custom-node-configs" '{"node1":{"log-level":"debug","api-admin-enabled":false},"node2":{...},...}'
 ```
@@ -155,8 +155,8 @@ netrunner control start \
 --global-node-config '{"http-host":"0.0.0.0"}'
 ```
 
-`--plugin-dir` and `--blockchain-specs` are parameters relevant to chain (L2 blockchain) operation.
-See the [chain deployment](#network-runner-rpc-server-l2-evm-example) section for details about how to run chains.
+`--plugin-dir` and `--blockchain-specs` are parameters relevant to chain operation.
+See the [chain deployment](#network-runner-rpc-server-evm-example) section for details about how to run chains.
 
 The network-runner supports node node configuration at different levels.
 
@@ -302,38 +302,38 @@ netrunner control remove-snapshot snapshotName
 To create 1 chain (validator set), with all existing nodes as participants (requires network restart):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{}]'
+curl -X POST -k http://localhost:8081/v1/control/createchains -d '[{}]'
 
 # or
-netrunner control create-subnets '[{}]'
+netrunner control create-chains '[{}]'
 ```
 
 To create 1 chain (validator set), with some of existing nodes as participants (requires network restart):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{"participants": ["node1", "node2"]}]'
+curl -X POST -k http://localhost:8081/v1/control/createchains -d '[{"participants": ["node1", "node2"]}]'
 
 # or
-netrunner control create-subnets '[{"participants": ["node1", "node2"]}]'
+netrunner control create-chains '[{"participants": ["node1", "node2"]}]'
 ```
 
 To create 1 chain (validator set), with some of existing nodes and another new node as participants (requires network restart):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{"participants": ["node1", "node2", "testNode"]}]'
+curl -X POST -k http://localhost:8081/v1/control/createchains -d '[{"participants": ["node1", "node2", "testNode"]}]'
 
 # or
-netrunner control create-subnets '[{"participants": ["node1", "node2", "testNode"]}]'
+netrunner control create-chains '[{"participants": ["node1", "node2", "testNode"]}]'
 
 ```
 
 To create N chains (validator sets) (requires network restart):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createsubnets -d '[{}, {"participants": ["node1", "node2", "node3"]}, {"participants": ["node1", "node2", "testNode"]}]'
+curl -X POST -k http://localhost:8081/v1/control/createchains -d '[{}, {"participants": ["node1", "node2", "node3"]}, {"participants": ["node1", "node2", "testNode"]}]'
 
 # or
-netrunner control create-subnets '[{}, {"participants": ["node1", "node2", "node3"]}, {"participants": ["node1", "node2", "testNode"]}]'
+netrunner control create-chains '[{}, {"participants": ["node1", "node2", "node3"]}, {"participants": ["node1", "node2", "testNode"]}]'
 
 ```
 
@@ -358,38 +358,38 @@ netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENE
 To create a blockchain with a chain ID (does not require restart):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'"}]}'
+curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "blockchain_id": "'$BLOCKCHAIN_ID'"}]}'
 
 # or
-netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'"}]' --plugin-dir $PLUGIN_DIR
+netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "blockchain_id": "'$BLOCKCHAIN_ID'"}]' --plugin-dir $PLUGIN_DIR
 ```
 
 To create a blockchain with a chain ID, and chain config, network upgrade and chain config file paths (requires network restart):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]}'
+curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "blockchain_id": "'$BLOCKCHAIN_ID'", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "chain_config_per_chain": "'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]}'
 
 # or
-netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]' --plugin-dir $PLUGIN_DIR
+netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "blockchain_id": "'$BLOCKCHAIN_ID'", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "chain_config_per_chain": "'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]' --plugin-dir $PLUGIN_DIR
 ```
 
 To create a blockchain with a new chain with select nodes as participants (requires network restart):
-(New nodes will first be added as primary validators similar to the process in `create-subnets`)
+(New nodes will first be added as primary validators similar to the process in `create-chains`)
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": "{"participants": ["node1", "node2", "testNode"]}"]}'
+curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "chain_spec": "{"participants": ["node1", "node2", "testNode"]}"]}'
 
 # or
-netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": "{"participants": ["node1", "node2", "testNode"]}]' --plugin-dir $PLUGIN_DIR
+netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "chain_spec": "{"participants": ["node1", "node2", "testNode"]}]' --plugin-dir $PLUGIN_DIR
 ```
 
 To create two blockchains in two disjoint chains (not shared validators), and where all validators have bls keys (participants new to the network):
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": {"participants": ["new_node1", "new_node2"]}},{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": {"participants": ["new_node3", "new_node4"]}}]'
+curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "chain_spec": {"participants": ["new_node1", "new_node2"]}},{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "chain_spec": {"participants": ["new_node3", "new_node4"]}}]'
 
 # or
-go run main.go control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": {"participants": ["new_node1", "new_node2"]}},{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_spec": {"participants": ["new_node3", "new_node4"]}}]'
+go run main.go control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "chain_spec": {"participants": ["new_node1", "new_node2"]}},{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "chain_spec": {"participants": ["new_node3", "new_node4"]}}]'
 ```
 
 Chain config can also be defined on a per node basis. For that, a per node chain config file is needed, which is a JSON that specifies the chain config per node. For example, given the following as the contents of the file with path `$PER_NODE_CHAIN_CONFIG`:
@@ -407,10 +407,10 @@ Chain config can also be defined on a per node basis. For that, a per node chain
 Then a blockchain with different chain configs per node can be created with this command:
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'", "per_node_chain_config": "'$PER_NODE_CHAIN_CONFIG'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]}'
+curl -X POST -k http://localhost:8081/v1/control/createblockchains -d '{"pluginDir":"'$PLUGIN_DIR'","blockchainSpecs":[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "blockchain_id": "'$BLOCKCHAIN_ID'", "per_node_chain_config": "'$PER_NODE_CHAIN_CONFIG'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "chain_config_per_chain": "'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]}'
 
 # or
-netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "subnet_id": "'$SUBNET_ID'", "per_node_chain_config": "'$PER_NODE_CHAIN_CONFIG'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]' --plugin-dir $PLUGIN_DIR
+netrunner control create-blockchains '[{"vm_name":"'$VM_NAME'","genesis":"'$GENESIS_PATH'", "blockchain_id": "'$BLOCKCHAIN_ID'", "per_node_chain_config": "'$PER_NODE_CHAIN_CONFIG'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "chain_config_per_chain": "'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]' --plugin-dir $PLUGIN_DIR
 ```
 
 To remove (stop) a node:
@@ -552,7 +552,7 @@ netrunner control stop \
 --endpoint="0.0.0.0:8080"
 ```
 
-## `network-runner` RPC server: L2 EVM example
+## `network-runner` RPC server: EVM chain example
 
 To start the server:
 
@@ -569,10 +569,10 @@ curl -X POST -k http://localhost:8081/v1/ping -d ''
 To start the cluster with custom chains:
 
 ```bash
-# or download from https://github.com/luxfi/subnet-cli/releases
-cd ${HOME}/go/src/github.com/luxfi/subnet-cli
+# or download from https://github.com/luxfi/cli/releases
+cd ${HOME}/go/src/github.com/luxfi/cli
 go install -v .
-subnet-cli create VMID subnetevm
+lux chain create VMID evm
 # srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy
 
 # download from https://github.com/luxfi/sdk/node/releases
@@ -581,8 +581,8 @@ rm -rf ${HOME}/go/src/github.com/luxfi/sdk/node/build
 cd ${HOME}/go/src/github.com/luxfi/node
 ./scripts/build.sh
 
-# ref. https://github.com/luxfi/subnet-evm/blob/b69e47e0398b5237cda0422f6a32969e64bde346/scripts/run.sh
-cd ${HOME}/go/src/github.com/luxfi/subnet-evm
+# ref. https://github.com/luxfi/evm/blob/b69e47e0398b5237cda0422f6a32969e64bde346/scripts/run.sh
+cd ${HOME}/go/src/github.com/luxfi/evm
 go build -v \
 -o ${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins/srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy \
 ./plugin
@@ -599,7 +599,7 @@ find ${HOME}/go/src/github.com/luxfi/sdk/node/build
 # generate the genesis for the custom chain
 export CHAIN_ID=99999
 export GENESIS_ADDRESS="0x9011E888251AB053B7bD1cdB598Db4f9DEd94714"
-cat <<EOF > /tmp/subnet-evm.genesis.json
+cat <<EOF > /tmp/evm.genesis.json
 {
   "config": {
     "chainId": $CHAIN_ID,
@@ -642,7 +642,7 @@ cat <<EOF > /tmp/subnet-evm.genesis.json
   "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
 }
 EOF
-cat /tmp/subnet-evm.genesis.json
+cat /tmp/evm.genesis.json
 ```
 
 ```bash
@@ -650,7 +650,7 @@ cat /tmp/subnet-evm.genesis.json
 LUXD_EXEC_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/node"
 LUXD_PLUGIN_PATH="${HOME}/go/src/github.com/luxfi/sdk/node/build/plugins"
 
-curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"subnetevm","genesis":"/tmp/subnet-evm.genesis.json"}]}'
+curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"evm","genesis":"/tmp/evm.genesis.json"}]}'
 
 # or
 netrunner control start \
@@ -658,7 +658,7 @@ netrunner control start \
 --endpoint="0.0.0.0:8080" \
 --node-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
---blockchain-specs '[{"vm_name": "subnetevm", "genesis": "/tmp/subnet-evm.genesis.json"}]'
+--blockchain-specs '[{"vm_name": "evm", "genesis": "/tmp/evm.genesis.json"}]'
 ```
 
 ```bash
@@ -669,7 +669,7 @@ curl -X POST -k http://localhost:8081/v1/control/status -d ''
 Blockchain config file, network upgrade file, and network config file paths can be optionally specified at network start, eg:
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"subnetevm","genesis":"/tmp/subnet-evm.genesis.json","chain_config":"'$CHAIN_CONFIG_PATH'","network_upgrade":"'$NETWORK_UPGRADE_PATH'","subnet_config":"'$SUBNET_CONFIG_PATH'"}]}'
+curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"evm","genesis":"/tmp/evm.genesis.json","chain_config":"'$CHAIN_CONFIG_PATH'","network_upgrade":"'$NETWORK_UPGRADE_PATH'","chain_config_per_chain":"'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]}'
 
 # or
 netrunner control start \
@@ -677,7 +677,7 @@ netrunner control start \
 --endpoint="0.0.0.0:8080" \
 --node-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
---blockchain-specs '[{"vm_name": "subnetevm", "genesis": "/tmp/subnet-evm.genesis.json", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]'
+--blockchain-specs '[{"vm_name": "evm", "genesis": "/tmp/evm.genesis.json", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "chain_config_per_chain": "'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]'
 ```
 
 ## `network-runner` RPC server: `blobvm` example
@@ -697,10 +697,10 @@ curl -X POST -k http://localhost:8081/v1/ping -d ''
 To start the cluster with custom chains:
 
 ```bash
-# or download from https://github.com/luxfi/subnet-cli/releases
-cd ${HOME}/go/src/github.com/luxfi/subnet-cli
+# or download from https://github.com/luxfi/cli/releases
+cd ${HOME}/go/src/github.com/luxfi/cli
 go install -v .
-subnet-cli create VMID blobvm
+lux chain create VMID blobvm
 # kM6h4LYe3AcEU1MB2UNg6ubzAiDAALZzpVrbX8zn3hXF6Avd8
 
 # download from https://github.com/luxfi/sdk/node/releases
@@ -755,7 +755,7 @@ curl -X POST -k http://localhost:8081/v1/control/status -d ''
 Blockchain config file and network upgrade file paths can be optionally specified at network start, eg:
 
 ```bash
-curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"blobvm","genesis":"/tmp/blobvm.json","chain_config":"'$CHAIN_CONFIG_PATH'","network_upgrade":"'$NETWORK_UPGRADE_PATH'","subnet_config":"'$SUBNET_CONFIG_PATH'"}]}'
+curl -X POST -k http://localhost:8081/v1/control/start -d '{"execPath":"'${LUXD_EXEC_PATH}'","numNodes":5,"logLevel":"INFO","pluginDir":"'${LUXD_PLUGIN_PATH}'","blockchainSpecs":[{"vm_name":"blobvm","genesis":"/tmp/blobvm.json","chain_config":"'$CHAIN_CONFIG_PATH'","network_upgrade":"'$NETWORK_UPGRADE_PATH'","chain_config_per_chain":"'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]}'
 
 # or
 netrunner control start \
@@ -763,7 +763,7 @@ netrunner control start \
 --endpoint="0.0.0.0:8080" \
 --node-path ${LUXD_EXEC_PATH} \
 --plugin-dir ${LUXD_PLUGIN_PATH} \
---blockchain-specs '[{"vm_name": "blobvm", "genesis": "/tmp/blobvm.genesis.json", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "subnet_config": "'$SUBNET_CONFIG_PATH'"}]'
+--blockchain-specs '[{"vm_name": "blobvm", "genesis": "/tmp/blobvm.genesis.json", "chain_config": "'$CHAIN_CONFIG_PATH'", "network_upgrade": "'$NETWORK_UPGRADE_PATH'", "chain_config_per_chain": "'$CHAIN_CONFIG_PER_CHAIN_PATH'"}]'
 ```
 
 ## `network-runner` RPC server: `timestampvm` example
@@ -783,10 +783,10 @@ curl -X POST -k http://localhost:8081/v1/ping -d ''
 To start the cluster with custom chains:
 
 ```bash
-# or download from https://github.com/luxfi/subnet-cli/releases
-cd ${HOME}/go/src/github.com/luxfi/subnet-cli
+# or download from https://github.com/luxfi/cli/releases
+cd ${HOME}/go/src/github.com/luxfi/cli
 go install -v .
-subnet-cli create VMID timestampvm
+lux chain create VMID timestampvm
 # tGas3T58KzdjcJ2iKSyiYsWiqYctRXaPTqBCA11BqEkNg8kPc
 
 # download from https://github.com/luxfi/sdk/node/releases
@@ -904,7 +904,7 @@ type Config struct {
   // May be nil.
   UpgradeConfigFiles map[string]string `json:"upgradeConfigFiles"`
   // May be nil.
-  SubnetConfigFiles map[string]string `json:"subnetConfigFiles"`
+  ChainConfigPerChainFiles map[string]string `json:"chainConfigPerChainFiles"`
   // Flags can hold additional flags for the node.
   // It can be empty.
   // The precedence of flags handling is:
