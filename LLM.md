@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-Lux Netrunner is a powerful network orchestration and testing framework for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, chains (L2 blockchains), and complex network topologies.
+Lux Netrunner is a powerful network orchestration and testing framework for blockchain development. It provides comprehensive tools for creating, managing, and testing multi-node blockchain networks with support for custom VMs, application chains, and complex network topologies.
 
 ## Essential Commands
 
@@ -1091,7 +1091,7 @@ After fixes, successfully deployed Zoo chain on mainnet:
 
 ### RLP Block Import Limitation
 
-**Discovery**: The L2 EVM doesn't support `admin_importChain` RPC method. Blocks in L2 EVM chains come through Lux consensus, not direct import.
+**Discovery**: The EVM plugin doesn't support `admin_importChain` RPC method. Blocks in EVM chains come through Lux consensus, not direct import.
 
 **Available RPC modules on Zoo chain**: eth, net, rpc, web3 (no admin or debug)
 

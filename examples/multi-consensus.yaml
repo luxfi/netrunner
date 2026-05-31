@@ -59,10 +59,10 @@ engines:
       - eth2-settlement
     wait_healthy: true
 
-  # ZOO L2 Chain on Lux
+  # ZOO Chain on Lux
   - name: zoo-chain
     type: lux
-    binary: "subnet-evm"
+    binary: "evm"
     network_id: 200200
     http_port: 9640
     ws_port: 9641
@@ -74,10 +74,10 @@ engines:
       - lux-mainnet
     wait_healthy: true
 
-  # SPC L2 Chain on Lux
+  # SPC Chain on Lux
   - name: spc-chain
     type: lux
-    binary: "subnet-evm"
+    binary: "evm"
     network_id: 36911
     http_port: 9642
     ws_port: 9643

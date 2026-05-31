@@ -6,24 +6,6 @@
       "value_map": "parent-dir"
   },
   {
-      "version": "v1.9.6",
-      "old_name": "whitelisted-subnets",
-      "new_name": "track-chains",
-      "value_map": ""
-  },
-  {
-      "version": "v1.9.6",
-      "old_name": "track-subnets",
-      "new_name": "track-chains",
-      "value_map": ""
-  },
-  {
-      "version": "v1.9.6",
-      "old_name": "subnet-config-dir",
-      "new_name": "chain-config-dir",
-      "value_map": ""
-  },
-  {
       "version": "v1.22.0",
       "old_name": "net-config-dir",
       "new_name": "chain-config-dir",

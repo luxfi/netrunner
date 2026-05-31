@@ -19,7 +19,7 @@ type NetworkType string
 
 const (
 	NetworkTypePrimary NetworkType = "primary" // Mainnet or Testnet
-	NetworkTypeChain   NetworkType = "chain"   // L1/L2 chains
+	NetworkTypeChain   NetworkType = "chain"   // Application chains
 )
 
 // NetworkConfig defines configuration for a single network
