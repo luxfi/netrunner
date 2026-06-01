@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/luxfi/keys"
-	"github.com/luxfi/kms/pkg/zapclient"
+	"github.com/luxfi/keys"
 )
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	mnemonic, err := zapclient.LoadMnemonic(ctx,
+	mnemonic, err := keys.LoadMnemonic(ctx,
 		os.Getenv("KMS_ADDR"),
 		os.Getenv("KMS_ENV"),
 		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
