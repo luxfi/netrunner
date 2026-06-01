@@ -1,7 +1,7 @@
 // genkeys generates mainnet validator keys from a BIP-39 mnemonic.
 //
 // Mnemonic source (priority order, handled inside the shared luxfi/kms
-// zapclient.LoadMnemonic loader so every Lux-derived tool resolves keys
+// keys.LoadMnemonic loader so every Lux-derived tool resolves keys
 // the same way):
 //
 //	1. MNEMONIC env var                 — local dev + CI test seam
@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/luxfi/keys"
-	"github.com/luxfi/kms/pkg/zapclient"
+	"github.com/luxfi/keys"
 )
 
 type ValidatorBackup struct {
@@ -36,7 +36,7 @@ type ValidatorBackup struct {
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	mnemonic, err := zapclient.LoadMnemonic(ctx,
+	mnemonic, err := keys.LoadMnemonic(ctx,
 		os.Getenv("KMS_ADDR"),
 		os.Getenv("KMS_ENV"),
 		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
