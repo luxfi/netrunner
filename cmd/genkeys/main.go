@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/luxfi/keys"
-	"github.com/luxfi/keys"
 )
 
 type ValidatorBackup struct {
