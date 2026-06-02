@@ -24,7 +24,7 @@ require (
 	github.com/luxfi/math v1.4.1
 	github.com/luxfi/metric v1.5.5
 	github.com/luxfi/node v1.27.24
-	github.com/luxfi/p2p v1.19.2
+	github.com/luxfi/p2p v1.21.0
 	github.com/luxfi/proto v1.1.0
 	github.com/luxfi/sdk v1.17.0
 	github.com/luxfi/utxo v0.3.2
