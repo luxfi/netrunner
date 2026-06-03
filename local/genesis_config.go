@@ -891,7 +891,7 @@ func validatorKeysDir() string {
 //
 // IMPORTANT: Keys are derived from mnemonic ONCE and persisted to disk (~/.lux/netrunner-validators/).
 // On subsequent runs, keys are loaded from disk to maintain stable NodeIDs.
-// This follows Avalanche's pattern where identity = persistent staking keys.
+// This follows the Lux pattern where identity = persistent staking keys.
 //
 // The mnemonic is used to derive:
 // - EC keys (for P-chain allocations) - deterministic from mnemonic
