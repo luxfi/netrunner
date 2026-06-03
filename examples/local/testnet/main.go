@@ -76,7 +76,7 @@ func activateEVMUpgrades(genesisJSON []byte) ([]byte, error) {
 			"cortinaBlockTimestamp",
 			"durangoTimestamp",
 			"durangoBlockTimestamp",
-			"etnaTimestamp",
+			"quasarTimestamp",
 			"fortunaTimestamp",
 			"graniteTimestamp",
 			"cancunTime",
