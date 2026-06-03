@@ -13,7 +13,7 @@ engines:
     staking_port: 9651
     extra:
       chain_id: 96369
-      consensus: snowman
+      consensus: linear
     wait_healthy: true
 
   # Lux for compatibility testing

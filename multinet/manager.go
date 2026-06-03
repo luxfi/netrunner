@@ -100,7 +100,7 @@ const (
 // ConsensusManager handles consensus for a network
 type ConsensusManager struct {
 	NetworkID uint32
-	Type      string // "snowman" or "avalanche"
+	Type      string // "linear" (single-chain Lux ProtocolVM) or "dag" (Quasar DAG)
 	Params    ConsensusParams
 	mu        sync.RWMutex
 }
@@ -205,7 +205,7 @@ func (m *MultiNetworkManager) AddNetwork(config NetworkConfig) error {
 	// Create consensus manager for this network
 	m.consensusManagers[config.NetworkID] = &ConsensusManager{
 		NetworkID: config.NetworkID,
-		Type:      "snowman", // Default to Snowman consensus
+		Type:      "linear", // Default to Lux ProtocolVM linear chain
 		Params:    DefaultConsensusParams(),
 	}
 
@@ -324,7 +324,7 @@ func (m *MultiNetworkManager) runConsensus(networkID uint32) {
 			return
 		case <-ticker.C:
 			// Simulate consensus round
-			// In production, this would run actual Snowman/Avalanche consensus
+			// In production, this would run actual Lux Quasar consensus
 		}
 	}
 }
