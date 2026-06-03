@@ -22,7 +22,7 @@ require (
 	github.com/luxfi/keys v1.0.9
 	github.com/luxfi/log v1.4.1
 	github.com/luxfi/math v1.4.1
-	github.com/luxfi/metric v1.5.5
+	github.com/luxfi/metric v1.5.8
 	github.com/luxfi/node v1.27.24
 	github.com/luxfi/p2p v1.19.2
 	github.com/luxfi/proto v1.1.0
@@ -30,7 +30,7 @@ require (
 	github.com/luxfi/utxo v0.3.2
 	github.com/luxfi/validators v1.2.0
 	github.com/luxfi/version v1.0.1
-	github.com/luxfi/zap v0.2.0
+	github.com/luxfi/zap v0.6.0
 	github.com/luxfi/zapdb v1.10.0
 	github.com/luxfi/zwing v0.5.2
 	github.com/onsi/ginkgo/v2 v2.28.1
