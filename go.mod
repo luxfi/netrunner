@@ -20,7 +20,7 @@ require (
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.10
 	github.com/luxfi/keys v1.0.9
-	github.com/luxfi/log v1.4.1
+	github.com/luxfi/log v1.4.3
 	github.com/luxfi/math v1.4.1
 	github.com/luxfi/metric v1.5.8
 	github.com/luxfi/node v1.27.24
