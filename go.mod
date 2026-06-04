@@ -10,7 +10,7 @@ require (
 	github.com/btcsuite/btcd v0.25.0
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/luxfi/address v1.0.1
-	github.com/luxfi/api v1.0.11
+	github.com/luxfi/api v1.0.12
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.5.8-0.20260603055356-93c2c2ceb9ca
