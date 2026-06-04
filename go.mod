@@ -13,7 +13,7 @@ require (
 	github.com/luxfi/api v1.0.11
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
-	github.com/luxfi/constants v1.5.7
+	github.com/luxfi/constants v1.5.8-0.20260603055356-93c2c2ceb9ca
 	github.com/luxfi/crypto v1.19.15
 	github.com/luxfi/genesis v1.12.15
 	github.com/luxfi/geth v1.16.98
@@ -80,7 +80,7 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/accel v1.1.4 // indirect
+	github.com/luxfi/accel v1.1.8 // indirect
 	github.com/luxfi/age v1.5.0 // indirect
 	github.com/luxfi/codec v1.1.4 // indirect
 	github.com/luxfi/compress v0.0.5 // indirect
@@ -177,8 +177,8 @@ require (
 	github.com/luxfi/sampler v1.0.0 // indirect
 	github.com/luxfi/tls v1.0.3
 	github.com/luxfi/trace v0.1.4 // indirect
-	github.com/luxfi/upgrade v1.0.0 // indirect
-	github.com/luxfi/vm v1.0.40
+	github.com/luxfi/upgrade v1.0.1-0.20260603055252-f51810805436 // indirect
+	github.com/luxfi/vm v1.1.7
 	github.com/luxfi/warp v1.18.6 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
