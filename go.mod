@@ -173,7 +173,7 @@ require (
 	github.com/luxfi/math/big v0.1.0 // indirect
 	github.com/luxfi/math/safe v0.0.1 // indirect
 	github.com/luxfi/mock v0.1.1 // indirect
-	github.com/luxfi/rpc v1.0.2
+	github.com/luxfi/rpc v1.0.3
 	github.com/luxfi/sampler v1.0.0 // indirect
 	github.com/luxfi/tls v1.0.3
 	github.com/luxfi/trace v0.1.4 // indirect
