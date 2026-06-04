@@ -15,7 +15,7 @@ require (
 	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.5.8-0.20260603055356-93c2c2ceb9ca
 	github.com/luxfi/crypto v1.19.15
-	github.com/luxfi/genesis v1.12.15
+	github.com/luxfi/genesis v1.13.9
 	github.com/luxfi/geth v1.16.98
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.10
