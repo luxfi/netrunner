@@ -1276,14 +1276,14 @@ func (ln *localNetwork) restartNodes(
 }
 
 type wallet struct {
-	addr       ids.ShortID
-	pWallet    pwallet.Wallet
-	pBackend   pwallet.Backend
-	pBuilder   pbuilder.Builder
-	pSigner    psigner.Signer
-	xWallet    x.Wallet
-	xChainID   ids.ID
-	luxAssetID ids.ID
+	addr        ids.ShortID
+	pWallet     pwallet.Wallet
+	pBackend    pwallet.Backend
+	pBuilder    pbuilder.Builder
+	pSigner     psigner.Signer
+	xWallet     x.Wallet
+	xChainID    ids.ID
+	utxoAssetID ids.ID
 }
 
 // getDefaultKey loads the first key from ~/.lux/keys for wallet operations.
@@ -1405,7 +1405,7 @@ func newWallet(
 	xSigner := xsigner.New(wrappedKC, xBackend)
 	w.xWallet = x.NewWallet(xBuilder, xSigner, xBackend)
 	w.xChainID = xChainID
-	w.luxAssetID = luxState.PCTX.UTXOAssetID
+	w.utxoAssetID = luxState.PCTX.UTXOAssetID
 	return &w, nil
 }
 
@@ -1470,7 +1470,7 @@ func (ln *localNetwork) addPrimaryValidators(
 				Chain: ids.Empty,
 			},
 			proofOfPossession,
-			w.luxAssetID,
+			w.utxoAssetID,
 			&secp256k1fx.OutputOwners{
 				Threshold: 1,
 				Addrs:     []ids.ShortID{w.addr},
@@ -1572,7 +1572,7 @@ func fundPChainFromXChain(ctx context.Context, w *wallet, logger log.Logger) err
 	if err != nil {
 		log.Warn("failed to check P-chain balance, will try X->P transfer", "error", err.Error())
 	} else {
-		pBalance := balances[w.luxAssetID]
+		pBalance := balances[w.utxoAssetID]
 		log.Info("P-chain balance check", "balance", pBalance, "required", requiredAmount)
 		if pBalance >= requiredAmount {
 			log.Info(log.Green.Wrap("P-chain already has sufficient funds, skipping X->P transfer"))
@@ -1590,7 +1590,7 @@ func fundPChainFromXChain(ctx context.Context, w *wallet, logger log.Logger) err
 	fmt.Printf("💰 Exporting %d nLUX from X-chain to P-chain for address %s\n", requiredAmount, w.addr.String())
 
 	// Export LUX from X-chain to P-chain
-	if err := exportXChainToPChain(ctx, w, owner, w.luxAssetID, requiredAmount); err != nil {
+	if err := exportXChainToPChain(ctx, w, owner, w.utxoAssetID, requiredAmount); err != nil {
 		return fmt.Errorf("failed to export from X-chain: %w", err)
 	}
 	fmt.Printf("✅ Export from X-chain completed\n")
