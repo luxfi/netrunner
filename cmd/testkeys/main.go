@@ -14,18 +14,10 @@ import (
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	identity, err := bootstrapIdentity("netrunner/testkeys")
-	if err != nil {
-		fmt.Printf("ERROR: derive KMS dial identity: %v\n", err)
-		fmt.Println("Set MNEMONIC or KMS_BOOTSTRAP_MNEMONIC for consensus-auth dial.")
-		os.Exit(1)
-	}
-	defer identity.Wipe()
 	mnemonic, err := keys.LoadMnemonic(ctx,
 		os.Getenv("KMS_ADDR"),
 		os.Getenv("KMS_ENV"),
-		envOr("KMS_MNEMONIC_PATH", "/mnemonic"),
-		identity)
+		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
 	if err != nil {
 		fmt.Printf("ERROR: load mnemonic: %v\n", err)
 		fmt.Println("Set MNEMONIC env var, or KMS_ADDR + KMS_ENV + KMS_MNEMONIC_PATH for native ZAP.")
@@ -100,20 +92,3 @@ func envOr(name, def string) string {
 	return def
 }
 
-// bootstrapIdentity derives the *keys.ServiceIdentity used to sign the
-// KMS dial envelope. Bootstrap mnemonic source order:
-//   1. KMS_BOOTSTRAP_MNEMONIC env var — explicit operator override.
-//   2. MNEMONIC env var — local dev + CI test seam.
-//
-// At least one MUST be set so the dial carries identity. Without an
-// identity the consensus-auth gate rejects the secret-opcode envelope.
-func bootstrapIdentity(servicePath string) (*keys.ServiceIdentity, error) {
-	m := strings.TrimSpace(os.Getenv("KMS_BOOTSTRAP_MNEMONIC"))
-	if m == "" {
-		m = strings.TrimSpace(os.Getenv("MNEMONIC"))
-	}
-	if m == "" {
-		return nil, fmt.Errorf("KMS_BOOTSTRAP_MNEMONIC (or MNEMONIC) must be set to dial KMS")
-	}
-	return keys.NewServiceIdentity(m, servicePath)
-}
