@@ -10,7 +10,7 @@ require (
 	github.com/btcsuite/btcd v0.25.0
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/luxfi/address v1.0.1
-	github.com/luxfi/api v1.0.12
+	github.com/luxfi/api v1.0.15
 	github.com/luxfi/atomic v1.0.0
 	github.com/luxfi/config v1.1.2
 	github.com/luxfi/constants v1.5.8-0.20260603055356-93c2c2ceb9ca
@@ -18,7 +18,7 @@ require (
 	github.com/luxfi/genesis v1.13.9
 	github.com/luxfi/geth v1.16.98
 	github.com/luxfi/go-bip39 v1.1.2
-	github.com/luxfi/ids v1.2.13
+	github.com/luxfi/ids v1.2.15
 	github.com/luxfi/keys v1.2.0
 	github.com/luxfi/log v1.4.3
 	github.com/luxfi/math v1.4.1
@@ -80,7 +80,7 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/luxfi/accel v1.1.9 // indirect
+	github.com/luxfi/accel v1.2.2 // indirect
 	github.com/luxfi/age v1.5.0 // indirect
 	github.com/luxfi/codec v1.1.4 // indirect
 	github.com/luxfi/compress v0.0.5 // indirect
@@ -179,7 +179,7 @@ require (
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/upgrade v1.0.1-0.20260603055252-f51810805436 // indirect
 	github.com/luxfi/vm v1.2.0
-	github.com/luxfi/warp v1.18.6 // indirect
+	github.com/luxfi/warp v1.19.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
