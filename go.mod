@@ -25,7 +25,7 @@ require (
 	github.com/luxfi/metric v1.5.8
 	github.com/luxfi/node v1.27.24
 	github.com/luxfi/p2p v1.21.1
-	github.com/luxfi/proto v1.1.0
+	github.com/luxfi/proto v1.3.4
 	github.com/luxfi/sdk v1.17.0
 	github.com/luxfi/utxo v0.3.7
 	github.com/luxfi/validators v1.2.0
@@ -85,7 +85,7 @@ require (
 	github.com/luxfi/codec v1.1.4 // indirect
 	github.com/luxfi/compress v0.0.5 // indirect
 	github.com/luxfi/concurrent v0.0.3 // indirect
-	github.com/luxfi/consensus v1.25.0 // indirect
+	github.com/luxfi/consensus v1.25.15 // indirect
 	github.com/luxfi/container v0.0.4 // indirect
 	github.com/luxfi/crypto/ipa v1.2.4 // indirect
 	github.com/luxfi/filesystem v0.0.1 // indirect
@@ -94,11 +94,11 @@ require (
 	github.com/luxfi/mdns v0.1.1 // indirect
 	github.com/luxfi/net v0.0.4 // indirect
 	github.com/luxfi/pq v1.0.3 // indirect
-	github.com/luxfi/runtime v1.1.0 // indirect
+	github.com/luxfi/runtime v1.1.1 // indirect
 	github.com/luxfi/staking v1.5.0 // indirect
 	github.com/luxfi/sys v0.0.0-20260110090042-50187ec5ffd8 // indirect
 	github.com/luxfi/timer v1.0.2 // indirect
-	github.com/luxfi/utils v1.1.5 // indirect
+	github.com/luxfi/utils v1.2.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -178,7 +178,7 @@ require (
 	github.com/luxfi/tls v1.0.3
 	github.com/luxfi/trace v0.1.4 // indirect
 	github.com/luxfi/upgrade v1.0.1-0.20260603055252-f51810805436 // indirect
-	github.com/luxfi/vm v1.2.0
+	github.com/luxfi/vm v1.2.1
 	github.com/luxfi/warp v1.18.6 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
