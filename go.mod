@@ -25,8 +25,8 @@ require (
 	github.com/luxfi/metric v1.5.8
 	github.com/luxfi/node v1.27.24
 	github.com/luxfi/p2p v1.21.1
-	github.com/luxfi/proto v1.1.0
-	github.com/luxfi/sdk v1.17.0
+	github.com/luxfi/proto v1.2.1
+	github.com/luxfi/sdk v1.17.8
 	github.com/luxfi/utxo v0.3.7
 	github.com/luxfi/validators v1.2.0
 	github.com/luxfi/version v1.0.1
@@ -82,7 +82,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/luxfi/accel v1.1.9 // indirect
 	github.com/luxfi/age v1.5.0 // indirect
-	github.com/luxfi/codec v1.1.4 // indirect
+	github.com/luxfi/codec v1.1.5 // indirect
 	github.com/luxfi/compress v0.0.5 // indirect
 	github.com/luxfi/concurrent v0.0.3 // indirect
 	github.com/luxfi/consensus v1.25.0 // indirect
