@@ -799,7 +799,7 @@ The `lux local` command should be **removed entirely**. Rationale:
         bls/               # BLS keys for consensus signatures
         ec/                # EC keys
         mldsa/             # ML-DSA post-quantum keys
-        rt/                # Ringtail keys
+        rt/                # Corona keys
     node-1/ ... node-4/    # Same structure
     mainnet_validators.json  # P-chain addresses and private keys
 ```
