@@ -90,7 +90,7 @@ require (
 	github.com/luxfi/crypto/ipa v1.2.4 // indirect
 	github.com/luxfi/filesystem v0.0.1 // indirect
 	github.com/luxfi/formatting v1.0.1 // indirect
-	github.com/luxfi/kms v1.11.4 // indirect
+	github.com/luxfi/kms v1.11.7 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
 	github.com/luxfi/net v0.0.5 // indirect
 	github.com/luxfi/pq v1.0.3 // indirect
