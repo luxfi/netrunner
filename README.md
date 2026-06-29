@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="netrunner" width="880"></p>
+
 # Lux Network Runner
 
 ## Note
