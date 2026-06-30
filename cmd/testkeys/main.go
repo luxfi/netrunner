@@ -9,15 +9,20 @@ import (
 	"time"
 
 	"github.com/luxfi/keys"
+	"github.com/luxfi/kms/pkg/mnemonic"
 )
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	mnemonic, err := keys.LoadMnemonic(ctx,
+	// Bootstrap loader: identity is nil (the mnemonic is the root; no service
+	// identity exists yet to sign the KMS envelope). With MNEMONIC set the KMS
+	// dial is never reached.
+	phrase, err := mnemonic.Load(ctx,
 		os.Getenv("KMS_ADDR"),
 		os.Getenv("KMS_ENV"),
-		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
+		envOr("KMS_MNEMONIC_PATH", "/mnemonic"),
+		nil)
 	if err != nil {
 		fmt.Printf("ERROR: load mnemonic: %v\n", err)
 		fmt.Println("Set MNEMONIC env var, or KMS_ADDR + KMS_ENV + KMS_MNEMONIC_PATH for native ZAP.")
@@ -51,7 +56,7 @@ func main() {
 
 	// Keys don't exist - derive from mnemonic and persist (first run only)
 	fmt.Println("=== Deriving 5 validators from mnemonic (first run) ===")
-	validators, err := keys.DeriveValidatorsFromMnemonic(mnemonic, 5)
+	validators, err := keys.DeriveValidatorsFromMnemonic(phrase, 5)
 	if err != nil {
 		fmt.Printf("Error deriving: %v\n", err)
 		os.Exit(1)
@@ -91,4 +96,3 @@ func envOr(name, def string) string {
 	}
 	return def
 }
-

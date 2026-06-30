@@ -20,6 +20,7 @@ require (
 	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.15
 	github.com/luxfi/keys v1.2.0
+	github.com/luxfi/kms v1.12.0
 	github.com/luxfi/log v1.4.3
 	github.com/luxfi/math v1.4.1
 	github.com/luxfi/metric v1.5.8
@@ -90,7 +91,6 @@ require (
 	github.com/luxfi/crypto/ipa v1.2.4 // indirect
 	github.com/luxfi/filesystem v0.0.1 // indirect
 	github.com/luxfi/formatting v1.0.1 // indirect
-	github.com/luxfi/kms v1.11.7 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
 	github.com/luxfi/net v0.0.5 // indirect
 	github.com/luxfi/pq v1.0.3 // indirect

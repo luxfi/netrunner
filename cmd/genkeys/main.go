@@ -1,12 +1,12 @@
 // genkeys generates mainnet validator keys from a BIP-39 mnemonic.
 //
-// Mnemonic source (priority order, handled inside the shared luxfi/kms
-// keys.LoadMnemonic loader so every Lux-derived tool resolves keys
-// the same way):
+// Mnemonic source (priority order, handled inside the shared
+// luxfi/kms mnemonic.Load loader so every Lux-derived tool resolves
+// keys the same way):
 //
-//	1. MNEMONIC env var                 — local dev + CI test seam
-//	2. KMS_ADDR + KMS_ENV +             — native ZAP from Liquid KMS
-//	   KMS_MNEMONIC_PATH
+//  1. MNEMONIC env var                 — local dev + CI test seam
+//  2. KMS_ADDR + KMS_ENV +             — native ZAP from Liquid KMS
+//     KMS_MNEMONIC_PATH
 package main
 
 import (
@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/luxfi/keys"
+	"github.com/luxfi/kms/pkg/mnemonic"
 )
 
 type ValidatorBackup struct {
@@ -35,10 +36,15 @@ type ValidatorBackup struct {
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	mnemonic, err := keys.LoadMnemonic(ctx,
+	// Bootstrap loader: identity is nil. genkeys derives the root validator
+	// set FROM this mnemonic, so no service identity exists yet to sign the
+	// KMS envelope (the mnemonic is the root every later identity derives
+	// from). With MNEMONIC set the KMS dial is never reached.
+	phrase, err := mnemonic.Load(ctx,
 		os.Getenv("KMS_ADDR"),
 		os.Getenv("KMS_ENV"),
-		envOr("KMS_MNEMONIC_PATH", "/mnemonic"))
+		envOr("KMS_MNEMONIC_PATH", "/mnemonic"),
+		nil)
 	if err != nil {
 		fmt.Printf("ERROR: load mnemonic: %v\n", err)
 		fmt.Println("Set MNEMONIC env var, or KMS_ADDR + KMS_ENV + KMS_MNEMONIC_PATH for native ZAP.")
@@ -58,7 +64,7 @@ func main() {
 	ks := keys.NewKeyStore(keysDir)
 
 	// Generate 5 validators
-	validators, err := keys.DeriveValidatorsFromMnemonic(mnemonic, 5)
+	validators, err := keys.DeriveValidatorsFromMnemonic(phrase, 5)
 	if err != nil {
 		fmt.Printf("ERROR: Failed to derive validators: %v\n", err)
 		os.Exit(1)
@@ -151,4 +157,3 @@ func envOr(name, def string) string {
 	}
 	return def
 }
-
