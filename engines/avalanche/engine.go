@@ -222,7 +222,7 @@ func (e *LuxEngine) WSEndpoint() string {
 		return ""
 	}
 	// Lux uses same port for HTTP and WS
-	return fmt.Sprintf("ws://localhost:%d/ext/bc/C/ws", e.config.HTTPPort)
+	return fmt.Sprintf("ws://localhost:%d/v1/bc/C/ws", e.config.HTTPPort)
 }
 
 func (e *LuxEngine) P2PEndpoint() string {
@@ -309,7 +309,7 @@ func (e *LuxEngine) callRPC(ctx context.Context, endpoint string, method string,
 }
 
 func (e *LuxEngine) getNodeID(ctx context.Context) (string, error) {
-	result, err := e.callRPC(ctx, "/ext/info", "info.getNodeID", struct{}{})
+	result, err := e.callRPC(ctx, "/v1/info", "info.getNodeID", struct{}{})
 	if err != nil {
 		return "", err
 	}
@@ -325,7 +325,7 @@ func (e *LuxEngine) getNodeID(ctx context.Context) (string, error) {
 }
 
 func (e *LuxEngine) getBlockchainID(ctx context.Context, alias string) (ids.ID, error) {
-	result, err := e.callRPC(ctx, "/ext/info", "info.getBlockchainID", map[string]string{"alias": alias})
+	result, err := e.callRPC(ctx, "/v1/info", "info.getBlockchainID", map[string]string{"alias": alias})
 	if err != nil {
 		return ids.Empty, err
 	}
@@ -341,7 +341,7 @@ func (e *LuxEngine) getBlockchainID(ctx context.Context, alias string) (ids.ID, 
 }
 
 func (e *LuxEngine) getHealth(ctx context.Context) (bool, error) {
-	result, err := e.callRPC(ctx, "/ext/health", "health.health", struct{}{})
+	result, err := e.callRPC(ctx, "/v1/health", "health.health", struct{}{})
 	if err != nil {
 		return false, err
 	}
@@ -357,7 +357,7 @@ func (e *LuxEngine) getHealth(ctx context.Context) (bool, error) {
 }
 
 func (e *LuxEngine) getPeerCount(ctx context.Context) (int, error) {
-	result, err := e.callRPC(ctx, "/ext/info", "info.peers", struct{}{})
+	result, err := e.callRPC(ctx, "/v1/info", "info.peers", struct{}{})
 	if err != nil {
 		return 0, err
 	}
@@ -382,7 +382,7 @@ func (e *LuxEngine) getPeerCount(ctx context.Context) (int, error) {
 }
 
 func (e *LuxEngine) getNodeVersion(ctx context.Context) (string, error) {
-	result, err := e.callRPC(ctx, "/ext/info", "info.getNodeVersion", struct{}{})
+	result, err := e.callRPC(ctx, "/v1/info", "info.getNodeVersion", struct{}{})
 	if err != nil {
 		return "", err
 	}

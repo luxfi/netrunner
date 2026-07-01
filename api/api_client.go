@@ -47,8 +47,8 @@ func NewAPIClient(ipAddr string, port uint16) Client {
 	infoClient := sdkinfo.NewClient(uri)
 	healthClient := health.NewClient(uri)
 	adminClient := admin.NewClient(uri)
-	pindexClient := indexer.NewClient(uri + "/ext/index/P/block")
-	cindexClient := indexer.NewClient(uri + "/ext/index/C/block")
+	pindexClient := indexer.NewClient(uri + "/v1/index/P/block")
+	cindexClient := indexer.NewClient(uri + "/v1/index/C/block")
 
 	return &APIClient{
 		platform:     platformClient,

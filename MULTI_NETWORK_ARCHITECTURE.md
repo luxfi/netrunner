@@ -384,10 +384,10 @@ lux network start &  # local
 sleep 60
 
 # Verify each network is accessible
-curl http://localhost:9630/ext/health  # mainnet
-curl http://localhost:9640/ext/health  # testnet
-curl http://localhost:9650/ext/health  # devnet
-curl http://localhost:9660/ext/health  # local
+curl http://localhost:9630/v1/health  # mainnet
+curl http://localhost:9640/v1/health  # testnet
+curl http://localhost:9650/v1/health  # devnet
+curl http://localhost:9660/v1/health  # local
 ```
 
 **Test Scenario 2: Deploy Chain to Each Network**
@@ -415,15 +415,15 @@ lux chain list --network local
 lux network stop --testnet
 
 # Verify other networks still running
-curl http://localhost:9630/ext/health  # mainnet - should succeed
-curl http://localhost:9640/ext/health  # testnet - should fail
-curl http://localhost:9650/ext/health  # devnet - should succeed
+curl http://localhost:9630/v1/health  # mainnet - should succeed
+curl http://localhost:9640/v1/health  # testnet - should fail
+curl http://localhost:9650/v1/health  # devnet - should succeed
 
 # Restart testnet
 lux network start --testnet
 
 # Verify testnet back up
-curl http://localhost:9640/ext/health  # should succeed
+curl http://localhost:9640/v1/health  # should succeed
 ```
 
 ### 7.3 Stress Test

@@ -47,7 +47,7 @@ scrape_configs:
        labels:
          alias: machine
   - job_name: node
-    metrics_path: /ext/metrics
+    metrics_path: /v1/metrics
     static_configs:
       - targets:
 `
@@ -826,7 +826,7 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 			if nodeInfo.Paused {
 				continue
 			}
-			lc.log.Info(fmt.Sprintf(log.LightBlue.Wrap("[blockchain RPC for %q] \"%s/ext/bc/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
+			lc.log.Info(fmt.Sprintf(log.LightBlue.Wrap("[blockchain RPC for %q] \"%s/v1/bc/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
 		}
 	}
 

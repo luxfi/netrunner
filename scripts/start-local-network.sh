@@ -21,7 +21,7 @@ $LUXD --network-id=1337 --genesis-file=$GENESIS --http-port=9630 --staking-port=
   --http-host=0.0.0.0 --public-ip=127.0.0.1 > $BASE/n1.log 2>&1 &
 
 sleep 15
-N1ID=$(curl -s http://localhost:9630/ext/info -d '{"jsonrpc":"2.0","id":1,"method":"info.getNodeID"}' -H 'content-type:application/json;' | jq -r '.result.nodeID')
+N1ID=$(curl -s http://localhost:9630/v1/info -d '{"jsonrpc":"2.0","id":1,"method":"info.getNodeID"}' -H 'content-type:application/json;' | jq -r '.result.nodeID')
 [ -z "$N1ID" ] && echo "ERROR: No Node ID" && tail -10 $BASE/n1.log && exit 1
 echo "Node 1 ID: $N1ID"
 
@@ -39,8 +39,8 @@ done
 echo "Waiting 50s for bootstrap..."
 sleep 50
 
-PEERS=$(curl -s http://localhost:9630/ext/info -d '{"jsonrpc":"2.0","id":1,"method":"info.peers"}' -H 'content-type:application/json;' | jq -r '.result.numPeers')
-CBS=$(curl -s http://localhost:9630/ext/info -d '{"jsonrpc":"2.0","id":1,"method":"info.isBootstrapped","params":{"chain":"C"}}' -H 'content-type:application/json;' | jq -r '.result.isBootstrapped')
+PEERS=$(curl -s http://localhost:9630/v1/info -d '{"jsonrpc":"2.0","id":1,"method":"info.peers"}' -H 'content-type:application/json;' | jq -r '.result.numPeers')
+CBS=$(curl -s http://localhost:9630/v1/info -d '{"jsonrpc":"2.0","id":1,"method":"info.isBootstrapped","params":{"chain":"C"}}' -H 'content-type:application/json;' | jq -r '.result.isBootstrapped')
 
 echo "Peers: $PEERS/4, C-Chain: $CBS"
 [ "$CBS" = "true" ] && echo "✅ Network ready for transactions!"

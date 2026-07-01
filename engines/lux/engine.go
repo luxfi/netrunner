@@ -230,7 +230,7 @@ func (e *LuxEngine) WSEndpoint() string {
 	}
 	if e.config.WSPort == 0 {
 		// Lux uses same port for HTTP and WS
-		return fmt.Sprintf("ws://localhost:%d/ext/bc/C/ws", e.config.HTTPPort)
+		return fmt.Sprintf("ws://localhost:%d/v1/bc/C/ws", e.config.HTTPPort)
 	}
 	return fmt.Sprintf("ws://localhost:%d", e.config.WSPort)
 }

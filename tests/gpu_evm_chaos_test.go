@@ -13,7 +13,7 @@
 //   - A running luxd node with GPU EVM enabled (GPU_EVM=1)
 //   - Or a local anvil instance on the default RPC endpoint
 //
-// Set RPC_URL to override the default endpoint (http://127.0.0.1:9650/ext/bc/C/rpc).
+// Set RPC_URL to override the default endpoint (http://127.0.0.1:9650/v1/bc/C/rpc).
 package tests
 
 import (
@@ -41,7 +41,7 @@ import (
 // --- Configuration ---
 
 const (
-	defaultRPCURL = "http://127.0.0.1:9650/ext/bc/C/rpc"
+	defaultRPCURL = "http://127.0.0.1:9650/v1/bc/C/rpc"
 	txTimeout     = 30 * time.Second
 	blockTimeout  = 60 * time.Second
 )

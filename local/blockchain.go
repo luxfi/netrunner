@@ -287,7 +287,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 			for time.Now().Before(deadline) {
 				attemptCount++
 				// Try to query the chain RPC endpoint with eth_chainId - if it responds, the chain is discovered
-				chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", node.GetURL(), blockchainID)
+				chainRPCURL := fmt.Sprintf("%s/v1/bc/%s/rpc", node.GetURL(), blockchainID)
 				// Use a proper JSON-RPC request body to ensure the EVM endpoint responds
 				jsonRPCBody := strings.NewReader(`{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`)
 				req, err := http.NewRequestWithContext(ctx, "POST", chainRPCURL, jsonRPCBody)
@@ -366,7 +366,7 @@ func (ln *localNetwork) waitForChainsDiscoveredOnAllNodes(
 				// Provide more diagnostic information
 				var lastErr string
 				// Try one more request to get the exact error
-				chainRPCURL := fmt.Sprintf("%s/ext/bc/%s/rpc", node.GetURL(), blockchainID)
+				chainRPCURL := fmt.Sprintf("%s/v1/bc/%s/rpc", node.GetURL(), blockchainID)
 				jsonRPCBody := strings.NewReader(`{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}`)
 				req, _ := http.NewRequestWithContext(ctx, "POST", chainRPCURL, jsonRPCBody)
 				if req != nil {

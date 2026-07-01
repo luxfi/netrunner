@@ -269,12 +269,12 @@ func (e *Engine) ChainID() ids.ID {
 
 // RPCEndpoint returns the external RPC endpoint
 func (e *Engine) RPCEndpoint() string {
-	return fmt.Sprintf("http://luxd.%s.svc.cluster.local:%d/ext/bc/C/rpc", e.namespace, e.httpPort)
+	return fmt.Sprintf("http://luxd.%s.svc.cluster.local:%d/v1/bc/C/rpc", e.namespace, e.httpPort)
 }
 
 // WSEndpoint returns the external WebSocket endpoint
 func (e *Engine) WSEndpoint() string {
-	return fmt.Sprintf("ws://luxd.%s.svc.cluster.local:%d/ext/bc/C/ws", e.namespace, e.httpPort)
+	return fmt.Sprintf("ws://luxd.%s.svc.cluster.local:%d/v1/bc/C/ws", e.namespace, e.httpPort)
 }
 
 // P2PEndpoint returns the staking/P2P endpoint
@@ -483,7 +483,7 @@ func (e *Engine) createStatefulSet(ctx context.Context, config *engines.NodeConf
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
-									Path: "/ext/health",
+									Path: "/v1/health",
 									Port: intstr.FromInt(int(e.httpPort)),
 								},
 							},
@@ -493,7 +493,7 @@ func (e *Engine) createStatefulSet(ctx context.Context, config *engines.NodeConf
 						ReadinessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
-									Path: "/ext/info",
+									Path: "/v1/info",
 									Port: intstr.FromInt(int(e.httpPort)),
 								},
 							},
