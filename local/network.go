@@ -609,6 +609,12 @@ func (ln *localNetwork) addNode(nodeConfig node.Config) (node.Node, error) {
 	if nodeConfig.Flags == nil {
 		nodeConfig.Flags = map[string]interface{}{}
 	}
+	// Every node needs ML-DSA + ML-KEM keys to satisfy the strict-PQ security
+	// profile pinned by the luxfi genesis; mint them here if absent so a
+	// PQ-profile network actually starts (netrunner only makes classical keys).
+	if err := ensurePQKeys(&nodeConfig); err != nil {
+		return nil, fmt.Errorf("failed to generate post-quantum staking keys: %w", err)
+	}
 	if nodeConfig.ChainConfigFiles == nil {
 		nodeConfig.ChainConfigFiles = map[string]string{}
 	}
