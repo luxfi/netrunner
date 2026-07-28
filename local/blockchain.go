@@ -1378,7 +1378,7 @@ func newWallet(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tx %s: %w", id, err)
 		}
-		tx, err := txs.Parse(txs.Codec, txBytes)
+		tx, err := txs.Parse(pwallet.Codec, txBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -1405,7 +1405,7 @@ func newWallet(
 	xSigner := xsigner.New(wrappedKC, xBackend)
 	w.xWallet = x.NewWallet(xBuilder, xSigner, xBackend)
 	w.xChainID = xChainID
-	w.luxAssetID = luxState.PCTX.XAssetID
+	w.luxAssetID = luxState.PCTX.UTXOAssetID
 	return &w, nil
 }
 
