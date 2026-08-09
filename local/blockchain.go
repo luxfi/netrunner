@@ -1378,7 +1378,7 @@ func newWallet(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tx %s: %w", id, err)
 		}
-		tx, err := txs.Parse(pwallet.Codec, txBytes)
+		tx, err := txs.Parse(txBytes)
 		if err != nil {
 			return nil, err
 		}
