@@ -26,7 +26,7 @@ require (
 	github.com/luxfi/metric v1.8.1
 	github.com/luxfi/node v1.36.15
 	github.com/luxfi/p2p v1.22.1
-	github.com/luxfi/proto v1.4.2
+	github.com/luxfi/proto v1.4.4
 	github.com/luxfi/sdk v1.18.1
 	github.com/luxfi/utxo v0.5.8
 	github.com/luxfi/validators v1.3.1
