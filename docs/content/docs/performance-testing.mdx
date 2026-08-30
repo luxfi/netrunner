@@ -167,7 +167,7 @@ START_HEIGHT=$(curl -s -X POST --data '{
   "params": {},
   "id": 1
 }' -H 'content-type:application/json' \
-  http://localhost:9630/v1/bc/P | jq -r '.result.height')
+  http://localhost:9630/v1/chain/P | jq -r '.result.height')
 
 sleep 60
 
@@ -177,7 +177,7 @@ END_HEIGHT=$(curl -s -X POST --data '{
   "params": {},
   "id": 1
 }' -H 'content-type:application/json' \
-  http://localhost:9630/v1/bc/P | jq -r '.result.height')
+  http://localhost:9630/v1/chain/P | jq -r '.result.height')
 
 BLOCKS_PRODUCED=$((END_HEIGHT - START_HEIGHT))
 echo "Blocks produced in 60 seconds: ${BLOCKS_PRODUCED}"
@@ -356,7 +356,7 @@ submit_batch() {
                 },
                 \"id\": ${i}
             }" -H 'content-type:application/json' \
-            http://localhost:9630/v1/bc/P > /dev/null
+            http://localhost:9630/v1/chain/P > /dev/null
         } &
     done
 

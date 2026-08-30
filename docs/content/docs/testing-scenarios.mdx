@@ -84,7 +84,7 @@ HEIGHT=$(curl -s -X POST --data '{
   "params": {},
   "id": 1
 }' -H 'content-type:application/json' \
-  http://localhost:9630/v1/bc/P | jq -r '.result.height')
+  http://localhost:9630/v1/chain/P | jq -r '.result.height')
 
 if [ -z "$HEIGHT" ]; then
   echo "Failed to get height"
@@ -157,8 +157,8 @@ netrunner control start \
 netrunner control health
 
 # Export from X-Chain to C-Chain
-X_CHAIN_URL="http://localhost:9630/v1/bc/X"
-C_CHAIN_URL="http://localhost:9630/v1/bc/C/lux"
+X_CHAIN_URL="http://localhost:9630/v1/chain/X"
+C_CHAIN_URL="http://localhost:9630/v1/chain/C/lux"
 
 # Create export transaction
 EXPORT_TX=$(curl -X POST --data '{
@@ -266,7 +266,7 @@ curl -X POST --data '{
   "params": {},
   "id": 1
 }' -H 'content-type:application/json' \
-  http://localhost:9630/v1/bc/${BLOCKCHAIN_ID}
+  http://localhost:9630/v1/chain/${BLOCKCHAIN_ID}
 ```
 
 ## Performance Testing
@@ -426,7 +426,7 @@ for i in {1..100}; do
     "params": {},
     "id": 1
   }' -H 'content-type:application/json' \
-    http://localhost:9630/v1/bc/P
+    http://localhost:9630/v1/chain/P
 
   sleep 1
 done

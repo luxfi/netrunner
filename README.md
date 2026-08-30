@@ -858,7 +858,7 @@ curl -X POST --data '{
 # in this example,
 # "E8isHenre76NMxbJ3munSQatV8GoQ4XKWQg9vD34xMBqEFJGf" is the blockchain Id
 # "timestamp" is the blockchain alias
-# You can use 127.0.0.1:9630/v1/bc/timestamp or 127.0.0.1:9630/v1/bc/E8isHenre76NMxbJ3munSQatV8GoQ4XKWQg9vD34xMBqEFJGf
+# You can use 127.0.0.1:9630/v1/chain/timestamp or 127.0.0.1:9630/v1/chain/E8isHenre76NMxbJ3munSQatV8GoQ4XKWQg9vD34xMBqEFJGf
 curl -X POST --data '{
     "jsonrpc": "2.0",
     "method": "timestampvm.proposeBlock",
@@ -866,7 +866,7 @@ curl -X POST --data '{
         "data":"0x6d796e6577626c6f636b0000000000000000000000000000000000000000000014228326"
     },
     "id": 1
-}' -H 'content-type:application/json;' 127.0.0.1:9630/v1/bc/timestamp
+}' -H 'content-type:application/json;' 127.0.0.1:9630/v1/chain/timestamp
 ```
 
 ```bash
@@ -875,7 +875,7 @@ curl -X POST --data '{
     "method": "timestampvm.getBlock",
     "params":{},
     "id": 1
-}' -H 'content-type:application/json;' 127.0.0.1:9630/v1/bc/timestamp
+}' -H 'content-type:application/json;' 127.0.0.1:9630/v1/chain/timestamp
 ```
 
 ## Configuration

@@ -1022,12 +1022,12 @@ User runs: lux network snapshot restore checkpoint1
 
 ```bash
 # Import Zoo mainnet blocks (~1.3M blocks)
-curl -X POST http://127.0.0.1:9650/v1/bc/Zoo/rpc \
+curl -X POST http://127.0.0.1:9650/v1/chain/Zoo/rpc \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"debug_importRLPBlocks","params":["'$(base64 -i ~/work/lux/state/rlp/zoo-mainnet/zoo-mainnet-200200.rlp)'"],"id":1}'
 
 # Import C-chain mainnet blocks (~1.2G)
-curl -X POST http://127.0.0.1:9650/v1/bc/C/rpc \
+curl -X POST http://127.0.0.1:9650/v1/chain/C/rpc \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"debug_importRLPBlocks","params":["'$(base64 -i ~/work/lux/state/rlp/lux-mainnet/lux-mainnet-96369.rlp)'"],"id":1}'
 ```
@@ -1087,7 +1087,7 @@ After fixes, successfully deployed Zoo chain on mainnet:
 - **Zoo Chain ID**: 200200 (0x30e08)
 - **Genesis Hash**: `0x7c548af47de27560779ccc67dda32a540944accc71dac3343da3b9cd18f14933`
 - **Treasury**: ~500M ZOO at `0x9011E888251AB053B7bD1cdB598Db4f9DEd94714`
-- **RPC Endpoint**: `http://localhost:9630/v1/bc/zoo/rpc`
+- **RPC Endpoint**: `http://localhost:9630/v1/chain/zoo/rpc`
 
 ### RLP Block Import Limitation
 
