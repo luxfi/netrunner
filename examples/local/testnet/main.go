@@ -248,7 +248,7 @@ func run(logger log.Logger, binaryPath string) error {
 	logger.Info("Zoo TESTNET blockchain created!", "chainIDs", chainIDStrs)
 	fmt.Printf("\n✅ Zoo TESTNET blockchain created successfully!\n")
 	fmt.Printf("   Chain ID: %s\n", chainIDs[0])
-	fmt.Printf("   RPC: http://localhost:9640/v1/bc/zootest/rpc\n\n")
+	fmt.Printf("   RPC: http://localhost:9640/v1/chain/zootest/rpc\n\n")
 
 	logger.Info("TESTNET will run until you CTRL + C to exit...")
 	<-closedOnShutdownCh

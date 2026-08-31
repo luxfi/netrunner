@@ -92,7 +92,7 @@ func newDEXTestEnv(t *testing.T) *dexTestEnv {
 	var clients []*ethclient.Client
 	for _, n := range allNodes {
 		nodes = append(nodes, n)
-		rpcURL := fmt.Sprintf("http://%s:%d/v1/bc/C/rpc", n.GetHost(), n.GetAPIPort())
+		rpcURL := fmt.Sprintf("http://%s:%d/v1/chain/C/rpc", n.GetHost(), n.GetAPIPort())
 		c, err := ethclient.Dial(rpcURL)
 		require.NoError(err, "failed to dial ethclient for %s", n.GetName())
 		clients = append(clients, c)

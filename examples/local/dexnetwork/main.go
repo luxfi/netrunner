@@ -149,7 +149,7 @@ func run(logger log.Logger, binaryPath string) error {
 	for name, node := range nodes {
 		logger.Info("  Node available",
 			"name", name,
-			"url", fmt.Sprintf("%s/v1/bc/dex", node.GetURL()),
+			"url", fmt.Sprintf("%s/v1/chain/dex", node.GetURL()),
 		)
 	}
 

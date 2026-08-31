@@ -269,12 +269,12 @@ func (e *Engine) ChainID() ids.ID {
 
 // RPCEndpoint returns the external RPC endpoint
 func (e *Engine) RPCEndpoint() string {
-	return fmt.Sprintf("http://luxd.%s.svc.cluster.local:%d/v1/bc/C/rpc", e.namespace, e.httpPort)
+	return fmt.Sprintf("http://luxd.%s.svc.cluster.local:%d/v1/chain/C/rpc", e.namespace, e.httpPort)
 }
 
 // WSEndpoint returns the external WebSocket endpoint
 func (e *Engine) WSEndpoint() string {
-	return fmt.Sprintf("ws://luxd.%s.svc.cluster.local:%d/v1/bc/C/ws", e.namespace, e.httpPort)
+	return fmt.Sprintf("ws://luxd.%s.svc.cluster.local:%d/v1/chain/C/ws", e.namespace, e.httpPort)
 }
 
 // P2PEndpoint returns the staking/P2P endpoint

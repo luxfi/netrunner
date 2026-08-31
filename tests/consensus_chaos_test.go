@@ -62,7 +62,7 @@ func newConsensusTestEnv(t *testing.T) *consensusTestEnv {
 	for _, n := range allNodes {
 		nodes = append(nodes, n)
 		names = append(names, n.GetName())
-		rpcURL := fmt.Sprintf("http://%s:%d/v1/bc/C/rpc", n.GetHost(), n.GetAPIPort())
+		rpcURL := fmt.Sprintf("http://%s:%d/v1/chain/C/rpc", n.GetHost(), n.GetAPIPort())
 		c, err := ethclient.Dial(rpcURL)
 		require.NoError(err, "failed to dial ethclient for %s", n.GetName())
 		clients = append(clients, c)

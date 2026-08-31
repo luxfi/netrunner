@@ -826,7 +826,7 @@ func (lc *localNetwork) updateChainInfo(ctx context.Context) error {
 			if nodeInfo.Paused {
 				continue
 			}
-			lc.log.Info(fmt.Sprintf(log.LightBlue.Wrap("[blockchain RPC for %q] \"%s/v1/bc/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
+			lc.log.Info(fmt.Sprintf(log.LightBlue.Wrap("[blockchain RPC for %q] \"%s/v1/chain/%s\""), chainInfo.info.VmId, nodeInfo.GetUri(), chainID))
 		}
 	}
 

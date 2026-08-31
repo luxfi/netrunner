@@ -222,7 +222,7 @@ func (e *LuxEngine) WSEndpoint() string {
 		return ""
 	}
 	// Lux uses same port for HTTP and WS
-	return fmt.Sprintf("ws://localhost:%d/v1/bc/C/ws", e.config.HTTPPort)
+	return fmt.Sprintf("ws://localhost:%d/v1/chain/C/ws", e.config.HTTPPort)
 }
 
 func (e *LuxEngine) P2PEndpoint() string {

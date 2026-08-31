@@ -24,7 +24,7 @@ engines:
     depends_on:
       - lux-l1
     extra:
-      l1-rpc: http://localhost:9630/v1/bc/C/rpc
+      l1-rpc: http://localhost:9630/v1/chain/C/rpc
       sequencer: true
       sequencer-l1-confs: 0
 
