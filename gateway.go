@@ -21,6 +21,54 @@ type GatewayConfig struct {
 	ExplorerRPC  string
 }
 
+// chainAlias is THE one place this gateway decides which chain a path names.
+//
+// `/v1/chain/C/rpc`, `/v1/chain/c`, `/v1/bc/C` and `/v1/bc/c/rpc` are one
+// route, not four: the word in the middle is either spelling, the alias is
+// matched without regard to case, and the trailing `/rpc` is optional. Only the
+// alias is the caller's to spell — the words around it are literals.
+//
+// It answers with the alias folded to lower case, or "" for a path that names
+// no chain, which is then left exactly as the client wrote it.
+func chainAlias(p string) string {
+	rest, ok := strings.CutPrefix(p, "/v1/chain/")
+	if !ok {
+		if rest, ok = strings.CutPrefix(p, "/v1/bc/"); !ok {
+			return ""
+		}
+	}
+	alias, endpoint, _ := strings.Cut(rest, "/")
+	if endpoint != "" && endpoint != "rpc" {
+		return ""
+	}
+	return strings.ToLower(alias)
+}
+
+// upstream names the node that serves a chain, and the path it serves it at.
+// One table: adding a chain is a row, not a branch.
+var upstream = map[string]struct {
+	node string // "lux", "zoo" or "hanzo"
+	path string
+}{
+	"c":      {"lux", "/v1/bc/C/rpc"},
+	"96369":  {"lux", "/v1/bc/C/rpc"},
+	"p":      {"lux", "/v1/bc/P"},
+	"x":      {"lux", "/v1/bc/X"},
+	"zoo":    {"zoo", "/v1/chain/C/rpc"},
+	"200200": {"zoo", "/v1/chain/C/rpc"},
+	"hanzo":  {"hanzo", "/v1/chain/C/rpc"},
+	"36963":  {"hanzo", "/v1/chain/C/rpc"},
+}
+
+// gatewayPort is the ":8080" of a listen address, for building a URL that
+// reaches this gateway wherever it was told to listen.
+func gatewayPort(addr string) string {
+	if i := strings.LastIndex(addr, ":"); i >= 0 {
+		return addr[i:]
+	}
+	return ":" + addr
+}
+
 func newProxy(target *url.URL) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	origDirector := proxy.Director
@@ -100,13 +148,14 @@ func startGateway(cfg GatewayConfig) error {
 		case "explore.lux.network", "explorer.lux.network":
 			routeExplorer(w, r, explorerProxy, cfg)
 		default:
-			if strings.HasPrefix(p, "/zoo") || strings.HasPrefix(p, "/v1/chain/zoo") || strings.HasPrefix(p, "/v1/chain/200200") {
+			switch {
+			case strings.HasPrefix(p, "/zoo"):
 				routeZoo(w, r, zooProxy)
-			} else if strings.HasPrefix(p, "/hanzo") || strings.HasPrefix(p, "/v1/chain/hanzo") || strings.HasPrefix(p, "/v1/chain/36963") {
+			case strings.HasPrefix(p, "/hanzo"):
 				routeHanzo(w, r, hanzoProxy)
-			} else if strings.HasPrefix(p, "/explore") || strings.HasPrefix(p, "/v1/explorer") {
+			case strings.HasPrefix(p, "/explore"), strings.HasPrefix(p, "/v1/explorer"):
 				routeExplorer(w, r, explorerProxy, cfg)
-			} else {
+			default:
 				routeLux(w, r, luxProxy, zooProxy, hanzoProxy, cfg)
 			}
 		}
@@ -142,44 +191,57 @@ func routeLux(w http.ResponseWriter, r *http.Request, luxProxy, zooProxy, hanzoP
 		json.NewEncoder(w).Encode(vals)
 		return
 	}
-	// Multi-chain sub-routing under api.lux.network
-	if strings.HasPrefix(origPath, "/v1/chain/zoo") || strings.HasPrefix(origPath, "/v1/chain/200200") || strings.HasPrefix(origPath, "/zoo") {
+	// One decision, from the alias the caller named. A chain that lives on
+	// another node is handed to it; one of Lux's own is rewritten to the path
+	// that node serves it at.
+	if to, known := upstream[chainAlias(origPath)]; known {
+		r.URL.Path = to.path
+		switch to.node {
+		case "zoo":
+			zooProxy.ServeHTTP(w, r)
+		case "hanzo":
+			hanzoProxy.ServeHTTP(w, r)
+		default:
+			luxProxy.ServeHTTP(w, r)
+		}
+		return
+	}
+
+	switch {
+	case origPath == "", origPath == "/":
+		// An eth client pointed at the gateway with no path means the C-Chain.
+		r.URL.Path = "/v1/bc/C/rpc"
+	case strings.HasPrefix(origPath, "/zoo"):
 		routeZoo(w, r, zooProxy)
 		return
-	}
-	if strings.HasPrefix(origPath, "/v1/chain/hanzo") || strings.HasPrefix(origPath, "/v1/chain/36963") || strings.HasPrefix(origPath, "/hanzo") {
+	case strings.HasPrefix(origPath, "/hanzo"):
 		routeHanzo(w, r, hanzoProxy)
 		return
-	}
-	// Primary Network Lux: C-Chain, P-Chain, X-Chain
-	if origPath == "" || origPath == "/" || strings.HasPrefix(origPath, "/v1/chain/C") || strings.HasPrefix(origPath, "/v1/chain/96369") {
+	case strings.HasPrefix(origPath, "/ext/bc/C/rpc"):
 		r.URL.Path = "/v1/bc/C/rpc"
-	} else if strings.HasPrefix(origPath, "/v1/chain/P") {
-		r.URL.Path = "/v1/bc/P"
-	} else if strings.HasPrefix(origPath, "/v1/chain/X") {
-		r.URL.Path = "/v1/bc/X"
-	} else if strings.HasPrefix(origPath, "/ext/bc/C/rpc") {
-		r.URL.Path = "/v1/bc/C/rpc"
-	} else if strings.HasPrefix(origPath, "/ext/") {
+	case strings.HasPrefix(origPath, "/ext/"):
 		r.URL.Path = strings.Replace(origPath, "/ext/", "/v1/bc/", 1)
 	}
 	luxProxy.ServeHTTP(w, r)
 }
 
-func routeZoo(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy) {
-	origPath := r.URL.Path
-	if origPath == "" || origPath == "/" || strings.HasPrefix(origPath, "/v1/chain/zoo") || strings.HasPrefix(origPath, "/v1/chain/200200") || strings.HasPrefix(origPath, "/zoo") || strings.HasPrefix(origPath, "/ext/") {
+// An L2 serves one chain, so every way of naming it — its own name, its chain
+// id, the bare root, or the prefix an old client still writes — is that chain.
+func routeL2(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy, own string) {
+	p := r.URL.Path
+	if _, mine := upstream[chainAlias(p)]; mine ||
+		p == "" || p == "/" || strings.HasPrefix(p, own) || strings.HasPrefix(p, "/ext/") {
 		r.URL.Path = "/v1/chain/C/rpc"
 	}
 	proxy.ServeHTTP(w, r)
 }
 
+func routeZoo(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy) {
+	routeL2(w, r, proxy, "/zoo")
+}
+
 func routeHanzo(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy) {
-	origPath := r.URL.Path
-	if origPath == "" || origPath == "/" || strings.HasPrefix(origPath, "/v1/chain/hanzo") || strings.HasPrefix(origPath, "/v1/chain/36963") || strings.HasPrefix(origPath, "/hanzo") || strings.HasPrefix(origPath, "/ext/") {
-		r.URL.Path = "/v1/chain/C/rpc"
-	}
-	proxy.ServeHTTP(w, r)
+	routeL2(w, r, proxy, "/hanzo")
 }
 
 func routeExplorer(w http.ResponseWriter, r *http.Request, indexerProxy *httputil.ReverseProxy, cfg GatewayConfig) {

@@ -18,10 +18,22 @@ import (
 )
 
 const (
+	hanzoGen = "/home/z/work/hanzo/universe/infra/k8s/hanzod/mainnet/genesis.json"
+	// What a Go node needs before it will serve a C-Chain: a genesis that
+	// declares one, and the post-quantum staking keys the strict profile
+	// requires. Without them luxd refuses to construct, so a boot measured
+	// without them measures a node that never starts.
+	luxGen     = "/home/z/testnets/lux/genesis.json"
+	luxStaking = "/home/z/testnets/lux/nodes/node0/staking"
+)
+
+// The three runtimes, where they are built. Variables rather than constants so
+// a candidate build can be measured where it sits, without being installed over
+// the one a cluster is already running.
+var (
 	binLuxd   = "/home/z/work/lux/node/build/luxd"
 	binHanzod = "/home/z/work/lux-rs/node/target/release/hanzod"
 	binZood   = "/home/z/work/lux-cpp/node/build/zood"
-	hanzoGen  = "/home/z/work/hanzo/universe/infra/k8s/hanzod/mainnet/genesis.json"
 )
 
 type Config struct {
@@ -466,8 +478,9 @@ COMMANDS:
   restart      Restart all managed node processes
   test         Verify multi-chain consensus, RO archive proxying & genesis parity
   scale        Benchmark light node scaling (10 to 100 nodes) with shared RO archive
-  gateway      Start reverse proxy on port 80 with EVM root fallback & Zap RPC
+  gateway      Start reverse proxy with EVM root fallback & Zap RPC
   bot          Run native EVM transaction bot (moving funds on all 3 chains)
+  boot         Measure cold start: exec -> listening -> first served call
   monitor      Run real-time RSS memory leak detector under load
   zap          Start standalone Zap RPC protocol transport daemon (:8082)
   network      Display typed multi-chain network topology (JSON)
@@ -476,15 +489,20 @@ COMMANDS:
 FLAGS:
   --env        Target network environment (mainnet, testnet) [default: mainnet]
   --impl       Implementation filter (all, zood, hanzod) [default: all]
-  --port       Gateway listen port [default: :80]
+  --port       Gateway listen port [default: :8080]
   --dur        Duration for bot or monitor [default: 60s]
   --tps        Transactions per second per chain for bot [default: 1.0]
   --n          Number of nodes for scale test [default: 10]
+  --runs       Cold starts to time per runtime for boot [default: 3]
+  --luxd       Go node binary to measure   [default: lux/node/build/luxd]
+  --hanzod     Rust node binary to measure [default: lux-rs/node/target/release/hanzod]
+  --zood       C++ node binary to measure  [default: lux-cpp/node/build/zood]
 
 PROTOCOLS & TRANSPORTS:
   * Zap RPC:   Binary & HTTP transport (/v1/zap) replacing legacy gRPC
   * EVM Root:  api.lux.network/, api.zoo.network/, api.hanzo.network/
-  * Chains:    Lux (/v1/chain/C/rpc), Zoo (/v1/chain/zoo), Hanzo (/v1/chain/hanzo)
+  * Chains:    Lux (/v1/chain/c), Zoo (/v1/chain/zoo), Hanzo (/v1/chain/hanzo)
+               The alias is case-insensitive and /rpc is optional.
 ================================================================================
 `, prog)
 }
@@ -505,7 +523,14 @@ func main() {
 	impl := fs.String("impl", "all", "implementation: all, zood, or hanzod")
 	nNodes := fs.Int("n", 10, "number of nodes for scale test")
 	reqs := fs.Int("reqs", 50, "requests per node for load test")
-	port := fs.String("port", ":80", "gateway listen port")
+	// Unprivileged by default. Binding :80 costs a capability on the binary,
+	// and a tool that has to be blessed before it will start is a tool that
+	// does not start.
+	port := fs.String("port", ":8080", "gateway listen port")
+	runs := fs.Int("runs", 3, "cold starts to time per runtime for boot")
+	fs.StringVar(&binLuxd, "luxd", binLuxd, "Go node binary to measure")
+	fs.StringVar(&binHanzod, "hanzod", binHanzod, "Rust node binary to measure")
+	fs.StringVar(&binZood, "zood", binZood, "C++ node binary to measure")
 	tps := fs.Float64("tps", 1.0, "transactions per second per chain for bot")
 	duration := fs.Duration("dur", 60*time.Second, "duration for bot or monitor")
 	fs.Parse(os.Args[2:])
@@ -560,18 +585,20 @@ func main() {
 	case "scale":
 		runScale(*nNodes, *impl, *reqs)
 	case "gateway":
+		// One address, the one that was asked for. The retry onto another port
+		// existed because the default could not be bound without a capability;
+		// with an unprivileged default it only hid the real error.
 		if err := startGateway(gwCfg); err != nil {
-			fmt.Printf("[-] Gateway error on %s: %v. Retrying on :8080...\n", *port, err)
-			gwCfg.ListenAddr = ":8080"
-			if err := startGateway(gwCfg); err != nil {
-				log.Fatalf("Fatal gateway error: %v", err)
-			}
+			log.Fatalf("gateway on %s: %v", gwCfg.ListenAddr, err)
 		}
 	case "bot":
+		// Through the gateway, so the addresses follow its port rather than
+		// assuming the privileged one.
+		at := gatewayPort(gwCfg.ListenAddr)
 		targets := []ChainBotTarget{
-			{Name: "Lux C-Chain", RPC: "http://api.lux.network/v1/chain/C/rpc", Coin: "LUX", ChainID: 36963},
-			{Name: "Zoo EVM", RPC: "http://api.zoo.network/v1/chain/zoo", Coin: "ZOO", ChainID: 200200},
-			{Name: "Hanzo EVM", RPC: "http://api.hanzo.network/v1/chain/hanzo", Coin: "AI", ChainID: 36963},
+			{Name: "Lux C-Chain", RPC: "http://api.lux.network" + at + "/v1/chain/c", Coin: "LUX", ChainID: 36963},
+			{Name: "Zoo EVM", RPC: "http://api.zoo.network" + at + "/v1/chain/zoo", Coin: "ZOO", ChainID: 200200},
+			{Name: "Hanzo EVM", RPC: "http://api.hanzo.network" + at + "/v1/chain/hanzo", Coin: "AI", ChainID: 36963},
 		}
 		runTrafficBot(targets, *tps, *duration)
 	case "zap":
@@ -582,6 +609,8 @@ func main() {
 			handleZapRPC(gwCfg, w, r)
 		})
 		log.Fatal(http.ListenAndServe(zapPort, mux))
+	case "boot":
+		runBoot(cfg, *runs)
 	case "monitor":
 		monitorMemory(*duration, 5*time.Second)
 	default:
