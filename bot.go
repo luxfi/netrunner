@@ -60,6 +60,7 @@ type tally struct {
 	heightAfter             uint64
 	submitted               int
 	landed                  int
+	included                int // in a block, but the chain serves no receipt
 	reverted                int
 	landedBy                map[kind]int
 	rejects                 map[string]int // submission errors, by reason
@@ -166,7 +167,7 @@ func runTrafficBot(targets []ChainBotTarget, s *Signer, tps float64, duration ti
 					r.mu.Lock()
 					mb := rss(t.Proc, t.Port)
 					r.memory = append(r.memory, mb)
-					line = append(line, fmt.Sprintf("%s %d/%d sent/landed %.0fMB", t.Name, r.submitted, r.landed, mb))
+					line = append(line, fmt.Sprintf("%s %d sent %d landed %.0fMB", t.Name, r.submitted, r.landed+r.included, mb))
 					r.mu.Unlock()
 				}
 				fmt.Printf("[%s] %s\n", time.Now().UTC().Format("15:04:05"), strings.Join(line, " | "))
@@ -365,6 +366,66 @@ func finish(t ChainBotTarget, r *tally) {
 	r.heightAfter = hexUint(head["result"])
 	r.memory = append(r.memory, rss(t.Proc, t.Port))
 	r.mu.Unlock()
+	readBlocks(t, r)
+}
+
+// readBlocks settles what is left by reading the blocks themselves. A chain can
+// mine a transaction and still answer null to eth_getTransactionReceipt — the
+// block is the evidence, the receipt is only the convenient way to ask.
+func readBlocks(t ChainBotTarget, r *tally) {
+	r.mu.Lock()
+	if len(r.outstanding) == 0 {
+		r.mu.Unlock()
+		return
+	}
+	type open struct {
+		key  string // the hash as the node spelled it, to delete by
+		kind kind
+	}
+	want := make(map[string]open, len(r.outstanding))
+	for h, s := range r.outstanding {
+		want[strings.ToLower(h)] = open{key: h, kind: s.kind}
+	}
+	from, to := r.heightBefore, r.heightAfter
+	r.mu.Unlock()
+
+	for n := from; n <= to && len(want) > 0; n++ {
+		res, err := httpPost(t.RPC, "eth_getBlockByNumber", []any{fmt.Sprintf("0x%x", n), true})
+		if err != nil || res == nil || res["result"] == nil {
+			continue
+		}
+		blk, ok := res["result"].(map[string]any)
+		if !ok {
+			continue
+		}
+		txs, _ := blk["transactions"].([]any)
+		for _, tx := range txs {
+			var h string
+			switch v := tx.(type) {
+			case string:
+				h = v
+			case map[string]any:
+				h = fmt.Sprintf("%v", v["hash"])
+			}
+			h = strings.ToLower(h)
+			o, waiting := want[h]
+			if !waiting {
+				continue
+			}
+			delete(want, h)
+			r.mu.Lock()
+			r.included++
+			r.landedBy[o.kind]++
+			if r.firstLandedBlock == 0 || n < r.firstLandedBlock {
+				r.firstLandedBlock = n
+			}
+			if n > r.lastB {
+				r.lastB = n
+			}
+			delete(r.outstanding, o.key)
+			r.mu.Unlock()
+		}
+	}
 }
 
 // currentGasPrice takes the chain's own price and adds headroom, except on a
@@ -391,8 +452,9 @@ func report(targets []ChainBotTarget, results []*tally) {
 		fmt.Printf("\n%s  (chainId %d, %s)\n", t.Name, r.chainID, t.RPC)
 		fmt.Printf("  height           %d -> %d  (+%d)\n", r.heightBefore, r.heightAfter, r.heightAfter-r.heightBefore)
 		fmt.Printf("  submitted        %d\n", r.submitted)
-		fmt.Printf("  landed           %d   (transfer %d, deploy %d, call %d)\n",
-			r.landed, r.landedBy[transfer], r.landedBy[deploy], r.landedBy[call])
+		fmt.Printf("  landed           %d   (by receipt %d, by reading the block %d)\n", r.landed+r.included, r.landed, r.included)
+		fmt.Printf("    of which        transfer %d, deploy %d, call %d\n",
+			r.landedBy[transfer], r.landedBy[deploy], r.landedBy[call])
 		fmt.Printf("  reverted         %d\n", r.reverted)
 		fmt.Printf("  never mined      %d\n", len(r.outstanding))
 		if r.landed > 0 {
