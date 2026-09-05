@@ -1,108 +1,73 @@
+// SPDX-License-Identifier: BSD-3-Clause-Eco
 package main
 
 import (
-	"encoding/hex"
-	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 )
 
+// The published BIP-39 test phrase and the address it yields at the Ethereum
+// account path. Checking against a value the whole world agrees on is what
+// makes the derivation trustworthy without ever naming a real account.
+const (
+	testPhrase  = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	testAddress = "0x9858effd232b4033e47d90003d41ec34ecaeda94"
+)
+
+func testSigner(t *testing.T) *Signer {
+	t.Helper()
+	t.Setenv("LUX_MNEMONIC", testPhrase)
+	s, err := SignerFromEnv()
+	if err != nil {
+		t.Fatalf("SignerFromEnv: %v", err)
+	}
+	return s
+}
+
+func TestSignerDerivesTheStandardAddress(t *testing.T) {
+	s := testSigner(t)
+	if !strings.EqualFold(s.Address, testAddress) {
+		t.Fatalf("m/44'/60'/0'/0/0 gave %s, want %s", s.Address, testAddress)
+	}
+}
+
+func TestSignerRefusesAnAbsentPhrase(t *testing.T) {
+	t.Setenv("LUX_MNEMONIC", "")
+	if _, err := SignerFromEnv(); err == nil {
+		t.Fatal("an absent LUX_MNEMONIC must be an error, not a default account")
+	}
+	t.Setenv("LUX_MNEMONIC", "only three words")
+	if _, err := SignerFromEnv(); err == nil {
+		t.Fatal("a phrase of the wrong length must be an error")
+	}
+}
 
 func TestComputeContractAddress(t *testing.T) {
-
-	addr := computeContractAddress(TreasuryAddress, 0)
-	t.Logf("Computed contract address for nonce 0: %s", addr)
-	if len(addr) != 42 {
-		t.Fatalf("unexpected addr len: %s", addr)
+	addr := computeContractAddress(testAddress, 0)
+	if len(addr) != 42 || !strings.HasPrefix(addr, "0x") {
+		t.Fatalf("unexpected contract address: %s", addr)
 	}
 }
 
 func TestSignTx(t *testing.T) {
-	raw, err := signEIP155Tx(TreasuryPrivateKey, 36963, 0, TreasuryAddress, big.NewInt(1000), 21000, big.NewInt(25000000000), nil)
+	s := testSigner(t)
+	raw, err := signEIP155Tx(s, 96368, 0, testAddress, big.NewInt(1000), 21000, big.NewInt(25000000000), nil)
 	if err != nil {
-		t.Fatalf("sign failed: %v", err)
+		t.Fatalf("sign: %v", err)
 	}
-	t.Logf("Signed raw tx: %s", raw)
-	if len(raw) < 10 {
-		t.Fatalf("raw tx too short")
+	// A signed legacy transfer is an RLP list of nine items; anything much
+	// shorter than that is not a transaction.
+	if !strings.HasPrefix(raw, "0xf8") || len(raw) < 200 {
+		t.Fatalf("signed transaction looks wrong: %s", raw)
 	}
 }
 
-func TestEVMContractLifecycle(t *testing.T) {
-	// Let's test full EVM contract deployment on Hanzo EVM first
-	rpcURL := "http://127.0.0.1:9780/v1/chain/C/rpc"
-	chainID := int64(36963)
-
-	nonceRes, err := httpPost(rpcURL, "eth_getTransactionCount", []any{TreasuryAddress, "latest"})
-	if err != nil || nonceRes["result"] == nil {
-		t.Fatalf("get nonce failed: %v", err)
+func TestRejectReasonGroups(t *testing.T) {
+	if got := rejectReason("err: insufficient funds for gas * price + value"); got != "insufficient funds" {
+		t.Fatalf("got %q", got)
 	}
-	var nonce uint64
-	fmt.Sscanf(fmt.Sprintf("%v", nonceRes["result"]), "0x%x", &nonce)
-	t.Logf("Initial Nonce: %d", nonce)
-
-	deployBytecode, _ := hex.DecodeString(sampleContractBytecode)
-	contractAddr := computeContractAddress(TreasuryAddress, nonce)
-	t.Logf("Expected Contract Address: %s", contractAddr)
-
-	// 1. Deploy Contract
-	gasPrice := big.NewInt(50000000000)
-	rawDeploy, err := signEIP155Tx(TreasuryPrivateKey, chainID, nonce, "", big.NewInt(0), 100000, gasPrice, deployBytecode)
-	if err != nil {
-		t.Fatalf("sign deploy err: %v", err)
+	if got := rejectReason("nonce too low: address 0x..., tx: 3 state: 5"); got != "nonce too low" {
+		t.Fatalf("got %q", got)
 	}
-	deployRes, err := httpPost(rpcURL, "eth_sendRawTransaction", []any{rawDeploy})
-	t.Logf("Deploy Response: %v, err: %v", deployRes, err)
-	if err != nil || deployRes["result"] == nil {
-		t.Fatalf("deploy failed")
-	}
-	deployTxHash := fmt.Sprintf("%v", deployRes["result"])
-	t.Logf("Deploy TxHash: %s", deployTxHash)
-
-	// Check code at contract address
-	codeRes, err := httpPost(rpcURL, "eth_getCode", []any{contractAddr, "latest"})
-	t.Logf("Contract Code: %v", codeRes)
-
-	// 2. State Mutation: call set(42) [selector 0x60fe47b1]
-	nonce++
-	setDataHex := "60fe47b1000000000000000000000000000000000000000000000000000000000000002a"
-	setData, _ := hex.DecodeString(setDataHex)
-	rawSet, err := signEIP155Tx(TreasuryPrivateKey, chainID, nonce, contractAddr, big.NewInt(0), 100000, gasPrice, setData)
-	if err != nil {
-		t.Fatalf("sign set err: %v", err)
-	}
-	setRes, err := httpPost(rpcURL, "eth_sendRawTransaction", []any{rawSet})
-	t.Logf("Set Response: %v", setRes)
-
-	// 3. State Query: eth_getStorageAt slot 0
-	storageRes, err := httpPost(rpcURL, "eth_getStorageAt", []any{contractAddr, "0x0", "latest"})
-	t.Logf("Storage slot 0: %v", storageRes)
-
-	// 4. eth_call: get() [selector 0x6d4ce63c]
-	callRes, err := httpPost(rpcURL, "eth_call", []any{
-		map[string]any{"to": contractAddr, "data": "0x6d4ce63c"},
-		"latest",
-	})
-	t.Logf("eth_call get(): %v", callRes)
-
-	// 5. Destructuring: destroy() [selector 0x83197ef0]
-	nonce++
-	destroyData, _ := hex.DecodeString("83197ef0")
-	rawDestroy, err := signEIP155Tx(TreasuryPrivateKey, chainID, nonce, contractAddr, big.NewInt(0), 100000, gasPrice, destroyData)
-	if err != nil {
-		t.Fatalf("sign destroy err: %v", err)
-	}
-	destroyRes, err := httpPost(rpcURL, "eth_sendRawTransaction", []any{rawDestroy})
-	t.Logf("Destroy Response: %v", destroyRes)
-
-	// Receipt query
-	receiptRes, _ := httpPost(rpcURL, "eth_getTransactionReceipt", []any{deployTxHash})
-	t.Logf("Deploy Receipt: %v", receiptRes)
 }
-
-
-
-
-
-
-

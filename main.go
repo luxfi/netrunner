@@ -46,6 +46,11 @@ type Config struct {
 	HanzodStakePorts []int
 	HanzodRPCPorts   []int
 	RuntimeDir       string
+	// BotTargets is where the traffic bot sends, one entry per chain. Each
+	// chain answers on its own name at its own node, addressed by loopback:
+	// a public host name here would aim treasury-signed traffic at the
+	// public network.
+	BotTargets []ChainBotTarget
 }
 
 var configs = map[string]Config{
@@ -59,6 +64,11 @@ var configs = map[string]Config{
 		HanzodStakePorts: []int{9781, 9782, 9783, 9784, 9785},
 		HanzodRPCPorts:   []int{9780, 9790, 9800, 9810, 9820},
 		RuntimeDir:       "/tmp/cluster_mainnet",
+		BotTargets: []ChainBotTarget{
+			{Name: "lux", RPC: "http://127.0.0.1:9630/v1/chain/c", Coin: "LUX", ChainID: 96369, Proc: "luxd", Port: 9630},
+			{Name: "zoo", RPC: "http://127.0.0.1:9730/v1/chain/zoo", Coin: "ZOO", ChainID: 200200, Proc: "zood", Port: 9730},
+			{Name: "hanzo", RPC: "http://127.0.0.1:9780/v1/chain/hanzo", Coin: "AI", ChainID: 36963, Proc: "hanzod", Port: 9780},
+		},
 	},
 	"testnet": {
 		NetworkID:        96300,
@@ -70,6 +80,11 @@ var configs = map[string]Config{
 		HanzodStakePorts: []int{19781, 19782, 19783, 19784, 19785},
 		HanzodRPCPorts:   []int{19780, 19790, 19800, 19810, 19820},
 		RuntimeDir:       "/tmp/cluster_testnet",
+		BotTargets: []ChainBotTarget{
+			{Name: "lux", RPC: "http://127.0.0.1:19600/v1/chain/c", Coin: "LUX", ChainID: 96368, Proc: "luxd", Port: 19600},
+			{Name: "zoo", RPC: "http://127.0.0.1:19730/v1/chain/zoo", Coin: "ZOO", ChainID: 200201, Proc: "zood", Port: 19730},
+			{Name: "hanzo", RPC: "http://127.0.0.1:19780/v1/chain/hanzo", Coin: "AI", ChainID: 36962, Proc: "hanzod", Port: 19780},
+		},
 	},
 }
 
@@ -592,15 +607,12 @@ func main() {
 			log.Fatalf("gateway on %s: %v", gwCfg.ListenAddr, err)
 		}
 	case "bot":
-		// Through the gateway, so the addresses follow its port rather than
-		// assuming the privileged one.
-		at := gatewayPort(gwCfg.ListenAddr)
-		targets := []ChainBotTarget{
-			{Name: "Lux C-Chain", RPC: "http://api.lux.network" + at + "/v1/chain/c", Coin: "LUX", ChainID: 36963},
-			{Name: "Zoo EVM", RPC: "http://api.zoo.network" + at + "/v1/chain/zoo", Coin: "ZOO", ChainID: 200200},
-			{Name: "Hanzo EVM", RPC: "http://api.hanzo.network" + at + "/v1/chain/hanzo", Coin: "AI", ChainID: 36963},
+		signer, err := SignerFromEnv()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
 		}
-		runTrafficBot(targets, *tps, *duration)
+		runTrafficBot(cfg.BotTargets, signer, *tps, *duration)
 	case "zap":
 		zapPort := ":8082"
 		fmt.Printf("[*] Starting Netrunner Zap RPC Protocol Server on %s...\n", zapPort)
@@ -612,7 +624,7 @@ func main() {
 	case "boot":
 		runBoot(cfg, *runs)
 	case "monitor":
-		monitorMemory(*duration, 5*time.Second)
+		monitorMemory(cfg.BotTargets, *duration, 5*time.Second)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown action: %s\n", action)
 		os.Exit(1)

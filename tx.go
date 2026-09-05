@@ -1,21 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/luxfi/crypto/secp256k1"
-)
-
-const (
-	// DefaultMnemonic is the official LUX_MNEMONIC for mainnet, testnet, devnet
-	DefaultMnemonic = "know defense install season surface planet hobby borrow theory security aisle toast"
-	// TreasuryAddress derived from LUX_MNEMONIC at BIP44 m/44'/60'/0'/0/0
-	TreasuryAddress = "0x9011E888251AB053B7bD1cdB598Db4f9DEd94714"
-	// TreasuryPrivateKey for 0x9011E888251AB053B7bD1cdB598Db4f9DEd94714
-	TreasuryPrivateKey = "fd233cfde18bd26962b670c983d367b77be8c912bbcca82c7cd7ca86ccdee2c8"
 )
 
 func rlpEncodeBytes(b []byte) []byte {
@@ -54,13 +45,12 @@ func rlpEncodeList(items [][]byte) []byte {
 }
 
 // signEIP155Tx signs an EVM transaction with replay-protection (EIP-155)
-func signEIP155Tx(privKeyHex string, chainID int64, nonce uint64, toAddrHex string, value *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) (string, error) {
-	privBytes, err := hex.DecodeString(privKeyHex)
-	if err != nil {
-		return "", fmt.Errorf("decode privkey: %w", err)
+func signEIP155Tx(signer *Signer, chainID int64, nonce uint64, toAddrHex string, value *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) (string, error) {
+	if signer == nil {
+		return "", errors.New("no signer")
 	}
+	privBytes := signer.key
 
-	toAddrHex = bytes.NewBufferString(toAddrHex).String()
 	if len(toAddrHex) >= 2 && toAddrHex[:2] == "0x" {
 		toAddrHex = toAddrHex[2:]
 	}
@@ -131,4 +121,3 @@ func computeContractAddress(senderHex string, nonce uint64) string {
 	hash := secp256k1.Keccak256(encoded)
 	return "0x" + hex.EncodeToString(hash[12:])
 }
-
