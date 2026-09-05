@@ -44,22 +44,6 @@ func chainAlias(p string) string {
 	return strings.ToLower(alias)
 }
 
-// upstream names the node that serves a chain, and the path it serves it at.
-// One table: adding a chain is a row, not a branch.
-var upstream = map[string]struct {
-	node string // "lux", "zoo" or "hanzo"
-	path string
-}{
-	"c":      {"lux", "/v1/bc/C/rpc"},
-	"96369":  {"lux", "/v1/bc/C/rpc"},
-	"p":      {"lux", "/v1/bc/P"},
-	"x":      {"lux", "/v1/bc/X"},
-	"zoo":    {"zoo", "/v1/chain/C/rpc"},
-	"200200": {"zoo", "/v1/chain/C/rpc"},
-	"hanzo":  {"hanzo", "/v1/chain/C/rpc"},
-	"36963":  {"hanzo", "/v1/chain/C/rpc"},
-}
-
 // gatewayPort is the ":8080" of a listen address, for building a URL that
 // reaches this gateway wherever it was told to listen.
 func gatewayPort(addr string) string {
@@ -79,16 +63,42 @@ func newProxy(target *url.URL) *httputil.ReverseProxy {
 	return proxy
 }
 
-func startGateway(cfg GatewayConfig) error {
-	luxURL, _ := url.Parse(cfg.LuxRPC)
-	zooURL, _ := url.Parse(cfg.ZooRPC)
-	hanzoURL, _ := url.Parse(cfg.HanzoRPC)
-	explorerURL, _ := url.Parse(cfg.ExplorerRPC)
+// gateway is the running state behind the handler: where each network's node
+// is, and what each has said about the chain it runs.
+type gateway struct {
+	cfg      GatewayConfig
+	proxy    map[string]*httputil.ReverseProxy
+	explorer *httputil.ReverseProxy
+	id       *identity
+}
 
-	luxProxy := newProxy(luxURL)
-	zooProxy := newProxy(zooURL)
-	hanzoProxy := newProxy(hanzoURL)
-	explorerProxy := newProxy(explorerURL)
+func newGateway(cfg GatewayConfig) (*gateway, error) {
+	g := &gateway{
+		cfg:   cfg,
+		proxy: map[string]*httputil.ReverseProxy{},
+		id:    newIdentity(cfg),
+	}
+	for _, n := range networks {
+		at, err := url.Parse(cfg.RPC(n.name))
+		if err != nil {
+			return nil, fmt.Errorf("%s node address %q: %w", n.name, cfg.RPC(n.name), err)
+		}
+		g.proxy[n.name] = newProxy(at)
+	}
+	explorerURL, err := url.Parse(cfg.ExplorerRPC)
+	if err != nil {
+		return nil, fmt.Errorf("explorer address %q: %w", cfg.ExplorerRPC, err)
+	}
+	g.explorer = newProxy(explorerURL)
+	return g, nil
+}
+
+func startGateway(cfg GatewayConfig) error {
+	g, err := newGateway(cfg)
+	if err != nil {
+		return err
+	}
+	explorerProxy := g.explorer
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host := strings.ToLower(r.Host)
@@ -110,7 +120,7 @@ func startGateway(cfg GatewayConfig) error {
 		// Programmatic Network & Consensus as a Service endpoints
 		if p == "/v1/network" {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(getNetworkResponse(cfg))
+			json.NewEncoder(w).Encode(g.networkReport())
 			return
 		}
 		if p == "/v1/consensus" {
@@ -134,37 +144,35 @@ func startGateway(cfg GatewayConfig) error {
 		}
 		if p == "/v1/chain/status" || p == "/api/status" {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(getExplorerStatus(cfg))
+			json.NewEncoder(w).Encode(g.statusReport())
 			return
 		}
 
+		// A caller who named a network reaches that network and only that
+		// network; one who named the gateway itself reaches the mesh, where
+		// every chain is served by the network that owns it.
+		if n, named := networkForHost(host); named {
+			g.route(w, r, n, onlyItsOwn)
+			return
+		}
 		switch host {
-		case "api.lux.network":
-			routeLux(w, r, luxProxy, zooProxy, hanzoProxy, cfg)
-		case "api.zoo.network":
-			routeZoo(w, r, zooProxy)
-		case "api.hanzo.network":
-			routeHanzo(w, r, hanzoProxy)
 		case "explore.lux.network", "explorer.lux.network":
 			routeExplorer(w, r, explorerProxy, cfg)
 		default:
 			switch {
-			case strings.HasPrefix(p, "/zoo"):
-				routeZoo(w, r, zooProxy)
-			case strings.HasPrefix(p, "/hanzo"):
-				routeHanzo(w, r, hanzoProxy)
 			case strings.HasPrefix(p, "/explore"), strings.HasPrefix(p, "/v1/explorer"):
 				routeExplorer(w, r, explorerProxy, cfg)
 			default:
-				routeLux(w, r, luxProxy, zooProxy, hanzoProxy, cfg)
+				g.route(w, r, lux(), anyNetwork)
 			}
 		}
 	})
 
 	log.Printf("[+] Gateway reverse proxy listening on %s", cfg.ListenAddr)
-	log.Printf("    * api.lux.network   -> %s (Primary C-Chain: /v1/chain/C/rpc)", cfg.LuxRPC)
-	log.Printf("    * api.zoo.network   -> %s (Zoo L2 EVM: /v1/chain/zoo)", cfg.ZooRPC)
-	log.Printf("    * api.hanzo.network -> %s (Hanzo L2 EVM: /v1/chain/hanzo)", cfg.HanzoRPC)
+	for _, n := range networks {
+		log.Printf("    * %-18s -> %s (%s, chain %d, root -> /v1/chain/%s)",
+			n.domain, cfg.RPC(n.name), n.label, n.evm, n.root)
+	}
 	log.Printf("    * /v1/zap           -> Zap RPC Protocol Transport")
 	log.Printf("    * explore.lux.network -> Explorer UI & P-Chain Validators")
 
@@ -179,11 +187,24 @@ func startGateway(cfg GatewayConfig) error {
 	return server.ListenAndServe()
 }
 
-func routeLux(w http.ResponseWriter, r *http.Request, luxProxy, zooProxy, hanzoProxy *httputil.ReverseProxy, cfg GatewayConfig) {
-	origPath := r.URL.Path
-	if origPath == "/v1/chain/validators" || origPath == "/api/validators" {
+// Whether a caller may reach past the network they addressed. A caller who
+// named a network gets that network's chains; one who named the gateway
+// itself gets the mesh.
+const (
+	onlyItsOwn = true
+	anyNetwork = false
+)
+
+// route serves one chain to one caller.
+//
+// host is the network the caller addressed. It decides what a bare root means —
+// root is that network's own EVM, reached with no path, and never another
+// network's — and, when the caller named it, which chains exist at all.
+func (g *gateway) route(w http.ResponseWriter, r *http.Request, host network, only bool) {
+	p := r.URL.Path
+	if p == "/v1/chain/validators" || p == "/api/validators" {
 		w.Header().Set("Content-Type", "application/json")
-		vals, err := fetchPChainValidators(cfg.LuxRPC)
+		vals, err := fetchPChainValidators(g.cfg.LuxRPC)
 		if err != nil {
 			http.Error(w, fmt.Sprintf(`{"error":"%v"}`, err), http.StatusInternalServerError)
 			return
@@ -191,57 +212,63 @@ func routeLux(w http.ResponseWriter, r *http.Request, luxProxy, zooProxy, hanzoP
 		json.NewEncoder(w).Encode(vals)
 		return
 	}
-	// One decision, from the alias the caller named. A chain that lives on
-	// another node is handed to it; one of Lux's own is rewritten to the path
-	// that node serves it at.
-	if to, known := upstream[chainAlias(origPath)]; known {
-		r.URL.Path = to.path
-		switch to.node {
-		case "zoo":
-			zooProxy.ServeHTTP(w, r)
-		case "hanzo":
-			hanzoProxy.ServeHTTP(w, r)
-		default:
-			luxProxy.ServeHTTP(w, r)
+
+	alias := chainAlias(p)
+	if alias == "" {
+		alias = spelling(p, host)
+	}
+	owned, known := chains[alias]
+	if !known {
+		refuse(w, http.StatusNotFound, fmt.Sprintf("no chain is named %q", strings.Trim(p, "/")))
+		return
+	}
+	// The rule: a chain belongs to one network, and only that network answers
+	// for it. c is the Lux primary-network EVM, so it exists on Lux and
+	// nowhere else; hanzo and zoo are their own networks' own EVMs.
+	if only && owned.network != host.name {
+		refuse(w, http.StatusNotFound, fmt.Sprintf(
+			"%s is a chain of the %s network; %s serves %s",
+			alias, owned.network, host.domain, host.root))
+		return
+	}
+	if err := g.id.confirm(networkNamed(owned.network)); err != nil {
+		refuse(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	r.URL.Path = owned.path
+	g.proxy[owned.network].ServeHTTP(w, r)
+}
+
+// spelling reads a chain out of a path that does not name one outright: a bare
+// root, which is the addressed network's own EVM, or one of the two shapes an
+// older client still writes.
+func spelling(p string, host network) string {
+	if p == "" || p == "/" {
+		return host.root
+	}
+	if rest, old := strings.CutPrefix(p, "/ext/bc/"); old {
+		return chainAlias("/v1/bc/" + rest)
+	}
+	for _, n := range networks {
+		if n.prefix != "" && strings.HasPrefix(p, n.prefix) {
+			return n.root
 		}
-		return
 	}
-
-	switch {
-	case origPath == "", origPath == "/":
-		// An eth client pointed at the gateway with no path means the C-Chain.
-		r.URL.Path = "/v1/bc/C/rpc"
-	case strings.HasPrefix(origPath, "/zoo"):
-		routeZoo(w, r, zooProxy)
-		return
-	case strings.HasPrefix(origPath, "/hanzo"):
-		routeHanzo(w, r, hanzoProxy)
-		return
-	case strings.HasPrefix(origPath, "/ext/bc/C/rpc"):
-		r.URL.Path = "/v1/bc/C/rpc"
-	case strings.HasPrefix(origPath, "/ext/"):
-		r.URL.Path = strings.Replace(origPath, "/ext/", "/v1/bc/", 1)
-	}
-	luxProxy.ServeHTTP(w, r)
+	return ""
 }
 
-// An L2 serves one chain, so every way of naming it — its own name, its chain
-// id, the bare root, or the prefix an old client still writes — is that chain.
-func routeL2(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy, own string) {
-	p := r.URL.Path
-	if _, mine := upstream[chainAlias(p)]; mine ||
-		p == "" || p == "/" || strings.HasPrefix(p, own) || strings.HasPrefix(p, "/ext/") {
-		r.URL.Path = "/v1/chain/C/rpc"
-	}
-	proxy.ServeHTTP(w, r)
-}
-
-func routeZoo(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy) {
-	routeL2(w, r, proxy, "/zoo")
-}
-
-func routeHanzo(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy) {
-	routeL2(w, r, proxy, "/hanzo")
+// refuse answers in the shape an eth client reads, so a caller who named a
+// chain this address does not serve learns that, rather than reading someone
+// else's chain and believing it.
+func refuse(w http.ResponseWriter, status int, why string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      nil,
+		"error":   map[string]any{"code": -32601, "message": why},
+	})
 }
 
 func routeExplorer(w http.ResponseWriter, r *http.Request, indexerProxy *httputil.ReverseProxy, cfg GatewayConfig) {
@@ -302,42 +329,48 @@ func fetchPChainValidators(luxRPC string) (map[string]any, error) {
 	return res, nil
 }
 
-func getExplorerStatus(cfg GatewayConfig) map[string]any {
-	luxBlock := queryBlockNumber(cfg.LuxRPC + "/v1/bc/C/rpc")
-	zooBlock := queryBlockNumber(cfg.ZooRPC + "/v1/chain/C/rpc")
-	hanzoBlock := queryBlockNumber(cfg.HanzoRPC + "/v1/chain/C/rpc")
+// chainStates reports what each network's node is actually running.
+//
+// The chain id here is read from the chain, not asserted beside it: this
+// report used to label the Lux row 96369 while the node it pointed at was
+// answering 36963, and a label cannot notice that.
+func (g *gateway) chainStates() []map[string]any {
+	states := make([]map[string]any, 0, len(networks))
+	for _, n := range networks {
+		state := map[string]any{
+			"name":     n.label,
+			"domain":   n.domain,
+			"symbol":   n.symbol,
+			"rpc_path": "/v1/chain/" + n.root,
+			"vm":       n.vm,
+			"network":  n.name,
+			"expects":  n.evm,
+		}
+		evm, err := g.id.observe(n)
+		switch {
+		case err != nil:
+			state["chain_id"] = nil
+			state["status"] = "UNREACHABLE"
+			state["detail"] = err.Error()
+		case evm != n.evm:
+			state["chain_id"] = evm
+			state["status"] = "WRONG CHAIN"
+			state["detail"] = fmt.Sprintf(
+				"the %s node runs chain %d; %s is chain %d", n.name, evm, n.name, n.evm)
+		default:
+			state["chain_id"] = evm
+			state["status"] = "ONLINE"
+			state["block_tip"] = queryBlockNumber(g.cfg.RPC(n.name) + n.path)
+		}
+		states = append(states, state)
+	}
+	return states
+}
 
+func (g *gateway) statusReport() map[string]any {
 	return map[string]any{
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"chains": []map[string]any{
-			{
-				"name":        "Lux C-Chain (Primary EVM)",
-				"domain":      "api.lux.network",
-				"chain_id":    96369,
-				"symbol":      "LUX",
-				"block_tip":   luxBlock,
-				"rpc_path":    "/v1/chain/C/rpc",
-				"status":      "ONLINE",
-			},
-			{
-				"name":        "Zoo L2 EVM",
-				"domain":      "api.zoo.network",
-				"chain_id":    200200,
-				"symbol":      "ZOO",
-				"block_tip":   zooBlock,
-				"rpc_path":    "/v1/chain/zoo",
-				"status":      "ONLINE",
-			},
-			{
-				"name":        "Hanzo L2 EVM",
-				"domain":      "api.hanzo.network",
-				"chain_id":    36963,
-				"symbol":      "AI",
-				"block_tip":   hanzoBlock,
-				"rpc_path":    "/v1/chain/hanzo",
-				"status":      "ONLINE",
-			},
-		},
+		"chains":    g.chainStates(),
 		"consensus": map[string]any{
 			"type":            "Snowman (Probabilistic Metastable Subsampling)",
 			"sample_size_k":   5,
@@ -348,12 +381,26 @@ func getExplorerStatus(cfg GatewayConfig) map[string]any {
 	}
 }
 
+// The CLI and the ZAP transport ask for the same reports without a gateway
+// running, so they get one that lives as long as the question.
 func getNetworkResponse(cfg GatewayConfig) map[string]any {
-	luxBlock := queryBlockNumber(cfg.LuxRPC + "/v1/bc/C/rpc")
-	zooBlock := queryBlockNumber(cfg.ZooRPC + "/v1/chain/C/rpc")
-	hanzoBlock := queryBlockNumber(cfg.HanzoRPC + "/v1/chain/C/rpc")
+	g, err := newGateway(cfg)
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	return g.networkReport()
+}
 
-	vals, _ := fetchPChainValidators(cfg.LuxRPC)
+func getExplorerStatus(cfg GatewayConfig) map[string]any {
+	g, err := newGateway(cfg)
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	return g.statusReport()
+}
+
+func (g *gateway) networkReport() map[string]any {
+	vals, _ := fetchPChainValidators(g.cfg.LuxRPC)
 	var validatorCount int
 	if vals != nil && vals["result"] != nil {
 		if vMap, ok := vals["result"].(map[string]any); ok {
@@ -366,49 +413,17 @@ func getNetworkResponse(cfg GatewayConfig) map[string]any {
 	return map[string]any{
 		"network":      "Lux Multi-Chain Mesh",
 		"timestamp":    time.Now().UTC().Format(time.RFC3339),
-		"status":       "HEALTHY",
 		"architecture": "Network of Sovereign EVM Chains & Shared Validators",
-		"chains": []map[string]any{
-			{
-				"name":      "Lux C-Chain (Primary EVM)",
-				"domain":    "api.lux.network",
-				"chain_id":  96369,
-				"symbol":    "LUX",
-				"block_tip": luxBlock,
-				"rpc_path":  "/v1/chain/C/rpc",
-				"vm":        "luxfi/geth (EVM)",
-				"status":    "ONLINE",
-			},
-			{
-				"name":      "Zoo L2 EVM",
-				"domain":    "api.zoo.network",
-				"chain_id":  200200,
-				"symbol":    "ZOO",
-				"block_tip": zooBlock,
-				"rpc_path":  "/v1/chain/zoo",
-				"vm":        "lux-cpp/noded (EVM)",
-				"status":    "ONLINE",
-			},
-			{
-				"name":      "Hanzo L2 EVM",
-				"domain":    "api.hanzo.network",
-				"chain_id":  36963,
-				"symbol":    "AI",
-				"block_tip": hanzoBlock,
-				"rpc_path":  "/v1/chain/hanzo",
-				"vm":        "lux-rs/hanzod (EVM)",
-				"status":    "ONLINE",
-			},
-		},
+		"chains":       g.chainStates(),
 		"p_chain": map[string]any{
 			"total_validators": validatorCount,
-			"rpc_path":         "/v1/chain/P",
+			"rpc_path":         "/v1/chain/p",
 			"staking_currency": "LUX",
 		},
 		"routing": map[string]any{
-			"evm_root_fallback": true,
-			"canonical_prefix":  "/v1/chain/",
-			"deprecated_prefix": "/v1/bc/ (auto-migrated)",
+			"canonical_prefix": "/v1/chain/",
+			"root_is_own_evm":  true,
+			"chain_of_network": "a chain is served by the network that owns it, and by no other",
 		},
 	}
 }
